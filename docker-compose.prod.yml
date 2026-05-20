@@ -104,7 +104,7 @@ services:
       target: production
       cache_from:
         - ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-oeuvres-sociales}/backend:latest
-    container_name: oeuvres_backend
+    #container_name: oeuvres_backend
     restart: always
     env_file:
       - ./backend/.env.production
@@ -148,7 +148,7 @@ services:
       context: ./backend
       dockerfile: ../docker/backend/Dockerfile
       target: production
-    container_name: oeuvres_celery_worker
+    #container_name: oeuvres_celery_worker
     restart: always
     env_file:
       - ./backend/.env.production
@@ -207,7 +207,7 @@ services:
       target: production
       cache_from:
         - ${REGISTRY:-ghcr.io}/${IMAGE_NAME:-oeuvres-sociales}/frontend:latest
-    container_name: oeuvres_frontend
+    #container_name: oeuvres_frontend
     restart: always
     ports:
       - "127.0.0.1:3000:80"
