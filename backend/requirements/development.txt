@@ -1,0 +1,32 @@
+# ============================================================
+# DÉVELOPPEMENT — uniquement en local
+# ============================================================
+-r base.txt
+
+# Debug toolbar
+django-debug-toolbar==4.4.6
+
+# Tests
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-cov==6.0.0
+pytest-faker==2.0.0
+factory-boy==3.3.1
+faker==33.1.0
+
+# Qualité code
+ruff==0.8.4
+black==24.10.0
+isort==5.13.2
+mypy==1.14.1
+django-stubs==5.1.1
+
+# Email en dev (capture locale)
+# Utiliser MailHog via Docker
+
+# Shell amélioré
+ipython==8.30.0
+django-extensions==3.2.3  # shell_plus, runserver_plus
+
+# Werkzeug (pour runserver_plus avec debugger)
+Werkzeug==3.1.3

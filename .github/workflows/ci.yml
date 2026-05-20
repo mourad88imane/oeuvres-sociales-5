@@ -1,0 +1,199 @@
+# ============================================================
+# GITHUB ACTIONS — CI/CD Oeuvres Sociales
+# ============================================================
+name: CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  lint-python:
+    name: Lint Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check backend/ --output-format=github
+
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci
+      - run: cd frontend && npm run lint
+
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci
+      - run: cd frontend && npx tsc --noEmit
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit bandit
+      - run: pip-audit -r backend/requirements/production.txt
+      - run: bandit -r backend/ -x backend/tests,backend/.env
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache-dependency-path: frontend/package-lock.json
+      - run: cd frontend && npm ci && npm audit --production
+
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: oeuvres_sociales_test
+          POSTGRES_USER: oeuvres_user
+          POSTGRES_PASSWORD: oeuvres_password_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: backend/requirements/*.txt
+      - run: sudo apt-get update && sudo apt-get install -y libpq-dev
+      - run: pip install -r backend/requirements/production.txt
+      - run: pip install -r backend/requirements/test.txt
+      - run: |
+          cd backend
+          pytest --cov=. --cov-report=term --cov-report=xml -v
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          SECRET_KEY: test-key-not-secret-12345
+          DB_NAME: oeuvres_sociales_test
+          DB_USER: oeuvres_user
+          DB_PASSWORD: oeuvres_password_test
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          REDIS_URL: redis://localhost:6379/0
+      - uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+
+  build-and-push:
+    name: Build & Push Docker Images
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    needs: [lint-python, lint-frontend, typecheck, test-backend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: docker/backend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.ref_name }}
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: docker/frontend/Dockerfile
+          target: production
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.ref_name }}
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/develop'
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.oeuvres-sociales.dz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/oeuvres-sociales
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker system prune -f
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://oeuvres-sociales.dz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/oeuvres-sociales
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans --wait
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput --clear
+            docker system prune -f

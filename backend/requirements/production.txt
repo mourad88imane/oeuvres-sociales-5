@@ -1,0 +1,13 @@
+# ============================================================
+# PRODUCTION — environnement de production
+# ============================================================
+-r base.txt
+
+# WSGI Server (remplace runserver)
+gunicorn==23.0.0
+
+# Monitoring
+sentry-sdk==2.19.2
+
+# Sécurité supplémentaire
+django-axes==7.0.1

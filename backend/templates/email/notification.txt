@@ -1,0 +1,11 @@
+Bonjour{% if recipient_name %} {{ recipient_name }}{% endif %},
+
+{{ body }}
+
+{% if action_url %}
+→ {{ action_label|default:"Voir les détails" }} : {{ action_url }}
+{% endif %}
+
+---
+Œuvres Sociales — Plateforme de gestion
+Pour gérer vos préférences : {{ settings_url|default:"#" }}

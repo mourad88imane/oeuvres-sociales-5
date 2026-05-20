@@ -1,0 +1,19 @@
+# ============================================================
+# TEST — dépendances de test
+# ============================================================
+-r base.txt
+
+# Test runner
+pytest>=8.3
+pytest-django>=4.9
+pytest-cov>=6.0
+pytest-xdist>=3.6
+
+# Factories & fixtures
+factory-boy>=3.3
+model-bakery>=1.19
+faker>=33.0
+
+# API testing
+requests>=2.32
+responses>=0.25

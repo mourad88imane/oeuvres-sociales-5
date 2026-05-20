@@ -1,0 +1,219 @@
+# ============================================================
+# DOCKER COMPOSE — Environnement de développement
+# ============================================================
+# Commandes :
+#   make dev        → lance tout
+#   make stop       → arrête tout
+#   make logs       → voir les logs
+#   make shell      → shell Django
+
+name: oeuvres-sociales-dev
+
+services:
+
+  # ── Base de données PostgreSQL ───────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: oeuvres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-oeuvres_sociales_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-oeuvres_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-oeuvres_password_dev}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=fr_FR.UTF-8"
+      TZ: Africa/Algiers
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"   # Exposé pour accès direct (DBeaver, pgAdmin)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-oeuvres_user} -d ${POSTGRES_DB:-oeuvres_sociales_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oeuvres_network
+
+  # ── Redis (Cache + Celery Broker) ────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: oeuvres_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oeuvres_network
+
+  # ── Backend Django ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+      target: development
+    container_name: oeuvres_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+    volumes:
+      - ./backend:/app                    # Mount code source pour hot reload
+      - ./backend/logs:/app/logs
+      - ./backend/media:/app/media
+      - ./backend/staticfiles:/app/staticfiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '⏳ Attente PostgreSQL...' &&
+        python manage.py migrate --noinput &&
+        echo '✅ Migrations appliquées' &&
+        python manage.py collectstatic --noinput --clear 2>/dev/null || true &&
+        echo '🚀 Démarrage Django...' &&
+        python manage.py runserver 0.0.0.0:8000
+      "
+    networks:
+      - oeuvres_network
+
+  # ── Celery Worker ─────────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+      target: development
+    container_name: oeuvres_celery_worker
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A config worker --loglevel=info --concurrency=2
+    networks:
+      - oeuvres_network
+
+  # ── Celery Beat (tâches périodiques) ─────────────────────
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+      target: development
+    container_name: oeuvres_celery_beat
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.development
+    volumes:
+      - ./backend:/app
+      - ./backend/logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    networks:
+      - oeuvres_network
+
+  # ── Frontend React + Vite ─────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/frontend/Dockerfile
+      target: development
+    container_name: oeuvres_frontend
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/app                   # Mount code source pour HMR
+      - /app/node_modules                 # Ne pas monter node_modules local
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost/api/v1
+      VITE_APP_NAME: "Oeuvres Sociales"
+    networks:
+      - oeuvres_network
+
+  # ── Nginx Reverse Proxy ───────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: oeuvres_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./backend/staticfiles:/app/staticfiles:ro
+      - ./backend/media:/app/media:ro
+      - nginx_logs:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - oeuvres_network
+
+  # ── MailHog (email en dev) ────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: oeuvres_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Interface Web : http://localhost:8025
+    networks:
+      - oeuvres_network
+
+  # ── pgAdmin (DB admin en dev) ─────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: oeuvres_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@oeuvres.dz
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"   # Interface Web : http://localhost:5050
+    depends_on:
+      - db
+    networks:
+      - oeuvres_network
+    profiles:
+      - tools   # Démarrer uniquement avec : docker compose --profile tools up
+
+# ── Volumes persistants ───────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# ── Réseau interne ────────────────────────────────────────
+networks:
+  oeuvres_network:
+    driver: bridge
+    name: oeuvres_network

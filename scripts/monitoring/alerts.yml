@@ -1,0 +1,101 @@
+# ============================================================
+# PROMETHEUS ALERTS — Règles d'alerte
+# ============================================================
+groups:
+  - name: oeuvres_sociales_alerts
+    interval: 30s
+    rules:
+
+      # ── Service Down ──────────────────────────────────
+      - alert: BackendDown
+        expr: up{job="django"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Le backend Django est injoignable"
+          description: "Aucune réponse du backend depuis plus d'une minute"
+
+      - alert: CeleryDown
+        expr: up{job="celery"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Celery Worker est injoignable"
+          description: "Les tâches asynchrones ne sont plus traitées"
+
+      - alert: DatabaseDown
+        expr: up{job="postgresql"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL est injoignable"
+          description: "La base de données ne répond plus"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis est injoignable"
+          description: "Le cache et le broker Celery sont indisponibles"
+
+      # ── Performances ─────────────────────────────────┬
+      - alert: HighAPILatency
+        expr: django_http_responses_total{status=~"5.."} > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreur 5xx élevé"
+          description: "Plus de 10 erreurs 5xx en 5 minutes"
+
+      - alert: SlowRequests
+        expr: histogram_quantile(0.95, django_http_requests_latency_seconds_bucket) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence API élevée (p95 > 2s)"
+          description: "Les requêtes API sont anormalement lentes"
+
+      # ── Ressources ──────────────────────────────────┬
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes{container_label_com_docker_compose_service="backend"} > 768 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mémoire backend élevée"
+          description: "Le backend utilise plus de 768 MB de mémoire"
+
+      - alert: DiskSpaceLow
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Espace disque faible (< 10%)"
+          description: "Il reste moins de 10% d'espace disque"
+
+      # ── Base de données ─────────────────────────────┬
+      - alert: PostgreSQLConnectionsHigh
+        expr: pg_stat_activity_count > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Nombre de connexions PostgreSQL élevé"
+          description: "Plus de 100 connexions actives"
+
+      - alert: CeleryQueueGrowth
+        expr: celery_queue_length > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "File Celery en croissance"
+          description: "Plus de 100 tâches en attente dans la file"

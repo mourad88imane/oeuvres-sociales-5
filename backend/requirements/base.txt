@@ -1,0 +1,55 @@
+# ============================================================
+# BASE REQUIREMENTS — partagés par tous les environnements
+# ============================================================
+
+# Django Core
+Django==5.1.4
+djangorestframework==3.15.2
+django-cors-headers==4.6.0
+
+# Authentication JWT
+djangorestframework-simplejwt==5.3.1
+
+# Database
+psycopg2-binary==2.9.10
+
+# Configuration via .env
+python-decouple==3.8
+
+# Filtering & Search
+django-filter==24.3
+
+# API Documentation (OpenAPI 3)
+drf-spectacular==0.27.2
+
+# Celery (tâches asynchrones)
+celery==5.4.0
+redis==5.2.1
+django-celery-beat==2.7.0
+django-celery-results==2.5.1
+
+# Utilitaires
+Pillow==11.0.0          # Traitement images
+python-slugify==8.0.4
+django-extensions==3.2.3
+
+# Sécurité
+django-axes==7.0.1       # Blocage brute force
+django-csp==3.8          # Content Security Policy
+
+# Logging structuré
+python-json-logger==3.2.0
+
+# Audit Trail
+django-simple-history==3.7.0
+
+# Timezone
+pytz==2024.2
+
+# Validation
+pydantic==2.10.3
+drf-nested-routers==0.94.1
+python-dateutil==2.9.0.post0
+openpyxl==3.1.2
+reportlab==4.5.1
+croniter==5.0.1

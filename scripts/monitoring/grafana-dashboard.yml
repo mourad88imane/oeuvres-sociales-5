@@ -1,0 +1,16 @@
+# ============================================================
+# GRAFANA — Dashboard "Oeuvres Sociales — Vue d'ensemble"
+# ============================================================
+apiVersion: 1
+
+providers:
+  - name: "Oeuvres Sociales"
+    orgId: 1
+    folder: "Oeuvres Sociales"
+    type: file
+    disableDeletion: false
+    editable: true
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards

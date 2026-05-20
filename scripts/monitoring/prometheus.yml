@@ -1,0 +1,93 @@
+# ============================================================
+# PROMETHEUS — Configuration collecte métriques
+# ============================================================
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+rule_files:
+  - "alerts/*.yml"
+
+scrape_configs:
+  # ── Prometheus auto ────────────────────────────────────
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # ── Backend Django (via django-prometheus) ─────────────
+  - job_name: "django"
+    metrics_path: "/api/v1/monitoring/metrics"
+    static_configs:
+      - targets: ["backend:8000"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"
+
+  # ── Celery ─────────────────────────────────────────────
+  - job_name: "celery"
+    static_configs:
+      - targets: ["celery_exporter:9808"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"
+
+  # ── PostgreSQL ─────────────────────────────────────────
+  - job_name: "postgresql"
+    static_configs:
+      - targets: ["postgres_exporter:9187"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"
+
+  # ── Redis ──────────────────────────────────────────────
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis_exporter:9121"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"
+
+  # ── Nginx ──────────────────────────────────────────────
+  - job_name: "nginx"
+    static_configs:
+      - targets: ["nginx_exporter:9113"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"
+
+  # ── Docker Engine ──────────────────────────────────────
+  - job_name: "docker"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"
+
+  # ── Serveur hôte (via node_exporter) ──────────────────
+  - job_name: "node"
+    static_configs:
+      - targets: ["node_exporter:9100"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        regex: "(.*):.*"
+        replacement: "${1}"

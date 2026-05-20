@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "django-audit-engine"
+version = "1.0.0"
+description = "Generic Django audit trail engine with immutable logs, signals, REST API"
+authors = [{name = "Oeuvres Sociales"}]
+license = {text = "MIT"}
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=5.0",
+    "djangorestframework>=3.15",
+    "django-simple-history>=3.7",
+]
+classifiers = [
+    "Framework :: Django",
+    "Programming Language :: Python :: 3",
+]
+
+[tool.setuptools.packages.find]
+include = ["shared.audit*"]

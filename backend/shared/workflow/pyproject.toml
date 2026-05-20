@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "django-workflow-engine"
+version = "1.0.0"
+description = "Generic Django workflow engine with states, transitions, guards, and hooks"
+authors = [{name = "Oeuvres Sociales"}]
+license = {text = "MIT"}
+requires-python = ">=3.12"
+dependencies = ["Django>=5.0"]
+classifiers = [
+    "Framework :: Django",
+    "Programming Language :: Python :: 3",
+]
+
+[tool.setuptools.packages.find]
+include = ["shared.workflow*"]
