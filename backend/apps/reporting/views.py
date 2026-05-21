@@ -13,6 +13,7 @@ from core.permissions import IsAdminOrGestionnaire, IsAdminOrReadOnly
 from django.apps import apps
 from django.db import models as db_models
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from shared.ai.services import PredictionService
 
 from .models import (
@@ -128,11 +129,11 @@ class KpiViewSet(viewsets.ModelViewSet):
         code = request.query_params.get("code", "")
         days = int(request.query_params.get("days", 90))
         if not code:
-            return Response({"status": "error", "message": "Paramètre 'code' requis."}, status=400)
+            return Response({"status": "error", "message": _("Paramètre 'code' requis.")}, status=400)
         kpi = KpiDefinition.objects.filter(code=code).first()
         if not kpi:
             return Response(
-                {"status": "error", "message": f"KPI '{code}' introuvable."}, status=404
+                {"status": "error", "message": _(f"KPI '{code}' introuvable.")}, status=404
             )
         snapshots = KpiSnapshot.objects.filter(
             kpi=kpi,
@@ -363,7 +364,7 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
     def _render_csv(self, data, report):
         if not data:
             output = io.BytesIO()
-            output.write(b"Aucune donnee\n")
+            output.write(_("Aucune donnée\n").encode("utf-8"))
             output.seek(0)
             return output
         output = io.StringIO()
@@ -388,7 +389,7 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
         ws.title = report.code[:31] or "Report"
 
         if not data:
-            ws.cell(row=1, column=1, value="Aucune donnee")
+            ws.cell(row=1, column=1, value=_("Aucune donnée"))
             buf = io.BytesIO()
             wb.save(buf)
             buf.seek(0)
@@ -438,6 +439,15 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
         buf = io.BytesIO()
         is_wide = len(data) > 20
         pagesize = landscape(A4) if is_wide else A4
+        page_w, page_h = pagesize
+
+        def draw_page_number(canvas, doc):
+            canvas.saveState()
+            canvas.setFont("Helvetica", 8)
+            canvas.setFillColor(colors.HexColor("#666666"))
+            canvas.drawCentredString(page_w / 2, 10 * mm, _(f"Généré le {generated_date} — page {doc.page}"))
+            canvas.restoreState()
+
         doc = SimpleDocTemplate(
             buf,
             pagesize=pagesize,
@@ -476,22 +486,24 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
             leading=10,
         )
 
+        generated_date = timezone.now().strftime("%d/%m/%Y %H:%M")
+
         elements = []
 
         # Title
         elements.append(Paragraph(report.title, title_style))
-        elements.append(Paragraph("Généré le — page $PAGE / $TOTAL", subtitle_style))
+        elements.append(Paragraph(_(f"Généré le {generated_date}"), subtitle_style))
         elements.append(Spacer(1, 6 * mm))
 
         if not data:
-            elements.append(Paragraph("Aucune donnée disponible.", styles["Normal"]))
+            elements.append(Paragraph(_("Aucune donnée disponible."), styles["Normal"]))
         else:
             keys = list(data[0].keys())
             # Clean up header labels
             headers = [k.replace("__", " ").replace("_", " ").title() for k in keys]
             col_count = len(headers)
 
-            max_col_width = max(20 * mm, (pagesize[0] - 40 * mm) / max(col_count, 1))
+            max_col_width = max(20 * mm, (page_w - 40 * mm) / max(col_count, 1))
             col_widths = [min(max_col_width, 22 * mm)] * col_count
 
             table_data = [[Paragraph(h, header_style) for h in headers]]
@@ -535,7 +547,7 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
                 )
                 elements.append(t)
 
-        doc.build(elements)
+        doc.build(elements, onFirstPage=draw_page_number, onLaterPages=draw_page_number)
         buf.seek(0)
         return buf
 

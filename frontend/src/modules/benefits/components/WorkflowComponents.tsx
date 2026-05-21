@@ -3,6 +3,7 @@
  * WorkflowBadge, WorkflowTimeline, WorkflowActions, WorkflowLog
  */
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CheckCircle2, Clock, Send, FileCheck, Banknote,
   XCircle, PauseCircle, Ban, ChevronRight, AlertTriangle, Loader2,
@@ -57,6 +58,7 @@ interface WorkflowTimelineProps {
 }
 
 export function WorkflowTimeline({ benefit, compact = false }: WorkflowTimelineProps) {
+  const { t } = useTranslation();
   const currentIdx  = WORKFLOW_ORDER.indexOf(benefit.workflow_state as WorkflowState);
   const isRejected  = benefit.workflow_state === "rejected";
   const isCancelled = benefit.workflow_state === "cancelled";
@@ -169,9 +171,9 @@ export function WorkflowTimeline({ benefit, compact = false }: WorkflowTimelineP
           isCancelled ? "bg-gray-50 text-gray-600" : "",
           isOnHold    ? "bg-amber-50 text-amber-700" : "",
         )}>
-          {isRejected && <><XCircle className="w-4 h-4 shrink-0" />Demande rejetée — {benefit.rejection_reason || "Motif non précisé"}</>}
-          {isCancelled && <><Ban className="w-4 h-4 shrink-0" />Demande annulée</>}
-          {isOnHold && <><PauseCircle className="w-4 h-4 shrink-0" />En attente de complément — {benefit.last_transition_reason || ""}</>}
+          {isRejected && <><XCircle className="w-4 h-4 shrink-0" />{t("benefits.rejected")} — {benefit.rejection_reason || t("common.noData")}</>}
+          {isCancelled && <><Ban className="w-4 h-4 shrink-0" />{t("benefits.cancelled")}</>}
+          {isOnHold && <><PauseCircle className="w-4 h-4 shrink-0" />{t("benefits.pending")} — {benefit.last_transition_reason || ""}</>}
         </div>
       )}
     </div>
@@ -206,6 +208,7 @@ interface TransitionFormData {
 }
 
 export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
+  const { t } = useTranslation();
   const [selectedTransition, setSelectedTransition] = useState<AvailableTransition | null>(null);
   const transitionMutation = useTransition(benefit.id);
 
@@ -240,25 +243,25 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {transitions.map((t) => {
-          const styleKey = t.to_state === "submitted" && benefit.workflow_state === "on_hold"
-            ? "submitted_re" : t.to_state;
+        {transitions.map((tran) => {
+          const styleKey = tran.to_state === "submitted" && benefit.workflow_state === "on_hold"
+            ? "submitted_re" : tran.to_state;
           const btnStyle = TRANSITION_STYLE[styleKey] ?? "bg-gray-100 text-gray-700";
           return (
             <button
-              key={t.to_state}
-              onClick={() => openModal(t)}
-              disabled={!t.can_execute}
-              title={!t.can_execute ? t.blocked_reason : ""}
+              key={tran.to_state}
+              onClick={() => openModal(tran)}
+              disabled={!tran.can_execute}
+              title={!tran.can_execute ? tran.blocked_reason : ""}
               className={clsx(
                 "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors",
                 "disabled:opacity-40 disabled:cursor-not-allowed",
                 btnStyle,
               )}
             >
-              {t.label}
-              {t.severity === "CRITICAL" && <AlertTriangle className="w-3.5 h-3.5" />}
-              {!t.can_execute && <span className="text-xs opacity-70">({t.blocked_reason})</span>}
+              {tran.label}
+              {tran.severity === "CRITICAL" && <AlertTriangle className="w-3.5 h-3.5" />}
+              {!tran.can_execute && <span className="text-xs opacity-70">({tran.blocked_reason})</span>}
             </button>
           );
         })}
@@ -274,7 +277,7 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
           <>
             <button type="button" onClick={() => setSelectedTransition(null)}
               className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-              Annuler
+              {t("common.cancel")}
             </button>
             <button type="button" onClick={handleConfirm}
               disabled={transitionMutation.isPending}
@@ -286,7 +289,7 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
                 "disabled:opacity-60",
               )}>
               {transitionMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-              Confirmer
+              {t("common.confirm")}
             </button>
           </>
         }
@@ -297,15 +300,15 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
             <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
               <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">
-                Cette action est <strong>irréversible</strong>. Vérifiez les informations avant de confirmer.
+                {t("common.warning")}
               </p>
             </div>
           )}
 
           <p className="text-sm text-gray-600">
-            Confirmer la transition de{" "}
+            {t("workflow.confirmTransition")} —{" "}
             <WorkflowBadge state={benefit.workflow_state as WorkflowState} size="sm" />
-            {" "}vers{" "}
+            {" → "}
             <WorkflowBadge state={selectedTransition?.to_state as WorkflowState} size="sm" />
           </p>
 
@@ -313,14 +316,14 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
           {needsApprovedAmount && (
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">
-                Montant approuvé (DZD) <span className="text-red-500">*</span>
+                {t("benefits.grantedAmount")} (DZD) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number" step="0.01" min="0"
-                {...register("approved_amount", { required: "Le montant approuvé est obligatoire" })}
+                {...register("approved_amount", { required: t("validation.amountRequired") })}
                 defaultValue={String(benefit.requested_amount)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder={`Montant demandé : ${benefit.requested_amount?.toLocaleString("fr-DZ")} DZD`}
+                placeholder={`${t("benefits.requestedAmount")} : ${benefit.requested_amount?.toLocaleString("fr-DZ")} DZD`}
               />
               {errors.approved_amount && <p className="text-xs text-red-500 mt-1">{errors.approved_amount.message}</p>}
             </div>
@@ -331,10 +334,10 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
             <>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Référence de paiement <span className="text-red-500">*</span>
+                  {t("finance.bankReference")} <span className="text-red-500">*</span>
                 </label>
                 <input
-                  {...register("payment_reference", { required: "La référence est obligatoire" })}
+                  {...register("payment_reference", { required: t("validation.required") })}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Ex : VIR-2024-00123"
                 />
@@ -342,7 +345,7 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 block mb-1">
-                  Montant payé (DZD) <span className="text-red-500">*</span>
+                  {t("finance.amount")} (DZD) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number" step="0.01" min="0"
@@ -358,13 +361,13 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
           {needsReason && (
             <div>
               <label className="text-sm font-medium text-gray-700 block mb-1">
-                Motif <span className="text-red-500">*</span>
+                {t("common.notes")} <span className="text-red-500">*</span>
               </label>
               <textarea
-                {...register("reason", { required: "Le motif est obligatoire" })}
+                {...register("reason", { required: t("validation.required") })}
                 rows={3}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Précisez la raison de cette action..."
+                placeholder={t("common.description")}
               />
               {errors.reason && <p className="text-xs text-red-500 mt-1">{errors.reason.message}</p>}
             </div>
@@ -372,12 +375,12 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
 
           {/* Commentaire optionnel */}
           <div>
-            <label className="text-sm text-gray-500 block mb-1">Commentaire interne (optionnel)</label>
+            <label className="text-sm text-gray-500 block mb-1">{t("common.comment")}</label>
             <textarea
               {...register("comment")}
               rows={2}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 bg-gray-50"
-              placeholder="Note visible uniquement en interne..."
+              placeholder={t("common.notes")}
             />
           </div>
 
@@ -385,7 +388,7 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
           {transitionMutation.error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-700">
-                {(transitionMutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message || "Erreur lors de la transition."}
+                {(transitionMutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message || t("workflow.transitionError")}
               </p>
             </div>
           )}
@@ -410,8 +413,10 @@ const SEVERITY_COLOR: Record<string, string> = {
 };
 
 export function WorkflowLogTimeline({ logs }: WorkflowLogTimelineProps) {
+  const { t } = useTranslation();
+
   if (logs.length === 0) {
-    return <p className="text-sm text-gray-400 italic text-center py-8">Aucune transition enregistrée.</p>;
+    return <p className="text-sm text-gray-400 italic text-center py-8">{t("common.noResults")}</p>;
   }
 
   return (
@@ -443,7 +448,7 @@ export function WorkflowLogTimeline({ logs }: WorkflowLogTimelineProps) {
                     {log.to_state_label}
                   </span>
                   {log.is_reversal && (
-                    <span className="text-xs text-red-500 bg-red-50 px-1.5 py-0.5 rounded">Retour</span>
+                    <span className="text-xs text-red-500 bg-red-50 px-1.5 py-0.5 rounded">{t("workflow.sendBack")}</span>
                   )}
                   <span className={clsx("text-xs px-1.5 py-0.5 rounded ml-auto", SEVERITY_COLOR[log.severity])}>
                     {log.severity}
@@ -453,7 +458,7 @@ export function WorkflowLogTimeline({ logs }: WorkflowLogTimelineProps) {
                 <div className="flex flex-wrap gap-4 text-xs text-gray-500">
                   {log.actor_email && <span>👤 {log.actor_email} ({log.actor_role})</span>}
                   {log.duration_label !== "—" && (
-                    <span>⏱ Durée dans l'état : {log.duration_label}</span>
+                    <span>⏱ {t("common.info")} : {log.duration_label}</span>
                   )}
                   <span className="ml-auto">
                     {new Date(log.timestamp).toLocaleString("fr-DZ", {

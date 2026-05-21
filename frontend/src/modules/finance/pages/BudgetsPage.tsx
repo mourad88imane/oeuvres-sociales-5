@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { TrendingUp, Download, RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useBudgets, useConsumptionReport, useActiveFiscalYear, useApproveBudget } from "../api/index";
 import { financeApi } from "../api/index";
 import { BudgetCard } from "../components/FinanceComponents";
@@ -12,6 +13,7 @@ import { fmtDZD, fmtPct } from "../utils/formatters";
 import type { BudgetFilters } from "../types";
 
 export function BudgetsPage() {
+  const { t } = useTranslation();
   const [filters] = useState<BudgetFilters>({});
   const { data: activeFY }    = useActiveFiscalYear();
   const fyId = activeFY?.id;
@@ -54,8 +56,8 @@ export function BudgetsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Budgets</h1>
-          <p className="text-gray-500 text-sm">{budgets.length} budget{budgets.length > 1 ? "s" : ""}{activeFY ? ` — Exercice ${activeFY.year}` : ""}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("finance.budgets")}</h1>
+          <p className="text-gray-500 text-sm">{t("finance.budgetsCount", { count: budgets.length })}{activeFY ? ` — ${t("finance.fiscalYear")} ${activeFY.year}` : ""}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => refetch()} className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
@@ -64,7 +66,7 @@ export function BudgetsPage() {
           {fyId && (
             <button onClick={handleExport}
               className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-              <Download className="w-4 h-4" />Export Excel
+              <Download className="w-4 h-4" />{t("finance.exportExcel")}
             </button>
           )}
         </div>
@@ -75,12 +77,12 @@ export function BudgetsPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
           {/* Stats globales */}
           <div className="xl:col-span-2 card p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Synthèse budgétaire</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">{t("finance.budgetSummary")}</h3>
             <div className="grid grid-cols-3 gap-3 mb-4">
               {[
-                { label: "Total alloué",   value: fmtDZD(totals.allocated, true), color: "text-brand" },
-                { label: "Total payé",     value: fmtDZD(totals.paid, true),      color: "text-green-700" },
-                { label: "Total disponible", value: fmtDZD(totals.available, true), color: totals.available < 0 ? "text-red-600" : "text-emerald-700" },
+                { label: t("finance.totalAllocated"), value: fmtDZD(totals.allocated, true), color: "text-brand" },
+                { label: t("finance.totalSpent"),     value: fmtDZD(totals.paid, true),      color: "text-green-700" },
+                { label: t("finance.totalAvailable"), value: fmtDZD(totals.available, true), color: totals.available < 0 ? "text-red-600" : "text-emerald-700" },
               ].map(({ label, value, color }) => (
                 <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className={`text-xl font-bold ${color}`}>{value}</p>
@@ -118,7 +120,7 @@ export function BudgetsPage() {
 
           {/* Pie */}
           <div className="card p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Répartition</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">{t("finance.budgetBreakdown")}</h3>
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75}
@@ -147,7 +149,7 @@ export function BudgetsPage() {
       {isLoading ? (
         <div className="flex justify-center py-16"><Spinner size="lg" /></div>
       ) : budgets.length === 0 ? (
-        <EmptyState icon={TrendingUp} title="Aucun budget" description="Créez des budgets pour l'exercice fiscal en cours." />
+        <EmptyState icon={TrendingUp} title={t("finance.noBudgets")} description={t("finance.noBudgetsDescription")} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {budgets.map(b => (

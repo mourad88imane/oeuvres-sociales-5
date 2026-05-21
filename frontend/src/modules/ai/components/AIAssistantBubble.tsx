@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Bot, X, Send, Loader2 } from "lucide-react";
 import { useAskAssistant } from "../api";
 import type { AssistantResponse } from "../types";
 
 export function AIAssistantBubble() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
@@ -23,10 +25,11 @@ export function AIAssistantBubble() {
     setMessages(prev => [...prev, { role: "user", text: q }]);
     mutate(q, {
       onSuccess: (res: AssistantResponse) => {
-        setMessages(prev => [...prev, { role: "assistant", text: res.response }]);
+        const reply = typeof res.response === "string" ? res.response : res.response?.text || JSON.stringify(res.response);
+        setMessages(prev => [...prev, { role: "assistant", text: reply }]);
       },
       onError: () => {
-        setMessages(prev => [...prev, { role: "assistant", text: "Désolé, je n'ai pas pu traiter votre demande. Veuillez réessayer." }]);
+        setMessages(prev => [...prev, { role: "assistant", text: t("ai.errorRetry") }]);
       },
     });
   };
@@ -37,7 +40,7 @@ export function AIAssistantBubble() {
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-brand text-white shadow-lg hover:bg-brand-dark transition-colors flex items-center justify-center"
-          title="Assistant IA"
+          title={t("ai.assistant")}
         >
           <Bot className="w-6 h-6" />
         </button>
@@ -49,7 +52,7 @@ export function AIAssistantBubble() {
           <div className="flex items-center justify-between px-4 py-3 bg-brand text-white">
             <div className="flex items-center gap-2">
               <Bot className="w-5 h-5" />
-              <span className="text-sm font-semibold">Assistant IA</span>
+              <span className="text-sm font-semibold">{t("ai.assistant")}</span>
             </div>
             <button onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-white/20">
               <X className="w-4 h-4" />
@@ -60,7 +63,7 @@ export function AIAssistantBubble() {
           <div ref={listRef} className="flex-1 p-4 space-y-3 max-h-80 overflow-y-auto bg-gray-50">
             {messages.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-8">
-                Posez une question sur les KPI, le budget, les anomalies...
+                {t("ai.askQuestion")}
               </p>
             )}
             {messages.map((m, i) => (
@@ -78,7 +81,7 @@ export function AIAssistantBubble() {
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-200 rounded-xl rounded-bl-sm px-3 py-2 text-sm text-gray-400 flex items-center gap-2">
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  Réflexion...
+                  {t("ai.thinking")}
                 </div>
               </div>
             )}
@@ -90,7 +93,7 @@ export function AIAssistantBubble() {
               value={query}
               onChange={e => setQuery(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSend()}
-              placeholder="Votre question..."
+              placeholder={t("ai.inputPlaceholder")}
               className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             <button

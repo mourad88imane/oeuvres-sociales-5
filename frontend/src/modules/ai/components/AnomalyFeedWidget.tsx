@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, CheckCircle2, Eye } from "lucide-react";
 import { useUnresolvedAnomalies, useResolveAnomaly } from "../api";
 
@@ -16,6 +17,7 @@ const SEVERITY_BADGE: Record<string, string> = {
 };
 
 export function AnomalyFeedWidget() {
+  const { t } = useTranslation();
   const { data: anomalies, isLoading } = useUnresolvedAnomalies();
   const { mutate: resolve } = useResolveAnomaly();
 
@@ -27,7 +29,7 @@ export function AnomalyFeedWidget() {
       <div className="flex items-center gap-2 mb-4">
         <AlertTriangle className="w-5 h-5 text-red-500" />
         <h2 className="text-base font-semibold text-gray-800">
-          Anomalies détectées
+          {t("ai.anomalies.title")}
         </h2>
         {anomalies.length > 0 && (
           <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
@@ -60,14 +62,14 @@ export function AnomalyFeedWidget() {
                 <button
                   onClick={() => resolve({ id: a.id, status: "investigating" })}
                   className="p-1 rounded hover:bg-gray-200 transition-colors"
-                  title="En investigation"
+                  title={t("ai.anomalies.investigating")}
                 >
                   <Eye className="w-3.5 h-3.5 text-gray-500" />
                 </button>
                 <button
-                  onClick={() => resolve({ id: a.id, status: "resolved", note: "Résolu depuis le tableau de bord" })}
+                  onClick={() => resolve({ id: a.id, status: "resolved", note: t("ai.anomalies.resolvedFromDashboard") })}
                   className="p-1 rounded hover:bg-gray-200 transition-colors"
-                  title="Résoudre"
+                  title={t("ai.anomalies.resolve")}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
                 </button>

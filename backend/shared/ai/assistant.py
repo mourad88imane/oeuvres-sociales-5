@@ -18,6 +18,7 @@ from datetime import timedelta
 
 from django.db.models import Count, Sum
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 logger = logging.getLogger("shared.ai.assistant")
 
@@ -123,18 +124,20 @@ class AIAssistant:
         return handler(entities, user)
 
     def _greeting(self, entities: dict, user=None) -> dict:
-        name = user.get_full_name() if user and hasattr(user, "get_full_name") else "Utilisateur"
+        name = user.get_full_name() if user and hasattr(user, "get_full_name") else _("Utilisateur")
         return {
-            "text": f"Bonjour {name} ! Je suis l'assistant IA des Œuvres Sociales. "
-            "Je peux vous aider avec le tableau de bord, les KPI, le budget, "
-            "les prestations, les conventions, et plus encore. Tapez « aide » "
-            "pour voir ce que je sais faire.",
+            "text": _(
+                f"Bonjour {name} ! Je suis l'assistant IA des Œuvres Sociales. "
+                "Je peux vous aider avec le tableau de bord, les KPI, le budget, "
+                "les prestations, les conventions, et plus encore. Tapez « aide » "
+                "pour voir ce que je sais faire."
+            ),
             "type": "text",
             "suggestions": [
-                "Récapitulatif du tableau de bord",
-                "État du budget",
-                "Prestations en attente",
-                "Conventions arrivant à expiration",
+                _("Récapitulatif du tableau de bord"),
+                _("État du budget"),
+                _("Prestations en attente"),
+                _("Conventions arrivant à expiration"),
             ],
         }
 
@@ -146,7 +149,7 @@ class AIAssistant:
             Benefit = apps.get_model("benefits", "Benefit")
             Convention = apps.get_model("conventions", "Convention")
         except LookupError:
-            return {"text": "Je n'arrive pas à accéder aux données.", "type": "text"}
+            return {"text": _("Je n'arrive pas à accéder aux données."), "type": "text"}
 
         today = timezone.localdate()
         employees = Employee.objects.alive().count()
@@ -160,7 +163,7 @@ class AIAssistant:
         )
 
         return {
-            "text": (
+            "text": _(
                 f"📊 **Récapitulatif**\n\n"
                 f"• {employees} employés actifs\n"
                 f"• {pending} prestations en attente\n"
@@ -177,7 +180,7 @@ class AIAssistant:
 
     def _kpi_query(self, entities: dict, user=None) -> dict:
         return {
-            "text": "Je peux vous montrer les indicateurs KPI. Pour le moment, consultez l'onglet Analytics.",
+            "text": _("Je peux vous montrer les indicateurs KPI. Pour le moment, consultez l'onglet Analytics."),
             "type": "text",
         }
 
@@ -188,7 +191,7 @@ class AIAssistant:
             Budget = apps.get_model("finance", "Budget")
             Payment = apps.get_model("finance", "Payment")
         except LookupError:
-            return {"text": "Module finance non disponible.", "type": "text"}
+            return {"text": _("Module finance non disponible."), "type": "text"}
 
         year = timezone.localdate().year
         total = (
@@ -206,7 +209,7 @@ class AIAssistant:
         pct = (paid / total * 100) if total else 0
 
         return {
-            "text": (
+            "text": _(
                 f"💰 **Budget {year}**\n\n"
                 f"Budget total : {total:,.0f} DA\n"
                 f"Dépensé : {paid:,.0f} DA ({pct:.1f}%)\n"
@@ -223,7 +226,7 @@ class AIAssistant:
         try:
             Benefit = apps.get_model("benefits", "Benefit")
         except LookupError:
-            return {"text": "Module prestations non disponible.", "type": "text"}
+            return {"text": _("Module prestations non disponible."), "type": "text"}
 
         total = Benefit.objects.alive().count()
         pending = (
@@ -237,7 +240,7 @@ class AIAssistant:
         )
 
         return {
-            "text": (
+            "text": _(
                 f"📋 **Prestations**\n\n"
                 f"Total : {total}\n"
                 f"En attente : {pending}\n\n"
@@ -254,7 +257,7 @@ class AIAssistant:
         try:
             Convention = apps.get_model("conventions", "Convention")
         except LookupError:
-            return {"text": "Module conventions non disponible.", "type": "text"}
+            return {"text": _("Module conventions non disponible."), "type": "text"}
 
         today = timezone.localdate()
         expiring = Convention.objects.alive().filter(
@@ -264,13 +267,13 @@ class AIAssistant:
         count = expiring.count()
         if count == 0:
             return {
-                "text": "✅ Aucune convention n'arrive à expiration dans les 30 prochains jours.",
+                "text": _("✅ Aucune convention n'arrive à expiration dans les 30 prochains jours."),
                 "type": "text",
             }
 
         details = "\n".join(f"  • {c} — expire le {c.end_date}" for c in expiring[:5])
         return {
-            "text": f"⚠️ **{count} convention(s) expirent dans 30 jours**\n\n{details}",
+            "text": _(f"⚠️ **{count} convention(s) expirent dans 30 jours**\n\n{details}"),
             "type": "rich",
         }
 
@@ -279,11 +282,11 @@ class AIAssistant:
 
         recent = AIAnomaly.objects.filter(status="new").order_by("-severity", "-created_at")[:5]
         if not recent.exists():
-            return {"text": "✅ Aucune anomalie détectée récemment.", "type": "text"}
+            return {"text": _("✅ Aucune anomalie détectée récemment."), "type": "text"}
         details = "\n".join(
             f"  • [{a.get_severity_display()}] {a.explanation or a.metric_name}" for a in recent
         )
-        return {"text": f"🔍 **{recent.count()} anomalies en cours**\n\n{details}", "type": "rich"}
+        return {"text": _(f"🔍 **{recent.count()} anomalies en cours**\n\n{details}"), "type": "rich"}
 
     def _recommendations(self, entities: dict, user=None) -> dict:
         from .models import AIRecommendation
@@ -292,9 +295,9 @@ class AIAssistant:
             "priority", "-created_at"
         )[:5]
         if not recs.exists():
-            return {"text": "Aucune recommandation active pour le moment.", "type": "text"}
+            return {"text": _("Aucune recommandation active pour le moment."), "type": "text"}
         details = "\n".join(f"  • [{r.get_priority_display()}] {r.title}" for r in recs)
-        return {"text": f"💡 **Recommandations**\n\n{details}", "type": "rich"}
+        return {"text": _(f"💡 **Recommandations**\n\n{details}"), "type": "rich"}
 
     def _employee_count(self, entities: dict, user=None) -> dict:
         from django.apps import apps
@@ -302,7 +305,7 @@ class AIAssistant:
         try:
             Employee = apps.get_model("employees", "Employee")
         except LookupError:
-            return {"text": "Module employés non disponible.", "type": "text"}
+            return {"text": _("Module employés non disponible."), "type": "text"}
         total = Employee.objects.alive().count()
         active = Employee.objects.alive().filter(status="active").count()
         by_dept = list(
@@ -312,13 +315,13 @@ class AIAssistant:
             .order_by("-count")[:5]
         )
         return {
-            "text": (
+            "text": _(
                 f"👥 **Effectifs**\n\n"
                 f"Total : {total}\n"
                 f"Actifs : {active}\n\n"
                 f"Top départements :\n"
                 + "\n".join(
-                    f"  • {d['department__name'] or 'Sans département'}: {d['count']}"
+                    f"  • {d['department__name'] or _('Sans département')}: {d['count']}"
                     for d in by_dept
                 )
             ),
@@ -327,7 +330,7 @@ class AIAssistant:
 
     def _forecast(self, entities: dict, user=None) -> dict:
         return {
-            "text": (
+            "text": _(
                 "📈 **Prévisions disponibles**\n\n"
                 "• Tendance des prestations (3 mois)\n"
                 "• Consommation budgétaire (fin d'année)\n"
@@ -339,7 +342,7 @@ class AIAssistant:
 
     def _user_help(self, entities: dict, user=None) -> dict:
         return {
-            "text": (
+            "text": _(
                 "🤖 **Commandes disponibles**\n\n"
                 "• « Récapitulatif » — Vue d'ensemble\n"
                 "• « Budget/Finances » — État budgétaire\n"
@@ -356,7 +359,7 @@ class AIAssistant:
 
     def _unknown(self, entities: dict, user=None) -> dict:
         return {
-            "text": (
+            "text": _(
                 "Je n'ai pas compris votre demande. "
                 "Essayez des mots-clés comme : budget, prestations, conventions, "
                 "employés, récapitulatif, anomalies, ou tapez « aide »."

@@ -50,10 +50,15 @@ export interface AIScore {
 }
 
 export interface AssistantResponse {
+  query: string;
   intent: string;
-  response: string;
-  suggestions?: string[];
-  data?: Record<string, unknown>;
+  entities: Record<string, unknown>;
+  response: {
+    text: string;
+    type: string;
+    data?: Record<string, unknown>;
+    suggestions?: string[];
+  };
 }
 
 export interface AssistantQuery {

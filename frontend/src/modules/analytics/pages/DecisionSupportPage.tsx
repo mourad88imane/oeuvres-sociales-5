@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import {
   Lightbulb, TrendingUp, Building2, Gift, Wallet, Users,
@@ -32,13 +33,14 @@ const DOMAIN_ICONS: Record<string, React.ElementType> = {
   global: TrendingUp,
 };
 
-const PRIORITY_COLORS: Record<string, { label: string; variant: "error" | "warning" | "info" | "default" }> = {
-  high:   { label: "Prioritaire", variant: "error" },
-  medium: { label: "Important",   variant: "warning" },
-  low:    { label: "Information",  variant: "info" },
+const PRIORITY_COLORS: Record<string, { labelKey: string; variant: "error" | "warning" | "info" | "default" }> = {
+  high:   { labelKey: "ai.decisions.priorityHigh", variant: "error" },
+  medium: { labelKey: "ai.decisions.priorityMedium",   variant: "warning" },
+  low:    { labelKey: "ai.decisions.priorityLow",  variant: "info" },
 };
 
 export function DecisionSupportPage() {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useQuery<DecisionResponse>({
@@ -57,17 +59,17 @@ export function DecisionSupportPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Aide à la décision</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("ai.decisions.title")}</h1>
           <p className="text-gray-500 text-sm">
             {data?.data?.total_recommendations
-              ? `${data.data.total_recommendations} recommandation${data.data.total_recommendations > 1 ? "s" : ""} · ${data.data.generated_at}`
-              : "Analyses et recommandations intelligentes"}
+              ? `${data.data.total_recommendations} ${t("ai.decisions.totalRecommendations")} · ${t("ai.decisions.generatedAt")} ${data.data.generated_at}`
+              : t("ai.decisions.smartAnalysis")}
           </p>
         </div>
         <button onClick={() => refetch()}
           className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
           <RefreshCw className={`w-4 h-4 ${isFetching ? "animate-spin" : ""}`} />
-          Actualiser
+          {t("common.refresh")}
         </button>
       </div>
 
@@ -76,28 +78,28 @@ export function DecisionSupportPage() {
         <div className="flex items-center gap-3 mb-2">
           <Lightbulb className="w-8 h-8 text-yellow-300" />
           <div>
-            <h2 className="text-lg font-bold">Tableau de bord décisionnel</h2>
+            <h2 className="text-lg font-bold">{t("ai.decisions.dashboard")}</h2>
             <p className="text-blue-200 text-sm">
-              Recommandations générées par analyse des données en temps réel
+              {t("ai.decisions.realtimeAnalysis")}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div className="text-center">
             <p className="text-2xl font-bold">{recommendations.length}</p>
-            <p className="text-xs text-blue-200">Recommandations</p>
+            <p className="text-xs text-blue-200">{t("ai.recommendations.title")}</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold">
               {recommendations.filter(r => r.priority === "high").length}
             </p>
-            <p className="text-xs text-red-300">Prioritaires</p>
+            <p className="text-xs text-red-300">{t("ai.decisions.priority")}</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold">
               {[...new Set(recommendations.map(r => r.domain))].length}
             </p>
-            <p className="text-xs text-blue-200">Domaines</p>
+            <p className="text-xs text-blue-200">{t("ai.decisions.domains")}</p>
           </div>
         </div>
       </div>
@@ -106,7 +108,7 @@ export function DecisionSupportPage() {
       {recommendations.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
           <Lightbulb className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Aucune recommandation pour le moment</p>
+          <p>{t("ai.decisions.noRecommendations")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -137,7 +139,7 @@ export function DecisionSupportPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-gray-900 text-sm">{rec.title}</span>
-                      <Badge variant={priority.variant}>{priority.label}</Badge>
+                      <Badge variant={priority.variant}>{t(priority.labelKey)}</Badge>
                     </div>
                     {isExpanded && (
                       <p className="text-sm text-gray-600 mt-2 leading-relaxed">{rec.detail}</p>

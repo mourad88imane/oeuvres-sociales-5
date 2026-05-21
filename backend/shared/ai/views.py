@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from .anomaly import AnomalyDetector
 from .assistant import AIAssistant
@@ -91,10 +92,6 @@ class AIAnomalyViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["get"])
     def unresolved(self, request):
         qs = self.get_queryset().filter(status__in=["new", "confirmed", "investigating"])
-        page = self.paginate_queryset(qs)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(qs, many=True)
         return Response({"status": "success", "data": serializer.data})
 
@@ -135,10 +132,6 @@ class AIRecommendationViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["get"])
     def active(self, request):
         qs = self.get_queryset().filter(feedback="pending")
-        page = self.paginate_queryset(qs)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
         serializer = self.get_serializer(qs, many=True)
         return Response({"status": "success", "data": serializer.data})
 
@@ -205,7 +198,7 @@ class AIServiceViewSet(viewsets.GenericViewSet):
     def score_benefit(self, request):
         benefit_id = request.data.get("benefit_id")
         if not benefit_id:
-            return Response({"status": "error", "message": "benefit_id requis"}, status=400)
+            return Response({"status": "error", "message": _("benefit_id requis")}, status=400)
         result = scoring_engine.score_benefit(benefit_id, save=True)
         return Response({"status": "success", "data": result})
 

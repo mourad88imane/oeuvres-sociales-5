@@ -162,8 +162,8 @@ export function AnalyticsDashboardPage() {
                 <XAxis dataKey="monthLabel" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} />
                 <Tooltip content={<ChartTooltip formatter={(v) => fmtDZD(v)} />} />
-                <Area yAxisId="left" type="monotone" dataKey="payments_amount" stroke="#10B981" fill="url(#paymentsGrad)" strokeWidth={2} name="Paiements" />
-                <Area yAxisId="left" type="monotone" dataKey="benefits_amount" stroke="#1A3C6E" fill="url(#benefitsGrad)" strokeWidth={2} name="Prestations" />
+                <Area type="monotone" dataKey="payments_amount" stroke="#10B981" fill="url(#paymentsGrad)" strokeWidth={2} name="Paiements" />
+                <Area type="monotone" dataKey="benefits_amount" stroke="#1A3C6E" fill="url(#benefitsGrad)" strokeWidth={2} name="Prestations" />
               </AreaChart>
             </ResponsiveContainer>
           )}

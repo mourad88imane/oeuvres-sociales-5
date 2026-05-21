@@ -1,18 +1,20 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Bot, Send, Loader2, Sparkles } from "lucide-react";
 import { useAskAssistant } from "../api";
 import type { AssistantResponse } from "../types";
 
-const SUGGESTIONS = [
-  "Quel est le budget actuel ?",
-  "Y a-t-il des anomalies ?",
-  "Quelles sont les recommandations en cours ?",
-  "Quel est le nombre d'employés ?",
-  "Combien de prestations en attente ?",
-];
-
 export function AIAssistantPage() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
+
+  const SUGGESTIONS = [
+    t("ai.suggestions.budget"),
+    t("ai.suggestions.anomalies"),
+    t("ai.suggestions.recommendations"),
+    t("ai.suggestions.employees"),
+    t("ai.suggestions.pending"),
+  ];
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   const { mutate, isPending } = useAskAssistant();
   const listRef = useRef<HTMLDivElement>(null);
@@ -30,10 +32,11 @@ export function AIAssistantPage() {
     setMessages(prev => [...prev, { role: "user", text }]);
     mutate(text, {
       onSuccess: (res: AssistantResponse) => {
-        setMessages(prev => [...prev, { role: "assistant", text: res.response }]);
+        const reply = typeof res.response === "string" ? res.response : res.response?.text || JSON.stringify(res.response);
+        setMessages(prev => [...prev, { role: "assistant", text: reply }]);
       },
       onError: () => {
-        setMessages(prev => [...prev, { role: "assistant", text: "Désolé, je n'ai pas pu traiter votre demande." }]);
+        setMessages(prev => [...prev, { role: "assistant", text: t("ai.error") }]);
       },
     });
   };
@@ -47,8 +50,8 @@ export function AIAssistantPage() {
             <Bot className="w-6 h-6 text-brand" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Assistant IA</h1>
-            <p className="text-sm text-gray-500">Posez une question sur la plateforme</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t("ai.assistant")}</h1>
+            <p className="text-sm text-gray-500">{t("ai.askQuestion")}</p>
           </div>
         </div>
       </div>
@@ -59,7 +62,7 @@ export function AIAssistantPage() {
           {messages.length === 0 && (
             <div className="text-center py-8">
               <Sparkles className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-sm text-gray-400 mb-4">Suggestions de questions :</p>
+              <p className="text-sm text-gray-400 mb-4">{t("ai.suggestions.title")}</p>
               <div className="flex flex-wrap gap-2 justify-center">
                 {SUGGESTIONS.map(s => (
                   <button
@@ -88,7 +91,7 @@ export function AIAssistantPage() {
             <div className="flex justify-start">
               <div className="bg-white border border-gray-200 rounded-xl rounded-bl-sm px-4 py-2.5 text-sm text-gray-400 flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Réflexion...
+                {t("ai.thinking")}
               </div>
             </div>
           )}
@@ -99,7 +102,7 @@ export function AIAssistantPage() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleSend()}
-            placeholder="Posez votre question..."
+            placeholder={t("ai.inputPlaceholder")}
             className="flex-1 text-sm border border-gray-200 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
           <button
@@ -108,7 +111,7 @@ export function AIAssistantPage() {
             className="px-4 py-2.5 rounded-lg bg-brand text-white hover:bg-brand-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             <Send className="w-4 h-4" />
-            <span className="hidden sm:inline">Envoyer</span>
+            <span className="hidden sm:inline">{t("ai.send")}</span>
           </button>
         </div>
       </div>

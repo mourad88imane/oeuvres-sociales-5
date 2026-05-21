@@ -5,6 +5,7 @@ import {
   Clock, FileText, AlertTriangle, Upload, Download,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { useTranslation } from "react-i18next";
 import { useConvention, useConventionDocuments, useConventionAlerts } from "../api/index";
 import { conventionsApi } from "../api/index";
 import {
@@ -14,6 +15,7 @@ import { Spinner, Modal, Field, inputCls } from "@shared/components/ui/index";
 import { fmtDZD, fmtDate } from "../utils/formatters";
 
 export function ConventionDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
@@ -53,7 +55,7 @@ export function ConventionDetailPage() {
   if (!conv) return (
     <div className="text-center py-16 text-gray-400">
       <Building2 className="w-12 h-12 mx-auto mb-3 opacity-30" />
-      <p>Convention introuvable</p>
+      <p>{t("conventions.conventionNotFound")}</p>
     </div>
   );
 
@@ -65,7 +67,7 @@ export function ConventionDetailPage() {
       {/* Back */}
       <button onClick={() => navigate("/conventions")}
         className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700">
-        <ArrowLeft className="w-4 h-4" />Retour aux conventions
+        <ArrowLeft className="w-4 h-4" />{t("conventions.backToConventions")}
       </button>
 
       {/* Header */}
@@ -79,7 +81,7 @@ export function ConventionDetailPage() {
               <ConventionStatusBadge status={conv.status} />
               {isExpiring && (
                 <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                  <Clock className="w-3 h-3" />{conv.days_until_expiry} jours restants
+                  <Clock className="w-3 h-3" />{t("conventions.expiresIn", { count: conv.days_until_expiry })}
                 </span>
               )}
             </div>
@@ -103,7 +105,7 @@ export function ConventionDetailPage() {
           </span>
           {conv.requires_attachments && (
             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-              Pièces jointes obligatoires
+              {t("conventions.mandatoryAttachments")}
             </span>
           )}
         </div>
@@ -114,38 +116,38 @@ export function ConventionDetailPage() {
         <div className="card p-4">
           <div className="flex items-center gap-2 text-gray-500 mb-3">
             <Calendar className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wide">Dates</span>
+            <span className="text-xs font-semibold uppercase tracking-wide">{t("conventions.dates")}</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Date d'effet</span>
+              <span className="text-gray-500">{t("conventions.startDate")}</span>
               <span className="font-medium">{fmtDate(conv.start_date)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Échéance</span>
+              <span className="text-gray-500">{t("conventions.endDate")}</span>
               <span className={clsx("font-medium", isExpired ? "text-red-600" : isExpiring ? "text-amber-600" : "")}>
                 {fmtDate(conv.end_date)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Durée</span>
+              <span className="text-gray-500">{t("conventions.duration")}</span>
               <span className="font-medium">{conv.duration_display}</span>
             </div>
             {conv.signed_date && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Signée le</span>
+                <span className="text-gray-500">{t("conventions.signedOn")}</span>
                 <span className="font-medium">{fmtDate(conv.signed_date)}</span>
               </div>
             )}
             {conv.terminated_date && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Résiliée le</span>
+                <span className="text-gray-500">{t("conventions.terminatedOn")}</span>
                 <span className="font-medium text-red-600">{fmtDate(conv.terminated_date)}</span>
               </div>
             )}
             {conv.renewed_at && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Dernier renouvellement</span>
+                <span className="text-gray-500">{t("conventions.lastRenewal")}</span>
                 <span className="font-medium">{fmtDate(conv.renewed_at)}</span>
               </div>
             )}
@@ -155,24 +157,24 @@ export function ConventionDetailPage() {
         <div className="card p-4">
           <div className="flex items-center gap-2 text-gray-500 mb-3">
             <DollarSign className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wide">Financier</span>
+            <span className="text-xs font-semibold uppercase tracking-wide">{t("conventions.financial")}</span>
           </div>
           {conv.amount != null ? (
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-500">Montant</span>
+                <span className="text-gray-500">{t("conventions.amount")}</span>
                 <span className="font-bold text-lg">{fmtDZD(conv.amount)}</span>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-400">Aucun montant renseigné</p>
+            <p className="text-sm text-gray-400">{t("conventions.noAmount")}</p>
           )}
         </div>
 
         <div className="card p-4">
           <div className="flex items-center gap-2 text-gray-500 mb-3">
             <AlertTriangle className="w-4 h-4" />
-            <span className="text-xs font-semibold uppercase tracking-wide">Statut</span>
+            <span className="text-xs font-semibold uppercase tracking-wide">{t("conventions.status")}</span>
           </div>
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -180,11 +182,11 @@ export function ConventionDetailPage() {
             </div>
             {isExpiring && (
               <p className="text-xs text-amber-600">
-                Expire dans {conv.days_until_expiry} jour(s)
+                {t("conventions.expiresIn", { count: conv.days_until_expiry })}
               </p>
             )}
             {conv.ai_metadata && Object.keys(conv.ai_metadata).length > 0 && (
-              <p className="text-xs text-gray-400">Données IA disponibles</p>
+              <p className="text-xs text-gray-400">{t("conventions.aiDataAvailable")}</p>
             )}
           </div>
         </div>
@@ -194,15 +196,15 @@ export function ConventionDetailPage() {
       <div className="card p-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-700">
-            Documents ({documents.length})
+            {t("conventions.documents", { count: documents.length })}
           </h2>
           <button onClick={() => setShowUpload(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-brand text-white text-xs rounded-lg hover:bg-blue-700">
-            <Upload className="w-3.5 h-3.5" />Ajouter
+            <Upload className="w-3.5 h-3.5" />{t("conventions.addDocument")}
           </button>
         </div>
         {documents.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">Aucun document</p>
+          <p className="text-sm text-gray-400 text-center py-4">{t("conventions.noDocument")}</p>
         ) : (
           <div className="space-y-2">
             {documents.map(doc => (
@@ -220,7 +222,7 @@ export function ConventionDetailPage() {
                 {doc.file_url && (
                   <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 rounded-lg text-xs text-gray-600 hover:bg-gray-100">
-                    <Download className="w-3 h-3" />Télécharger
+                    <Download className="w-3 h-3" />{t("conventions.download")}
                   </a>
                 )}
               </div>
@@ -233,7 +235,7 @@ export function ConventionDetailPage() {
       {alerts.length > 0 && (
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-700">Alertes ({alerts.length})</h2>
+            <h2 className="text-sm font-semibold text-gray-700">{t("conventions.alerts")} ({alerts.length})</h2>
           </div>
           <ConventionAlertPanel alerts={alerts} maxItems={10} />
         </div>
@@ -241,33 +243,33 @@ export function ConventionDetailPage() {
 
       {/* Upload Modal */}
       <Modal open={showUpload} onClose={() => setShowUpload(false)}
-        title="Ajouter un document" size="sm"
+        title={t("conventions.uploadDocument")} size="sm"
         footer={
           <>
             <button onClick={() => setShowUpload(false)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">{t("conventions.cancel")}</button>
             <button type="submit" form="upload-form" disabled={uploading}
               className="flex items-center gap-2 px-4 py-2 bg-brand text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-60">
-              {uploading && <Spinner size="sm" />}Uploader
+              {uploading && <Spinner size="sm" />}{t("conventions.addDocument")}
             </button>
           </>
         }>
         <form id="upload-form" onSubmit={handleUpload} className="space-y-4">
-          <Field label="Type de document" required>
+          <Field label={t("conventions.documentType")} required>
             <select name="doc_type" className={inputCls()}>
-              <option value="contract">Contrat signé</option>
-              <option value="addendum">Avenant</option>
-              <option value="annex">Annexe</option>
-              <option value="proof">Justificatif</option>
-              <option value="report">Rapport</option>
-              <option value="other">Autre</option>
+              <option value="contract">{t("conventions.signedContract")}</option>
+              <option value="addendum">{t("conventions.addendum")}</option>
+              <option value="annex">{t("conventions.annex")}</option>
+              <option value="proof">{t("conventions.proof")}</option>
+              <option value="report">{t("conventions.report")}</option>
+              <option value="other">{t("conventions.other")}</option>
             </select>
           </Field>
-          <Field label="Fichier" required>
+          <Field label={t("conventions.file")} required>
             <input type="file" className={inputCls()} required accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg" />
           </Field>
-          <Field label="Description">
-            <textarea name="description" rows={2} className={inputCls()} placeholder="Description optionnelle..." />
+          <Field label={t("conventions.description")}>
+            <textarea name="description" rows={2} className={inputCls()} placeholder={t("conventions.optionalDescription")} />
           </Field>
         </form>
       </Modal>

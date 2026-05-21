@@ -5,6 +5,7 @@ import {
   Clock, Building2, RefreshCw, Search,
   ChevronLeft, ChevronRight, Plus,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   useConventionDashboard, useConventions, useConventionAlerts,
 } from "../api/index";
@@ -14,6 +15,7 @@ import { RoleGuard } from "@shared/components/layout/ProtectedRoute";
 import type { ConventionFilters } from "../types";
 
 export function ConventionsDashboardPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<ConventionFilters>({ page: 1, page_size: 12, ordering: "-created_at" });
   const [search, setSearch] = useState("");
@@ -41,8 +43,8 @@ export function ConventionsDashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Conventions</h1>
-          <p className="text-gray-500 text-sm">{dashboard?.total ?? "—"} convention(s)</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("conventions.title")}</h1>
+          <p className="text-gray-500 text-sm">{t("conventions.conventionsCount", { count: dashboard?.total ?? 0 })}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => refetch()}
@@ -52,7 +54,7 @@ export function ConventionsDashboardPage() {
           <RoleGuard roles={["admin","gestionnaire"]}>
             <button onClick={() => navigate("/conventions/new")}
               className="flex items-center gap-2 px-3 py-2 bg-brand text-white text-sm rounded-lg hover:bg-blue-800">
-              <Plus className="w-4 h-4" />Nouvelle convention
+              <Plus className="w-4 h-4" />{t("conventions.newConvention")}
             </button>
           </RoleGuard>
         </div>
@@ -62,29 +64,29 @@ export function ConventionsDashboardPage() {
       {dashboard && (
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
           <ConventionKpiCard
-            label="Total" value={String(dashboard.total)}
+            label={t("common.all")} value={String(dashboard.total)}
             icon={FileText} iconBg="bg-gray-100" iconColor="text-gray-600"
           />
           <ConventionKpiCard
-            label="Actives" value={String(dashboard.active)}
+            label={t("conventions.active")} value={String(dashboard.active)}
             icon={CheckCircle2} iconBg="bg-green-100" iconColor="text-green-600"
           />
           <ConventionKpiCard
-            label="Expiration proche" value={String(dashboard.expiring_soon)}
+            label={t("conventions.expiringSoon")} value={String(dashboard.expiring_soon)}
             icon={Clock} iconBg="bg-amber-100" iconColor="text-amber-600"
             alert={dashboard.expiring_soon > 0}
           />
           <ConventionKpiCard
-            label="Expirées" value={String(dashboard.expired)}
+            label={t("conventions.expired")} value={String(dashboard.expired)}
             icon={AlertTriangle} iconBg="bg-red-100" iconColor="text-red-600"
             alert={dashboard.expired > 0}
           />
           <ConventionKpiCard
-            label="Brouillons" value={String(dashboard.draft)}
+            label={t("conventions.draft")} value={String(dashboard.draft)}
             icon={FileText} iconBg="bg-gray-100" iconColor="text-gray-500"
           />
           <ConventionKpiCard
-            label="Résiliées" value={String(dashboard.terminated)}
+            label={t("conventions.terminated")} value={String(dashboard.terminated)}
             icon={BarChart3} iconBg="bg-gray-100" iconColor="text-gray-400"
           />
         </div>
@@ -95,25 +97,25 @@ export function ConventionsDashboardPage() {
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder="Référence, titre, partenaire..."
+            <input type="text" placeholder={t("conventions.searchConventions")}
               value={search} onChange={e => setSearch(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleSearch()}
               className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           <select value={filters.status ?? ""} onChange={e => upd("status", e.target.value)}
             className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none">
-            <option value="">Tous les statuts</option>
-            <option value="draft">Brouillon</option>
-            <option value="active">Active</option>
-            <option value="expiring_soon">Expiration proche</option>
-            <option value="expired">Expirée</option>
-            <option value="terminated">Résiliée</option>
+            <option value="">{t("conventions.allStatuses")}</option>
+            <option value="draft">{t("conventions.draft")}</option>
+            <option value="active">{t("conventions.active")}</option>
+            <option value="expiring_soon">{t("conventions.expiringSoon")}</option>
+            <option value="expired">{t("conventions.expired")}</option>
+            <option value="terminated">{t("conventions.terminated")}</option>
           </select>
           <select value={filters.ordering ?? "-start_date"} onChange={e => upd("ordering", e.target.value)}
             className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none">
-            <option value="-start_date">Plus récent</option>
-            <option value="end_date">Échéance ↑</option>
-            <option value="-end_date">Échéance ↓</option>
+            <option value="-start_date">{t("conventions.newest")}</option>
+            <option value="end_date">{t("conventions.deadlineAsc")}</option>
+            <option value="-end_date">{t("conventions.deadlineDesc")}</option>
           </select>
         </div>
         <div className="flex gap-3 mt-2">
@@ -121,13 +123,13 @@ export function ConventionsDashboardPage() {
             <input type="checkbox" checked={!!filters.expiring_soon}
               onChange={e => upd("expiring_soon", e.target.checked)}
               className="w-3.5 h-3.5 rounded accent-brand" />
-            Expiration proche
+            {t("conventions.expiringSoon")}
           </label>
           <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
             <input type="checkbox" checked={!!filters.expired}
               onChange={e => upd("expired", e.target.checked)}
               className="w-3.5 h-3.5 rounded accent-brand" />
-            Expirées
+            {t("conventions.expired")}
           </label>
         </div>
       </div>
@@ -139,8 +141,8 @@ export function ConventionsDashboardPage() {
           {isLoading ? (
             <div className="flex justify-center py-16"><Spinner size="lg" /></div>
           ) : conventions.length === 0 ? (
-            <EmptyState icon={Building2} title="Aucune convention"
-              description="Créez votre première convention avec le bouton +." />
+            <EmptyState icon={Building2} title={t("conventions.noConventions")}
+              description={t("conventions.noConventionsDescription")} />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {conventions.map(c => (
@@ -154,7 +156,7 @@ export function ConventionsDashboardPage() {
 
           {pagination && pagination.total_pages > 1 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500">{pagination.count} résultats</p>
+              <p className="text-xs text-gray-500">{t("conventions.results", { count: pagination.count })}</p>
               <div className="flex items-center gap-1">
                 <button onClick={() => upd("page", (filters.page ?? 1) - 1)} disabled={!pagination.previous}
                   className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-100">
@@ -177,7 +179,7 @@ export function ConventionsDashboardPage() {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-700">
-                Alertes
+                {t("conventions.alerts")}
                 {alerts.length > 0 && (
                   <span className="ml-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                     {alerts.length}

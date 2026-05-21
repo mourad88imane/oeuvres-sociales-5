@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from core.pagination import StandardResultsSetPagination
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from .models import Notification, NotificationPreference
 from .serializers import (
@@ -98,7 +99,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({"status": "success"})
         except Notification.DoesNotExist:
             return Response(
-                {"status": "error", "message": "Notification introuvable"},
+                {"status": "error", "message": _("Notification introuvable")},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

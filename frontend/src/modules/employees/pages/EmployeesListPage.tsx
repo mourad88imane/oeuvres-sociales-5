@@ -5,6 +5,7 @@
 import { useState, useCallback } from "react";
 import { Users, Plus, Search, Download, RefreshCw, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useEmployees, useCreateEmployee, useDeleteEmployee, useExportEmployees, useEmployeeStatistics } from "../hooks/useEmployees";
 import { EmployeeStatusBadge, Modal, ConfirmDialog, EmptyState, Spinner } from "@shared/components/ui/index";
 import { EmployeeForm } from "../components/EmployeeForm";
@@ -15,6 +16,7 @@ const PAGE_SIZES = [10, 25, 50, 100];
 
 export function EmployeesPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<EmployeeFilters>({ page: 1, page_size: 25, ordering: "-created_at" });
   const [showFilters, setShowFilters] = useState(false);
   const [showCreate,  setShowCreate]  = useState(false);
@@ -38,9 +40,9 @@ export function EmployeesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employés</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("employees.title")}</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {pagination ? `${pagination.count.toLocaleString("fr-DZ")} employé${pagination.count > 1 ? "s" : ""}` : "Chargement..."}
+            {pagination ? t("common.totalItems", { count: pagination.count }) : t("common.loading")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -50,13 +52,13 @@ export function EmployeesPage() {
           <RoleGuard roles={["admin","gestionnaire"]}>
             <button onClick={() => exportMutation.mutate(filters)} disabled={exportMutation.isPending}
               className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-              <Download className="w-4 h-4" />Export CSV
+              <Download className="w-4 h-4" />{t("common.export")} CSV
             </button>
           </RoleGuard>
           <RoleGuard roles={["admin","gestionnaire"]}>
             <button onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-light">
-              <Plus className="w-4 h-4" />Nouvel employé
+              <Plus className="w-4 h-4" />{t("employees.add")}
             </button>
           </RoleGuard>
         </div>
@@ -66,10 +68,10 @@ export function EmployeesPage() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label:"Actifs",           value: stats.active_count,                        color:"text-green-600"  },
-            { label:"Retraités",        value: stats.retired_count,                       color:"text-amber-600"  },
-            { label:"Nouveaux/an",      value: stats.new_this_year,                       color:"text-blue-600"   },
-            { label:"Ancienneté moy.",  value: `${stats.avg_seniority_years} ans`,        color:"text-purple-600" },
+            { label: t("employees.active"),      value: stats.active_count,                          color:"text-green-600"  },
+            { label: t("employees.retired"),     value: stats.retired_count,                         color:"text-amber-600"  },
+            { label: t("employees.newThisYear"), value: stats.new_this_year,                         color:"text-blue-600"   },
+            { label: t("employees.avgSeniority"), value: `${stats.avg_seniority_years} ${t("employees.seniority").toLowerCase()}`, color:"text-purple-600" },
           ].map(({ label, value, color }) => (
             <div key={label} className="card p-4 text-center">
               <p className={`text-2xl font-bold ${color}`}>{value}</p>
@@ -84,22 +86,22 @@ export function EmployeesPage() {
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder="Rechercher par nom, matricule, poste..."
+            <input type="text" placeholder={t("employees.searchPlaceholder")}
               value={filters.search ?? ""} onChange={(e) => updateFilter("search", e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           <button onClick={() => setShowFilters(!showFilters)}
             className={`flex items-center gap-2 px-3 py-2 border rounded-lg text-sm transition-colors ${showFilters ? "border-brand bg-blue-50 text-brand" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
-            <SlidersHorizontal className="w-4 h-4" />Filtres
+            <SlidersHorizontal className="w-4 h-4" />{t("common.filter")}
           </button>
         </div>
         {showFilters && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-100">
             {[
-              { key:"status",        label:"Statut",   opts:[["","Tous"],["active","Actif"],["inactive","Inactif"],["retired","Retraité"]] },
-              { key:"gender",        label:"Genre",    opts:[["","Tous"],["M","Masculin"],["F","Féminin"]] },
-              { key:"contract_type", label:"Contrat",  opts:[["","Tous"],["cdi","CDI"],["cdd","CDD"],["stage","Stagiaire"]] },
-              { key:"ordering",      label:"Tri",      opts:[["-created_at","Plus récent"],["last_name","Nom A→Z"],["-date_hired","Ancienneté ↓"]] },
+              { key:"status",        label:t("employees.status"),   opts:[["",t("common.all")],["active",t("employees.active")],["inactive",t("employees.inactive")],["retired",t("employees.retired")]] },
+              { key:"gender",        label:t("employees.gender"),    opts:[["",t("common.all")],["M",t("employees.male")],["F",t("employees.female")]] },
+              { key:"contract_type", label:t("employees.contractType"),  opts:[["",t("common.all")],["cdi",t("employees.cdi")],["cdd",t("employees.cdd")],["stage",t("employees.intern")]] },
+              { key:"ordering",      label:t("common.filter"),      opts:[["-created_at",t("employees.sortNewest")],["last_name",t("employees.sortNameAZ")],["-date_hired",t("employees.sortSeniority")]] },
             ].map(({ key, label, opts }) => (
               <div key={key}>
                 <label className="text-xs text-gray-500 mb-1 block">{label}</label>
@@ -118,13 +120,13 @@ export function EmployeesPage() {
         {isLoading ? (
           <div className="flex justify-center py-16"><Spinner size="lg" /></div>
         ) : employees.length === 0 ? (
-          <EmptyState icon={Users} title="Aucun employé trouvé" description="Modifiez vos critères de recherche." />
+          <EmptyState icon={Users} title={t("employees.noEmployees")} description={t("employees.emptySearchDescription")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  {["Employé","Poste / Grade","Département","Ancienneté","Statut","Ayants droit","Actions"].map((h, i) => (
+                  {[t("employees.employee"),`${t("employees.position")} / ${t("employees.grade")}`,t("employees.department"),t("employees.seniority"),t("employees.status"),t("beneficiaries.title"),t("common.actions")].map((h, i) => (
                     <th key={h} className={`text-left px-4 py-3 font-semibold text-gray-700 ${i > 1 && i < 5 ? "hidden lg:table-cell" : ""} ${i === 5 ? "hidden sm:table-cell" : ""} ${i === 6 ? "text-right" : ""}`}>
                       {h}
                     </th>
@@ -167,12 +169,12 @@ export function EmployeesPage() {
                     </td>
                     <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => navigate(`/employees/${emp.id}`)} className="px-2 py-1 text-xs text-brand hover:bg-blue-50 rounded">Voir</button>
+                        <button onClick={() => navigate(`/employees/${emp.id}`)} className="px-2 py-1 text-xs text-brand hover:bg-blue-50 rounded">{t("employees.view")}</button>
                         <RoleGuard roles={["admin","gestionnaire"]}>
-                          <button onClick={() => navigate(`/employees/${emp.id}/edit`)} className="px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded">Modifier</button>
+                          <button onClick={() => navigate(`/employees/${emp.id}/edit`)} className="px-2 py-1 text-xs text-gray-500 hover:bg-gray-100 rounded">{t("common.edit")}</button>
                         </RoleGuard>
                         <RoleGuard roles={["admin"]}>
-                          <button onClick={() => setDeleteTarget(emp.id)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-50 rounded">Suppr.</button>
+                          <button onClick={() => setDeleteTarget(emp.id)} className="px-2 py-1 text-xs text-red-400 hover:bg-red-50 rounded">{t("common.delete")}</button>
                         </RoleGuard>
                       </div>
                     </td>
@@ -186,10 +188,10 @@ export function EmployeesPage() {
         {pagination && pagination.total_pages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <span>{pagination.count} résultats</span>
+              <span>{t("common.totalItems", { count: pagination.count })}</span>
               <select value={filters.page_size ?? 25} onChange={(e) => updateFilter("page_size", Number(e.target.value))}
                 className="text-xs border border-gray-200 rounded px-2 py-1">
-                {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}/page</option>)}
+                {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}{t("employees.perPage")}</option>)}
               </select>
             </div>
             <div className="flex items-center gap-1">
@@ -204,15 +206,15 @@ export function EmployeesPage() {
       </div>
 
       {/* Modals */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Nouvel employé" size="xl">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t("employees.add")} size="xl">
         <EmployeeForm mode="create"
           onSubmit={async (payload) => { await createMutation.mutateAsync(payload); setShowCreate(false); }}
           onCancel={() => setShowCreate(false)} isLoading={createMutation.isPending} />
       </Modal>
       <ConfirmDialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}
         onConfirm={async () => { if (deleteTarget) { await deleteMutation.mutateAsync(deleteTarget); setDeleteTarget(null); }}}
-        title="Supprimer l'employé" message="L'employé sera désactivé et archivé. Continuer ?"
-        confirmLabel="Supprimer" loading={deleteMutation.isPending} />
+        title={t("employees.confirmDeleteTitle")} message={t("employees.confirmDeleteMessage")}
+        confirmLabel={t("common.delete")} loading={deleteMutation.isPending} />
     </div>
   );
 }

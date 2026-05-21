@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Lightbulb, ThumbsUp, ThumbsDown, CheckCircle, XCircle, ExternalLink } from "lucide-react";
 import { useActiveRecommendations, useRecommendationFeedback } from "../api";
 
@@ -16,6 +17,7 @@ const DOMAIN_ICONS: Record<string, string> = {
 };
 
 export function RecommendationsWidget() {
+  const { t } = useTranslation();
   const { data: recommendations, isLoading } = useActiveRecommendations();
   const { mutate: sendFeedback } = useRecommendationFeedback();
 
@@ -27,7 +29,7 @@ export function RecommendationsWidget() {
       <div className="flex items-center gap-2 mb-4">
         <Lightbulb className="w-5 h-5 text-amber-500" />
         <h2 className="text-base font-semibold text-gray-800">
-          Recommandations IA
+          {t("ai.recommendations.title")}
         </h2>
       </div>
       <div className="space-y-3">
@@ -62,7 +64,7 @@ export function RecommendationsWidget() {
                 className="inline-flex items-center gap-1 text-xs font-medium mt-2 hover:underline"
               >
                 <ExternalLink className="w-3 h-3" />
-                {rec.action_label || "Voir"}
+                {rec.action_label || t("common.view")}
               </a>
             )}
 
@@ -71,28 +73,28 @@ export function RecommendationsWidget() {
                 <button
                   onClick={() => sendFeedback({ id: rec.id, feedback: "helpful" })}
                   className="p-1 rounded hover:bg-black/10 transition-colors"
-                  title="Utile"
+                  title={t("ai.recommendations.helpful")}
                 >
                   <ThumbsUp className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => sendFeedback({ id: rec.id, feedback: "not_helpful" })}
                   className="p-1 rounded hover:bg-black/10 transition-colors"
-                  title="Pas utile"
+                  title={t("ai.recommendations.notHelpful")}
                 >
                   <ThumbsDown className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => sendFeedback({ id: rec.id, feedback: "applied" })}
                   className="p-1 rounded hover:bg-black/10 transition-colors"
-                  title="Appliquée"
+                  title={t("ai.recommendations.applied")}
                 >
                   <CheckCircle className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => sendFeedback({ id: rec.id, feedback: "dismissed" })}
                   className="p-1 rounded hover:bg-black/10 transition-colors"
-                  title="Ignorer"
+                  title={t("ai.recommendations.dismissed")}
                 >
                   <XCircle className="w-3.5 h-3.5" />
                 </button>

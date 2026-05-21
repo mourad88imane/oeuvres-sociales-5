@@ -1,10 +1,9 @@
-/**
- * PAGES D'ERREUR — 404 et 403
- */
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { Home, ArrowLeft, ShieldOff, SearchX } from "lucide-react";
 
 export function NotFoundPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
@@ -12,9 +11,9 @@ export function NotFoundPage() {
         <SearchX className="w-10 h-10 text-gray-400" />
       </div>
       <h1 className="text-5xl font-bold text-gray-800 mb-2">404</h1>
-      <h2 className="text-xl font-semibold text-gray-700 mb-3">Page introuvable</h2>
+      <h2 className="text-xl font-semibold text-gray-700 mb-3">{t("app.pageNotFound")}</h2>
       <p className="text-gray-500 mb-8 max-w-sm">
-        La page que vous cherchez n'existe pas ou a été déplacée.
+        {t("app.pageNotFoundDescription")}
       </p>
       <div className="flex gap-3">
         <button
@@ -23,7 +22,7 @@ export function NotFoundPage() {
             text-gray-700 hover:bg-gray-50 transition-colors text-sm"
         >
           <ArrowLeft className="w-4 h-4" />
-          Retour
+          {t("app.back")}
         </button>
         <button
           onClick={() => navigate("/dashboard")}
@@ -31,7 +30,7 @@ export function NotFoundPage() {
             hover:bg-brand-light transition-colors text-sm"
         >
           <Home className="w-4 h-4" />
-          Tableau de bord
+          {t("app.backToDashboard")}
         </button>
       </div>
     </div>
@@ -39,6 +38,7 @@ export function NotFoundPage() {
 }
 
 export function ForbiddenPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
@@ -46,10 +46,9 @@ export function ForbiddenPage() {
         <ShieldOff className="w-10 h-10 text-red-400" />
       </div>
       <h1 className="text-5xl font-bold text-gray-800 mb-2">403</h1>
-      <h2 className="text-xl font-semibold text-gray-700 mb-3">Accès refusé</h2>
+      <h2 className="text-xl font-semibold text-gray-700 mb-3">{t("app.forbidden")}</h2>
       <p className="text-gray-500 mb-8 max-w-sm">
-        Vous n'avez pas les permissions nécessaires pour accéder à cette page.
-        Contactez votre administrateur si vous pensez que c'est une erreur.
+        {t("app.forbiddenDescription")}
       </p>
       <button
         onClick={() => navigate("/dashboard")}
@@ -57,7 +56,7 @@ export function ForbiddenPage() {
           hover:bg-brand-light transition-colors text-sm"
       >
         <Home className="w-4 h-4" />
-        Retour au tableau de bord
+        {t("app.backToDashboard")}
       </button>
     </div>
   );

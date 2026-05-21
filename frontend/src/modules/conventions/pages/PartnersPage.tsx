@@ -4,6 +4,7 @@ import {
   Building2, Search, RefreshCw, Plus, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { useTranslation } from "react-i18next";
 import { usePartners } from "../api/index";
 import { EmptyState, Spinner, Modal, Field, inputCls } from "@shared/components/ui/index";
 import { RoleGuard } from "@shared/components/layout/ProtectedRoute";
@@ -11,6 +12,7 @@ import { PARTNER_TYPE_UI } from "../types";
 import { useCreatePartner } from "../api/index";
 
 export function PartnersPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -38,8 +40,8 @@ export function PartnersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Partenaires</h1>
-          <p className="text-gray-500 text-sm">{pagination?.count ?? "—"} partenaire(s)</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("conventions.partners")}</h1>
+          <p className="text-gray-500 text-sm">{t("conventions.partnersCount", { count: pagination?.count ?? 0 })}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => refetch()}
@@ -49,7 +51,7 @@ export function PartnersPage() {
           <RoleGuard roles={["admin","gestionnaire"]}>
             <button onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 px-3 py-2 bg-brand text-white text-sm rounded-lg hover:bg-blue-800">
-              <Plus className="w-4 h-4" />Nouveau partenaire
+              <Plus className="w-4 h-4" />{t("conventions.addPartner")}
             </button>
           </RoleGuard>
         </div>
@@ -59,13 +61,13 @@ export function PartnersPage() {
       <div className="card p-4 flex gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input type="text" placeholder="Code, nom, email, contact..."
+          <input type="text" placeholder={t("conventions.searchPartners")}
             value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
         </div>
         <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
           className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none">
-          <option value="">Tous les types</option>
+          <option value="">{t("conventions.allTypes")}</option>
           {Object.entries(PARTNER_TYPE_UI).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
@@ -77,14 +79,14 @@ export function PartnersPage() {
         {isLoading ? (
           <div className="flex justify-center py-16"><Spinner size="lg" /></div>
         ) : partners.length === 0 ? (
-          <EmptyState icon={Building2} title="Aucun partenaire"
-            description="Créez votre premier partenaire." />
+          <EmptyState icon={Building2} title={t("conventions.noPartners")}
+            description={t("conventions.noPartnersDescription")} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  {["Code", "Nom", "Type", "Ville", "Wilaya", "Contact", "Email", "Actif", ""].map(h => (
+                  {[t("conventions.code"), t("conventions.name"), t("conventions.type"), t("conventions.city"), t("conventions.wilaya"), t("conventions.contact"), t("conventions.email"), t("conventions.isActive"), ""].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-semibold text-gray-700">{h}</th>
                   ))}
                 </tr>
@@ -102,13 +104,13 @@ export function PartnersPage() {
                     <td className="px-4 py-3">
                       <span className={clsx("text-xs font-medium px-2 py-0.5 rounded-full",
                         p.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500")}>
-                        {p.is_active ? "Oui" : "Non"}
+                        {p.is_active ? t("conventions.yes") : t("conventions.no")}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => navigate(`/conventions?partner_id=${p.id}`)}
                         className="text-xs text-brand hover:underline">
-                        Voir conventions
+                        {t("conventions.seeConventions")}
                       </button>
                     </td>
                   </tr>
@@ -119,7 +121,7 @@ export function PartnersPage() {
         )}
         {pagination && pagination.total_pages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-            <p className="text-xs text-gray-500">{pagination.count} résultats</p>
+            <p className="text-xs text-gray-500">{t("conventions.results", { count: pagination.count })}</p>
             <div className="flex items-center gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={!pagination.previous}
                 className="p-1.5 rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-100">
@@ -139,27 +141,27 @@ export function PartnersPage() {
 
       {/* Create Modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)}
-        title="Nouveau partenaire" size="lg"
+        title={t("conventions.newPartner")} size="lg"
         footer={
           <>
             <button onClick={() => setShowCreate(false)}
-              className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
+              className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">{t("conventions.cancel")}</button>
             <button type="submit" form="create-partner-form" disabled={createMut.isPending}
               className="flex items-center gap-2 px-5 py-2 bg-brand text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-60">
-              {createMut.isPending && <Spinner size="sm" />}Créer
+              {createMut.isPending && <Spinner size="sm" />}{t("conventions.createPartner")}
             </button>
           </>
         }>
         <form id="create-partner-form" onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Code" required>
-              <input name="code" className={inputCls()} required placeholder="EX: HOSP-001" />
+            <Field label={t("conventions.code")} required>
+              <input name="code" className={inputCls()} required placeholder={t("conventions.codePlaceholder")} />
             </Field>
-            <Field label="Raison sociale" required>
-              <input name="name" className={inputCls()} required placeholder="Nom du partenaire" />
+            <Field label={t("conventions.companyName")} required>
+              <input name="name" className={inputCls()} required placeholder={t("conventions.namePlaceholder")} />
             </Field>
           </div>
-          <Field label="Type" required>
+          <Field label={t("conventions.partnerType")} required>
             <select name="type" className={inputCls()} required>
               {Object.entries(PARTNER_TYPE_UI).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>

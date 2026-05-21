@@ -2,6 +2,7 @@
  * USERS PAGE — Gestion des utilisateurs (admin seulement)
  */
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Search, UserX, UserCheck, Edit2 } from "lucide-react";
 
 interface UserItem {
@@ -14,11 +15,11 @@ interface UserItem {
   date_joined: string;
 }
 
-const ROLE_CONFIG: Record<string, { label: string; classes: string }> = {
-  admin:        { label: "Administrateur", classes: "bg-red-100 text-red-700" },
-  gestionnaire: { label: "Gestionnaire",   classes: "bg-blue-100 text-blue-700" },
-  comptable:    { label: "Comptable",      classes: "bg-purple-100 text-purple-700" },
-  consultant:   { label: "Consultant",     classes: "bg-gray-100 text-gray-700" },
+const ROLE_CONFIG: Record<string, { labelKey: string; classes: string }> = {
+  admin:        { labelKey: "users.admin",        classes: "bg-red-100 text-red-700" },
+  gestionnaire: { labelKey: "users.gestionnaire", classes: "bg-blue-100 text-blue-700" },
+  comptable:    { labelKey: "users.comptable",    classes: "bg-purple-100 text-purple-700" },
+  consultant:   { labelKey: "users.consultant",   classes: "bg-gray-100 text-gray-700" },
 };
 
 const MOCK_USERS: UserItem[] = [
@@ -30,6 +31,7 @@ const MOCK_USERS: UserItem[] = [
 ];
 
 export function UsersPage() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState<UserItem[]>(MOCK_USERS);
 
@@ -49,22 +51,22 @@ export function UsersPage() {
   const formatDate = (iso: string | null) =>
     iso
       ? new Date(iso).toLocaleDateString("fr-DZ", { day: "2-digit", month: "short", year: "numeric" })
-      : "Jamais";
+      : t("common.never");
 
   return (
     <div className="space-y-5 animate-fade-in">
       {/* ── En-tête ─────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Utilisateurs</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("users.title")}</h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            {filtered.length} compte{filtered.length > 1 ? "s" : ""}
+            {filtered.length} {t("common.totalItems", { count: filtered.length })}
           </p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg
           text-sm hover:bg-brand-light transition-colors">
           <Plus className="w-4 h-4" />
-          Nouvel utilisateur
+          {t("users.add")}
         </button>
       </div>
 
@@ -76,7 +78,7 @@ export function UsersPage() {
             <div key={role} className="card p-4 text-center">
               <p className="text-2xl font-bold text-gray-900">{count}</p>
               <p className={`text-xs font-medium mt-1 px-2 py-0.5 rounded-full inline-block ${cfg.classes}`}>
-                {cfg.label}
+                {t(cfg.labelKey)}
               </p>
             </div>
           );
@@ -88,7 +90,7 @@ export function UsersPage() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <input
           type="text"
-          placeholder="Rechercher un utilisateur..."
+          placeholder={t("users.searchPlaceholder") || "Rechercher un utilisateur..."}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg
@@ -102,12 +104,12 @@ export function UsersPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Utilisateur</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Rôle</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700 hidden md:table-cell">Dernière connexion</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700 hidden lg:table-cell">Inscrit le</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Statut</th>
-                <th className="text-right px-4 py-3 font-semibold text-gray-700">Actions</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">{t("users.fullName")}</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">{t("users.role")}</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 hidden md:table-cell">{t("users.lastLogin")}</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700 hidden lg:table-cell">{t("common.createdAt")}</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">{t("users.status")}</th>
+                <th className="text-right px-4 py-3 font-semibold text-gray-700">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -140,15 +142,15 @@ export function UsersPage() {
                       {formatDate(u.date_joined)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full
-                        ${u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                        {u.is_active ? "Actif" : "Inactif"}
-                      </span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full
+                      ${u.is_active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {u.is_active ? t("users.active") : t("users.inactive")}
+                    </span>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                          title="Modifier">
+                          title={t("common.edit")}>
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
@@ -157,7 +159,7 @@ export function UsersPage() {
                             ${u.is_active
                               ? "text-red-400 hover:bg-red-50 hover:text-red-600"
                               : "text-green-500 hover:bg-green-50 hover:text-green-700"}`}
-                          title={u.is_active ? "Désactiver" : "Activer"}
+                          title={u.is_active ? t("users.deactivate") : t("users.activate")}
                         >
                           {u.is_active
                             ? <UserX className="w-3.5 h-3.5" />

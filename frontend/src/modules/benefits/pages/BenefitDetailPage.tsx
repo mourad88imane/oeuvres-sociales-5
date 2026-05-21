@@ -7,6 +7,7 @@ import {
   ArrowLeft, Edit2, Trash2, Gift, FileText,
   Clock, MessageCircle, ChevronRight,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   useBenefit, useBenefitWorkflowLog, useDeleteBenefit,
 } from "../hooks/useBenefits";
@@ -21,14 +22,8 @@ import type { WorkflowState } from "../types";
 
 type Tab = "overview" | "attachments" | "comments" | "history";
 
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "overview",     label: "Aperçu",          icon: Gift        },
-  { id: "attachments",  label: "Pièces jointes",   icon: FileText    },
-  { id: "comments",     label: "Commentaires",     icon: MessageCircle},
-  { id: "history",      label: "Historique",       icon: Clock       },
-];
-
 export function BenefitDetailPage() {
+  const { t } = useTranslation();
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [tab,        setTab]        = useState<Tab>("overview");
@@ -39,10 +34,17 @@ export function BenefitDetailPage() {
   const { data: logData }            = useBenefitWorkflowLog(id ?? null);
   const deleteMutation               = useDeleteBenefit();
 
+  const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "overview",     label: t("common.info"),       icon: Gift        },
+    { id: "attachments",  label: t("benefits.attachments"),   icon: FileText    },
+    { id: "comments",     label: t("common.comment"),    icon: MessageCircle},
+    { id: "history",      label: t("employees.history"), icon: Clock       },
+  ];
+
   if (isLoading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   if (!benefit)  return (
-    <EmptyState icon={Gift} title="Prestation introuvable"
-      action={<button onClick={() => navigate("/benefits")} className="btn-primary">Retour</button>}
+    <EmptyState icon={Gift} title={t("benefits.noBenefits")}
+      action={<button onClick={() => navigate("/benefits")} className="btn-primary">{t("common.back")}</button>}
     />
   );
 
@@ -54,7 +56,6 @@ export function BenefitDetailPage() {
     navigate("/benefits");
   };
 
-  // Compteurs pour les onglets
   const attachCount  = benefit.attachments?.length ?? 0;
   const commentCount = benefit.comments?.length ?? 0;
   const logCount     = logData?.count ?? 0;
@@ -65,14 +66,14 @@ export function BenefitDetailPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <button onClick={() => navigate("/benefits")}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700">
-          <ArrowLeft className="w-4 h-4" />Retour
+          <ArrowLeft className="w-4 h-4" />{t("common.back")}
         </button>
         <div className="flex items-center gap-2">
           <RoleGuard roles={["admin","gestionnaire"]}>
             {["draft","on_hold"].includes(benefit.workflow_state) && (
               <button onClick={() => setShowEdit(true)}
                 className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-                <Edit2 className="w-4 h-4" />Modifier
+                <Edit2 className="w-4 h-4" />{t("common.edit")}
               </button>
             )}
           </RoleGuard>
@@ -80,7 +81,7 @@ export function BenefitDetailPage() {
             {["draft","cancelled","rejected"].includes(benefit.workflow_state) && (
               <button onClick={() => setShowDelete(true)}
                 className="flex items-center gap-2 px-3 py-2 border border-red-200 rounded-lg text-sm text-red-600 hover:bg-red-50">
-                <Trash2 className="w-4 h-4" />Supprimer
+                <Trash2 className="w-4 h-4" />{t("common.delete")}
               </button>
             )}
           </RoleGuard>
@@ -104,10 +105,10 @@ export function BenefitDetailPage() {
                 {priCfg.label}
               </span>
               {benefit.ai_anomaly_flag && (
-                <Badge variant="warning">⚠ Anomalie IA détectée</Badge>
+                <Badge variant="warning">{t("ai.anomalies.title")}</Badge>
               )}
               {benefit.is_overdue && (
-                <Badge variant="error">En retard</Badge>
+                <Badge variant="error">{t("common.warning")}</Badge>
               )}
             </div>
             <h1 className="text-xl font-bold text-gray-900">{benefit.title}</h1>
@@ -120,25 +121,25 @@ export function BenefitDetailPage() {
 
         {/* Montants */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <AmountChip label="Montant demandé"  value={`${Number(benefit.requested_amount).toLocaleString("fr-DZ")} DZD`} />
-          <AmountChip label="Montant approuvé"
+          <AmountChip label={t("benefits.requestedAmount")}  value={`${Number(benefit.requested_amount).toLocaleString("fr-DZ")} DZD`} />
+          <AmountChip label={t("benefits.grantedAmount")}
             value={benefit.approved_amount ? `${Number(benefit.approved_amount).toLocaleString("fr-DZ")} DZD` : "—"}
             highlight={!!benefit.approved_amount}
           />
-          <AmountChip label="Montant payé"
+          <AmountChip label={t("finance.amount")}
             value={benefit.paid_amount ? `${Number(benefit.paid_amount).toLocaleString("fr-DZ")} DZD` : "—"}
             highlight={!!benefit.paid_amount} color="text-green-700"
           />
           <AmountChip
-            label="Délai traitement"
-            value={benefit.processing_days != null ? `${benefit.processing_days} jour(s)` : "—"}
+            label={t("common.info")}
+            value={benefit.processing_days != null ? `${benefit.processing_days} ${t("common.status")}` : "—"}
           />
         </div>
 
         {/* Timeline workflow complète */}
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Progression du dossier
+            {t("common.info")}
           </p>
           <WorkflowTimeline benefit={benefit} compact={false} />
         </div>
@@ -147,7 +148,7 @@ export function BenefitDetailPage() {
         {(benefit.workflow_state !== "paid" && benefit.workflow_state !== "rejected") && (
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              Actions disponibles
+              {t("common.actions")}
             </p>
             <WorkflowActions benefit={benefit} />
           </div>
@@ -188,56 +189,56 @@ export function BenefitDetailPage() {
           {/* Description */}
           {benefit.description && (
             <div className="card p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Description / Justification</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">{t("common.description")}</h3>
               <p className="text-sm text-gray-600 whitespace-pre-wrap">{benefit.description}</p>
             </div>
           )}
 
           {/* Infos employé */}
-          <DetailSection title="Employé demandeur" icon={Gift}>
-            <InfoRow label="Nom"        value={benefit.employee_name} />
-            <InfoRow label="Matricule"  value={benefit.employee_matricule} mono />
-            <InfoRow label="Département"value={benefit.department_name} />
+          <DetailSection title={t("benefits.employee")} icon={Gift}>
+            <InfoRow label={t("employees.lastName")}   value={benefit.employee_name} />
+            <InfoRow label={t("employees.matricule")}  value={benefit.employee_matricule} mono />
+            <InfoRow label={t("employees.department")} value={benefit.department_name} />
           </DetailSection>
 
           {/* Infos demande */}
-          <DetailSection title="Détails de la demande" icon={FileText}>
-            <InfoRow label="Type"           value={benefit.benefit_type_info?.name ?? "—"} />
-            <InfoRow label="Catégorie"      value={catCfg?.label ?? "—"} />
-            <InfoRow label="Priorité"       value={priCfg.label} />
-            {benefit.due_date && <InfoRow label="Échéance"     value={fmtDate(benefit.due_date)} />}
-            {benefit.payment_method_display && <InfoRow label="Mode paiement" value={benefit.payment_method_display} />}
-            {benefit.payment_reference && <InfoRow label="Réf. paiement"  value={benefit.payment_reference} mono />}
+          <DetailSection title={t("benefits.detail")} icon={FileText}>
+            <InfoRow label={t("benefits.benefitType")} value={benefit.benefit_type_info?.name ?? "—"} />
+            <InfoRow label={t("conventions.type")}     value={catCfg?.label ?? "—"} />
+            <InfoRow label={t("common.status")}        value={priCfg.label} />
+            {benefit.due_date && <InfoRow label={t("conventions.startDate")} value={fmtDate(benefit.due_date)} />}
+            {benefit.payment_method_display && <InfoRow label={t("finance.paymentMethod")} value={benefit.payment_method_display} />}
+            {benefit.payment_reference && <InfoRow label={t("finance.bankReference")} value={benefit.payment_reference} mono />}
           </DetailSection>
 
           {/* Rejet */}
           {benefit.workflow_state === "rejected" && benefit.rejection_reason && (
             <div className="card p-5 border-l-4 border-l-red-400 bg-red-50 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-red-700 mb-1">Motif de rejet</h3>
+              <h3 className="text-sm font-semibold text-red-700 mb-1">{t("common.description")}</h3>
               <p className="text-sm text-red-600">{benefit.rejection_reason}</p>
             </div>
           )}
 
           {/* Dates */}
-          <DetailSection title="Chronologie" icon={Clock}>
-            <InfoRow label="Créée le"       value={fmtDateTime(benefit.created_at)} />
-            {benefit.submitted_at && <InfoRow label="Soumise le"    value={fmtDateTime(benefit.submitted_at)} />}
-            {benefit.validated_at && <InfoRow label="Validée le"    value={fmtDateTime(benefit.validated_at)} />}
-            {benefit.paid_at      && <InfoRow label="Payée le"      value={fmtDateTime(benefit.paid_at)} />}
-            {benefit.rejected_at  && <InfoRow label="Rejetée le"    value={fmtDateTime(benefit.rejected_at)} />}
+          <DetailSection title={t("employees.history")} icon={Clock}>
+            <InfoRow label={t("common.createdAt")}         value={fmtDateTime(benefit.created_at)} />
+            {benefit.submitted_at && <InfoRow label={t("benefits.submitted")} value={fmtDateTime(benefit.submitted_at)} />}
+            {benefit.validated_at && <InfoRow label={t("benefits.approved")}  value={fmtDateTime(benefit.validated_at)} />}
+            {benefit.paid_at      && <InfoRow label={t("benefits.paid")}      value={fmtDateTime(benefit.paid_at)} />}
+            {benefit.rejected_at  && <InfoRow label={t("benefits.rejected")}  value={fmtDateTime(benefit.rejected_at)} />}
           </DetailSection>
 
           {/* Intervenants */}
-          <DetailSection title="Intervenants" icon={ChevronRight}>
-            <InfoRow label="Demandeur"      value={benefit.created_by_name ?? "—"} />
-            {benefit.validated_by_name && <InfoRow label="Validé par"  value={benefit.validated_by_name} />}
-            {benefit.paid_by_name      && <InfoRow label="Payé par"    value={benefit.paid_by_name} />}
+          <DetailSection title={t("common.createdBy")} icon={ChevronRight}>
+            <InfoRow label={t("common.createdBy")}       value={benefit.created_by_name ?? "—"} />
+            {benefit.validated_by_name && <InfoRow label={t("common.createdBy")} value={benefit.validated_by_name} />}
+            {benefit.paid_by_name      && <InfoRow label={t("common.createdBy")} value={benefit.paid_by_name} />}
           </DetailSection>
 
           {/* Notes internes */}
           {benefit.internal_notes && (
             <div className="card p-5 bg-amber-50 border-amber-200">
-              <h3 className="text-sm font-semibold text-amber-800 mb-2">Notes internes</h3>
+              <h3 className="text-sm font-semibold text-amber-800 mb-2">{t("common.notes")}</h3>
               <p className="text-sm text-amber-700 whitespace-pre-wrap">{benefit.internal_notes}</p>
             </div>
           )}
@@ -245,12 +246,12 @@ export function BenefitDetailPage() {
           {/* Score AI */}
           {(benefit.ai_score != null || benefit.risk_score != null) && (
             <div className="card p-5 lg:col-span-2">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Analyse IA</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">{t("ai.anomalies.title")}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {benefit.ai_score != null && (
                   <div className="bg-purple-50 rounded-lg p-3 text-center">
                     <p className="text-2xl font-bold text-purple-700">{benefit.ai_score.toFixed(1)}</p>
-                    <p className="text-xs text-purple-600">Score IA</p>
+                    <p className="text-xs text-purple-600">{t("common.status")}</p>
                   </div>
                 )}
                 {benefit.risk_score != null && (
@@ -262,7 +263,7 @@ export function BenefitDetailPage() {
                       benefit.risk_score > 70 ? "text-red-700" :
                       benefit.risk_score > 40 ? "text-amber-700" : "text-green-700"
                     }`}>{benefit.risk_score.toFixed(0)}</p>
-                    <p className="text-xs text-gray-600">Score de risque</p>
+                    <p className="text-xs text-gray-600">{t("common.status")}</p>
                   </div>
                 )}
               </div>
@@ -304,14 +305,14 @@ export function BenefitDetailPage() {
       {tab === "history" && (
         <div className="card p-5">
           <p className="text-sm text-gray-500 mb-4">
-            {logCount} transition{logCount > 1 ? "s" : ""} enregistrée{logCount > 1 ? "s" : ""}
+            {t("common.totalItems", { count: logCount })}
           </p>
           <WorkflowLogTimeline logs={logData?.data ?? []} />
         </div>
       )}
 
       {/* ── Modals ───────────────────────────────────── */}
-      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Modifier la demande" size="xl">
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title={t("common.edit")} size="xl">
         <BenefitForm mode="edit" initialData={benefit}
           onSubmit={async () => { setShowEdit(false); }}
           onCancel={() => setShowEdit(false)}
@@ -320,9 +321,9 @@ export function BenefitDetailPage() {
 
       <ConfirmDialog open={showDelete} onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
-        title="Supprimer la demande"
-        message={`Supprimer ${benefit.reference} ? Cette action est irréversible.`}
-        confirmLabel="Supprimer" loading={deleteMutation.isPending}
+        title={t("common.delete")}
+        message={`${t("common.areYouSure", { action: t("common.delete").toLowerCase() })} ${benefit.reference} — ${t("common.warning")}.`}
+        confirmLabel={t("common.delete")} loading={deleteMutation.isPending}
       />
     </div>
   );

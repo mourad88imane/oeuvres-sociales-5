@@ -72,7 +72,7 @@ const router = createBrowserRouter([
         // Admin
         { element: <ProtectedRoute roles={["admin"]} />, children: [
           { path: "/users",       element: W(UsersPage) },
-          { path: "/settings",    element: W(NotFoundPage) },
+          { path: "/settings",    element: <Navigate to="/dashboard" replace /> },
           { path: "/monitoring",  element: W(MonitoringPage) },
           { path: "/ai/assistant", element: W(AIAssistantPage) },
         ]},

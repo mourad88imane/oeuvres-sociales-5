@@ -2,30 +2,32 @@
  * EMPLOYEE HISTORY — Timeline des modifications
  */
 import { Clock, Plus, Edit2, Trash2, User } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useEmployeeHistory } from "../hooks/useEmployees";
 import { Spinner, EmptyState } from "@shared/components/ui/index";
 import type { HistoryRecord } from "../types";
 
 interface EmployeeHistoryProps { employeeId: string; }
 
-const TYPE_CONFIG = {
-  "+": { label: "Création",     icon: Plus,   color: "text-green-600", bg: "bg-green-100" },
-  "~": { label: "Modification", icon: Edit2,  color: "text-blue-600",  bg: "bg-blue-100"  },
-  "-": { label: "Suppression",  icon: Trash2, color: "text-red-600",   bg: "bg-red-100"   },
-};
-
-// Traduction des noms de champs Django → français
-const FIELD_LABELS: Record<string, string> = {
-  first_name: "Prénom", last_name: "Nom", job_title: "Intitulé du poste",
-  status: "Statut", department_id: "Département", grade: "Grade",
-  grade_level: "Niveau grade", contract_type: "Type de contrat",
-  date_hired: "Date d'embauche", base_salary: "Salaire",
-  marital_status: "Situation familiale", phone: "Téléphone",
-  email_professional: "Email pro", education_level: "Formation",
-  national_id: "NNI", notes: "Notes",
-};
-
 export function EmployeeHistory({ employeeId }: EmployeeHistoryProps) {
+  const { t } = useTranslation();
+
+  const TYPE_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string; bg: string }> = {
+    "+": { label: t("employees.historyCreation"),     icon: Plus,   color: "text-green-600", bg: "bg-green-100" },
+    "~": { label: t("employees.historyModification"), icon: Edit2,  color: "text-blue-600",  bg: "bg-blue-100"  },
+    "-": { label: t("employees.historyDeletion"),     icon: Trash2, color: "text-red-600",   bg: "bg-red-100"   },
+  };
+
+  const FIELD_LABELS: Record<string, string> = {
+    first_name: t("employees.firstName"), last_name: t("employees.lastName"), job_title: t("employees.jobTitle"),
+    status: t("employees.status"), department_id: t("employees.department"), grade: t("employees.grade"),
+    grade_level: t("employees.gradeLevel"), contract_type: t("employees.contractType"),
+    date_hired: t("employees.dateHired"), base_salary: t("employees.salary"),
+    marital_status: t("employees.maritalStatus"), phone: t("employees.phone"),
+    email_professional: t("employees.email"), education_level: t("employees.educationLevel"),
+    national_id: t("employees.nationalId"), notes: t("common.notes"),
+  };
+
   const { data, isLoading } = useEmployeeHistory(employeeId);
 
   if (isLoading) return (
@@ -33,12 +35,12 @@ export function EmployeeHistory({ employeeId }: EmployeeHistoryProps) {
   );
 
   if (!data?.data.length) return (
-    <EmptyState icon={Clock} title="Aucun historique" description="Les modifications apparaîtront ici." />
+    <EmptyState icon={Clock} title={t("employees.noHistory")} description={t("employees.noHistoryDescription")} />
   );
 
   return (
     <div className="space-y-1">
-      <p className="text-xs text-gray-400 mb-4">{data.count} entrée(s) — 50 dernières modifications</p>
+      <p className="text-xs text-gray-400 mb-4">{t("employees.records")}</p>
       <div className="relative">
         {/* Ligne verticale */}
         <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200" />
@@ -95,13 +97,13 @@ function HistoryEntry({ record }: { record: HistoryRecord }) {
                 <div className="flex items-center gap-2 flex-wrap">
                   {change.old != null && (
                     <span className="line-through text-red-400 bg-red-50 px-1.5 py-0.5 rounded">
-                      {change.old || "(vide)"}
+                      {change.old || t("employees.emptyValue")}
                     </span>
                   )}
                   {change.old != null && <span className="text-gray-400">→</span>}
                   {change.new != null && (
                     <span className="text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
-                      {change.new || "(vide)"}
+                      {change.new || t("employees.emptyValue")}
                     </span>
                   )}
                 </div>

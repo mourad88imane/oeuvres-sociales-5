@@ -12,6 +12,7 @@ from statistics import mean, stdev
 from django.apps import apps
 from django.db.models import Sum
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 logger = logging.getLogger("shared.ai")
 
@@ -154,9 +155,9 @@ class PredictionService:
         progress_pct = min(days_elapsed / days_total, 1.0)
 
         budgets = Budget.objects.filter(fiscal_year__year=today.year, is_deleted=False)
-        total_budget = budgets.aggregate(total=Sum("allocated_amount"))["total"] or 0
+        total_budget = float(budgets.aggregate(total=Sum("allocated_amount"))["total"] or 0)
 
-        paid = (
+        paid = float(
             Payment.objects.filter(
                 is_deleted=False, executed_date__year=today.year, status="paid"
             ).aggregate(total=Sum("amount"))["total"]
@@ -185,9 +186,9 @@ class PredictionService:
             "days_progress_pct": round(progress_pct * 100, 1),
             "risk_level": risk,
             "recommendation": (
-                "Ralentir les dépenses"
+                _("Ralentir les dépenses")
                 if risk == "critical"
-                else "Maintenir le rythme" if risk == "low" else "Surveiller le budget"
+                else _("Maintenir le rythme") if risk == "low" else _("Surveiller le budget")
             ),
         }
 
@@ -255,8 +256,8 @@ class PredictionService:
                 {
                     "domain": "finance",
                     "priority": "high",
-                    "title": "Risque de dépassement budgétaire",
-                    "detail": (
+                    "title": _("Risque de dépassement budgétaire"),
+                    "detail": _(
                         f"Consommation projetée à {budget_info['projected_rate']:.0f}% "
                         f"({budget_info['fiscal_year']}). Action recommandée : "
                         f"{budget_info['recommendation']}."
@@ -274,15 +275,15 @@ class PredictionService:
             )
             if expiring > 0:
                 recommendations.append(
-                    {
-                        "domain": "conventions",
-                        "priority": "high" if expiring > 5 else "medium",
-                        "title": "Conventions arrivant à expiration",
-                        "detail": (
-                            f"{expiring} convention(s) expirent dans les 30 prochains jours. "
-                            "Prévoir les renouvellements."
-                        ),
-                    }
+                {
+                    "domain": "conventions",
+                    "priority": "high" if expiring > 5 else "medium",
+                    "title": _("Conventions arrivant à expiration"),
+                    "detail": _(
+                        f"{expiring} convention(s) expirent dans les 30 prochains jours. "
+                        "Prévoir les renouvellements."
+                    ),
+                }
                 )
         except LookupError:
             pass
@@ -295,8 +296,8 @@ class PredictionService:
                 {
                     "domain": "benefits",
                     "priority": "high" if pending > 100 else "medium",
-                    "title": "Backlog de prestations",
-                    "detail": (
+                    "title": _("Backlog de prestations"),
+                    "detail": _(
                         f"{int(pending)} prestations en attente de traitement. "
                         "Envisager un renfort ou une priorisation."
                     ),
@@ -307,8 +308,8 @@ class PredictionService:
                 {
                     "domain": "benefits",
                     "priority": "low",
-                    "title": "Prestations en attente",
-                    "detail": f"{int(pending)} dossiers à traiter.",
+                    "title": _("Prestations en attente"),
+                    "detail": _(f"{int(pending)} dossiers à traiter."),
                 }
             )
 
@@ -320,15 +321,15 @@ class PredictionService:
                 deviation = abs(cv - tv) / tv
                 if deviation > 0.2:
                     recommendations.append(
-                        {
-                            "domain": kpi.get("category", "global"),
-                            "priority": "medium",
-                            "title": f"Écart significatif : {kpi['name']}",
-                            "detail": (
-                                f"Valeur actuelle {cv:.0f} vs objectif {tv:.0f} "
-                                f"(écart {deviation:.0%})."
-                            ),
-                        }
+                {
+                    "domain": kpi.get("category", "global"),
+                    "priority": "medium",
+                    "title": _(f"Écart significatif : {kpi['name']}"),
+                    "detail": _(
+                        f"Valeur actuelle {cv:.0f} vs objectif {tv:.0f} "
+                        f"(écart {deviation:.0%})."
+                    ),
+                }
                     )
 
         # 5. New employee surge
@@ -338,15 +339,15 @@ class PredictionService:
             new_emp = Employee.objects.alive().filter(created_at__date__gte=month_start).count()
             if new_emp > 20:
                 recommendations.append(
-                    {
-                        "domain": "hr",
-                        "priority": "low",
-                        "title": "Afflux de nouveaux employés",
-                        "detail": (
-                            f"{new_emp} employés recrutés ce mois-ci. "
-                            "Vérifier l'enregistrement des ayants droit."
-                        ),
-                    }
+                {
+                    "domain": "hr",
+                    "priority": "low",
+                    "title": _("Afflux de nouveaux employés"),
+                    "detail": _(
+                        f"{new_emp} employés recrutés ce mois-ci. "
+                        "Vérifier l'enregistrement des ayants droit."
+                    ),
+                }
                 )
         except LookupError:
             pass

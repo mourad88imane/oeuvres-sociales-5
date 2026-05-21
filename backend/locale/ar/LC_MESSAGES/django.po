@@ -1,0 +1,229 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Oeuvres Sociales\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-21 09:07+0100\n"
+"PO-Revision-Date: 2026-05-21 09:07+0100\n"
+"Last-Translator: System\n"
+"Language-Team: Arabic\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
+"&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+#: apps/reporting/views.py:132
+msgid "Paramètre 'code' requis."
+msgstr "المعامل 'code' مطلوب."
+
+#: apps/reporting/views.py:367
+msgid "Aucune donnée\n"
+msgstr "لا توجد بيانات\n"
+
+#: apps/reporting/views.py:392
+msgid "Aucune donnée"
+msgstr "لا توجد بيانات"
+
+#: apps/reporting/views.py:499
+msgid "Aucune donnée disponible."
+msgstr "لا تتوفر بيانات."
+
+#: shared/ai/assistant.py:127
+msgid "Utilisateur"
+msgstr "المستخدم"
+
+#: shared/ai/assistant.py:131
+msgid ""
+"Je peux vous aider avec le tableau de bord, les KPI, le budget, les "
+"prestations, les conventions, et plus encore. Tapez « aide » pour voir ce "
+"que je sais faire."
+msgstr ""
+"يمكنني مساعدتك في لوحة القيادة ومؤشرات الأداء والميزانية والمنافع "
+"والاتفاقيات والمزيد. اكتب 'مساعدة' لرؤية ما يمكنني فعله."
+
+#: shared/ai/assistant.py:137
+msgid "Récapitulatif du tableau de bord"
+msgstr "ملخص لوحة القيادة"
+
+#: shared/ai/assistant.py:138
+msgid "État du budget"
+msgstr "حالة الميزانية"
+
+#: shared/ai/assistant.py:139 shared/ai/services.py:311
+msgid "Prestations en attente"
+msgstr "المنافع المعلقة"
+
+#: shared/ai/assistant.py:140 shared/ai/services.py:281
+msgid "Conventions arrivant à expiration"
+msgstr "الاتفاقيات وشيكة الانتهاء"
+
+#: shared/ai/assistant.py:152
+msgid "Je n'arrive pas à accéder aux données."
+msgstr "لا أستطيع الوصول إلى البيانات."
+
+#: shared/ai/assistant.py:167
+msgid ""
+"📊 **Récapitulatif**\n"
+"\n"
+msgstr ""
+"📊 **ملخص**\n"
+"\n"
+
+#: shared/ai/assistant.py:183
+msgid ""
+"Je peux vous montrer les indicateurs KPI. Pour le moment, consultez l'onglet "
+"Analytics."
+msgstr ""
+"يمكنني عرض مؤشرات الأداء. حالياً، يرجى مراجعة علامة التبويب 'تحليلات'."
+
+#: shared/ai/assistant.py:194
+msgid "Module finance non disponible."
+msgstr "وحدة المالية غير متوفرة."
+
+#: shared/ai/assistant.py:229
+msgid "Module prestations non disponible."
+msgstr "وحدة المنافع غير متوفرة."
+
+#: shared/ai/assistant.py:244
+msgid ""
+"📋 **Prestations**\n"
+"\n"
+msgstr ""
+"📋 **المنافع**\n"
+"\n"
+
+#: shared/ai/assistant.py:260
+msgid "Module conventions non disponible."
+msgstr "وحدة الاتفاقيات غير متوفرة."
+
+#: shared/ai/assistant.py:270
+msgid "✅ Aucune convention n'arrive à expiration dans les 30 prochains jours."
+msgstr "✅ لا توجد اتفاقيات تنتهي في الثلاثين يوماً القادمة."
+
+#: shared/ai/assistant.py:285
+msgid "✅ Aucune anomalie détectée récemment."
+msgstr "✅ لم يتم اكتشاف أي حالات شاذة مؤخراً."
+
+#: shared/ai/assistant.py:298
+msgid "Aucune recommandation active pour le moment."
+msgstr "لا توجد توصيات نشطة حالياً."
+
+#: shared/ai/assistant.py:308
+msgid "Module employés non disponible."
+msgstr "وحدة الموظفين غير متوفرة."
+
+#: shared/ai/assistant.py:324
+msgid "Sans département"
+msgstr "بدون قسم"
+
+#: shared/ai/assistant.py:319
+msgid ""
+"👥 **Effectifs**\n"
+"\n"
+msgstr ""
+"👥 **الموظفون**\n"
+"\n"
+
+#: shared/ai/assistant.py:334
+msgid ""
+"📈 **Prévisions disponibles**\n"
+"\n"
+"• Tendance des prestations (3 mois)\n"
+"• Consommation budgétaire (fin d'année)\n"
+"• Simulation Monte Carlo\n"
+"\n"
+"Consultez l'onglet Analytics pour les graphiques détaillés."
+msgstr ""
+"📈 **التوقعات المتوفرة**\n"
+"\n"
+"• اتجاه المنافع (3 أشهر)\n"
+"• استهلاك الميزانية (نهاية السنة)\n"
+"• محاكاة مونتي كارلو\n"
+"\n"
+"راجع علامة التبويب 'تحليلات' للرسوم البيانية المفصلة."
+
+#: shared/ai/assistant.py:346
+msgid ""
+"🤖 **Commandes disponibles**\n"
+"\n"
+"• « Récapitulatif » — Vue d'ensemble\n"
+"• « Budget/Finances » — État budgétaire\n"
+"• « Prestations » — Demandes en cours\n"
+"• « Conventions » — Expirations\n"
+"• « Anomalies » — Alertes récentes\n"
+"• « Recommandations » — Suggestions\n"
+"• « Employés » — Effectifs\n"
+"• « Prévisions » — Tendances\n"
+"\n"
+"Posez une question en langage naturel !"
+msgstr ""
+"🤖 **الأوامر المتاحة**\n"
+"\n"
+"• 'ملخص' — نظرة عامة\n"
+"• 'الميزانية/المالية' — حالة الميزانية\n"
+"• 'المنافع' — الطلبات المعلقة\n"
+"• 'الاتفاقيات' — الانتهاءات\n"
+"• 'الحالات الشاذة' — التنبيهات الأخيرة\n"
+"• 'التوصيات' — الاقتراحات\n"
+"• 'الموظفون' — العدد الإجمالي\n"
+"• 'التوقعات' — الاتجاهات\n"
+"\n"
+"اطرح سؤالاً باللغة الطبيعية!"
+
+#: shared/ai/assistant.py:363
+msgid ""
+"Je n'ai pas compris votre demande. Essayez des mots-clés comme : budget, "
+"prestations, conventions, employés, récapitulatif, anomalies, ou tapez "
+"« aide »."
+msgstr ""
+"لم أفهم طلبك. جرب كلمات مفتاحية مثل: الميزانية، المنافع، الاتفاقيات، "
+"الموظفون، ملخص، الحالات الشاذة، أو اكتب 'مساعدة'."
+
+#: shared/ai/services.py:189
+msgid "Ralentir les dépenses"
+msgstr "إبطاء الإنفاق"
+
+#: shared/ai/services.py:191
+msgid "Maintenir le rythme"
+msgstr "الحفاظ على الوتيرة"
+
+#: shared/ai/services.py:191
+msgid "Surveiller le budget"
+msgstr "مراقبة الميزانية"
+
+#: shared/ai/services.py:259
+msgid "Risque de dépassement budgétaire"
+msgstr "خطر تجاوز الميزانية"
+
+#: shared/ai/services.py:284
+msgid "Prévoir les renouvellements."
+msgstr "التخطيط للتجديدات."
+
+#: shared/ai/services.py:299
+msgid "Backlog de prestations"
+msgstr "تراكم المنافع"
+
+#: shared/ai/services.py:302
+msgid "Envisager un renfort ou une priorisation."
+msgstr "النظر في تعزيز أو تحديد أولويات."
+
+#: shared/ai/services.py:345
+msgid "Afflux de nouveaux employés"
+msgstr "تدفق الموظفين الجدد"
+
+#: shared/ai/services.py:348
+msgid "Vérifier l'enregistrement des ayants droit."
+msgstr "التحقق من تسجيل المستحقين."
+
+#: shared/ai/views.py:201
+msgid "benefit_id requis"
+msgstr "benefit_id مطلوب"
+
+#: shared/notifications/views.py:102
+msgid "Notification introuvable"
+msgstr "الإشعار غير موجود"

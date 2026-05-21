@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   ArrowLeft, Edit2, Trash2, User, Phone, Briefcase,
   Users, Clock, Shield, AlertTriangle, Camera,
@@ -26,16 +27,16 @@ import type { Beneficiary, EmployeeUpdatePayload, BeneficiaryCreatePayload } fro
 
 type Tab = "identity" | "beneficiaries" | "history" | "security";
 
-const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: "identity",      label: "Identité",    icon: User    },
-  { id: "beneficiaries", label: "Ayants droit", icon: Users   },
-  { id: "history",       label: "Historique",  icon: Clock   },
-  { id: "security",      label: "Statut",      icon: Shield  },
-];
-
 export function EmployeeDetailPage() {
+  const { t } = useTranslation();
   const { id }  = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
+    { id: "identity",      label: t("employees.identity"),     icon: User    },
+    { id: "beneficiaries", label: t("beneficiaries.title"),    icon: Users   },
+    { id: "history",       label: t("employees.history"),      icon: Clock   },
+    { id: "security",      label: t("employees.status"),       icon: Shield  },
+  ];
   const [activeTab,     setActiveTab]     = useState<Tab>("identity");
   const [showEdit,      setShowEdit]      = useState(false);
   const [showDelete,    setShowDelete]    = useState(false);
@@ -65,9 +66,9 @@ export function EmployeeDetailPage() {
 
   if (!employee) {
     return (
-      <EmptyState icon={User} title="Employé introuvable"
-        description="Cet employé n'existe pas ou a été supprimé."
-        action={<button onClick={() => navigate("/employees")} className="btn-primary">Retour à la liste</button>}
+      <EmptyState icon={User} title={t("app.pageNotFound")}
+        description={t("app.pageNotFoundDescription")}
+        action={<button onClick={() => navigate("/employees")} className="btn-primary">{t("app.back")}</button>}
       />
     );
   }
@@ -113,19 +114,19 @@ export function EmployeeDetailPage() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <button onClick={() => navigate("/employees")}
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
-          <ArrowLeft className="w-4 h-4" />Retour
+          <ArrowLeft className="w-4 h-4" />{t("app.back")}
         </button>
         <div className="flex items-center gap-2">
           <RoleGuard roles={["admin", "gestionnaire"]}>
             <button onClick={() => setShowEdit(true)}
               className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">
-              <Edit2 className="w-4 h-4" />Modifier
+              <Edit2 className="w-4 h-4" />{t("common.edit")}
             </button>
           </RoleGuard>
           <RoleGuard roles={["admin"]}>
             <button onClick={() => setShowDelete(true)}
               className="flex items-center gap-2 px-3 py-2 border border-red-200 rounded-lg text-sm text-red-600 hover:bg-red-50">
-              <Trash2 className="w-4 h-4" />Supprimer
+              <Trash2 className="w-4 h-4" />{t("common.delete")}
             </button>
           </RoleGuard>
         </div>
@@ -176,22 +177,22 @@ export function EmployeeDetailPage() {
               <EmployeeStatusBadge status={employee.status} />
               {cinExpired && (
                 <Badge variant="error">
-                  <AlertTriangle className="w-3 h-3" />CIN expirée
+                  <AlertTriangle className="w-3 h-3" />{t("employees.expiredCIN")}
                 </Badge>
               )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-              <InfoChip label="Matricule" value={employee.matricule} mono />
-              <InfoChip label="Poste" value={employee.job_title} />
-              <InfoChip label="Département"
+              <InfoChip label={t("employees.matricule")} value={employee.matricule} mono />
+              <InfoChip label={t("employees.jobTitle")} value={employee.job_title} />
+              <InfoChip label={t("employees.department")}
                 value={`[${employee.department_info?.code}] ${employee.department_info?.name}`} />
-              <InfoChip label="Contrat" value={employee.contract_display} />
-              <InfoChip label="Grade" value={employee.grade || "—"} />
-              <InfoChip label="Ancienneté" value={employee.seniority_label} />
-              <InfoChip label="Âge" value={employee.age ? `${employee.age} ans` : "—"} />
-              <InfoChip label="Ayants droit"
-                value={`${employee.beneficiaries.length} personne${employee.beneficiaries.length > 1 ? "s" : ""}`} />
+              <InfoChip label={t("employees.contractType")} value={employee.contract_display} />
+              <InfoChip label={t("employees.grade")} value={employee.grade || "—"} />
+              <InfoChip label={t("employees.seniority")} value={employee.seniority_label} />
+              <InfoChip label={t("employees.age")} value={employee.age ? `${employee.age}` : "—"} />
+              <InfoChip label={t("beneficiaries.title")}
+                value={t("employees.beneficiaryCount", { count: employee.beneficiaries.length })} />
             </div>
           </div>
         </div>
@@ -218,56 +219,51 @@ export function EmployeeDetailPage() {
       ════════════════════════════════════════════════ */}
       {activeTab === "identity" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* État civil */}
-          <Section title="État civil" icon={User}>
-            <InfoRow label="Nom complet"     value={employee.full_name} />
-            <InfoRow label="Genre"           value={employee.gender_display} />
-            <InfoRow label="Date naissance"  value={formatDate(employee.date_of_birth)} />
-            <InfoRow label="Âge"             value={`${employee.age} ans`} />
-            <InfoRow label="Lieu naissance"  value={employee.place_of_birth || "—"} />
-            <InfoRow label="Situation fam."  value={employee.marital_display} />
-            <InfoRow label="Nationalité"     value={employee.nationality} />
+          <Section title={t("employees.civilStatus")} icon={User}>
+            <InfoRow label={t("employees.fullName")}     value={employee.full_name} />
+            <InfoRow label={t("employees.gender")}           value={employee.gender_display} />
+            <InfoRow label={t("employees.dateOfBirth")}  value={formatDate(employee.date_of_birth)} />
+            <InfoRow label={t("employees.age")}             value={`${employee.age}`} />
+            <InfoRow label={t("employees.placeOfBirth")}  value={employee.place_of_birth || "—"} />
+            <InfoRow label={t("employees.maritalStatus")}  value={employee.marital_display} />
+            <InfoRow label={t("employees.nationalityLabel")}     value={employee.nationality} />
           </Section>
 
-          {/* Contact */}
-          <Section title="Coordonnées" icon={Phone}>
-            <InfoRow label="Téléphone"       value={employee.phone || "—"} />
-            <InfoRow label="Tél. secondaire" value={employee.phone_secondary || "—"} />
-            <InfoRow label="Email pro."      value={employee.email_professional || "—"} />
-            <InfoRow label="Email perso."    value={employee.email_personal || "—"} />
-            <InfoRow label="Adresse"         value={employee.address || "—"} />
-            <InfoRow label="Ville / Wilaya"  value={`${employee.city || "—"} / ${employee.wilaya || "—"}`} />
+          <Section title={t("employees.contacts")} icon={Phone}>
+            <InfoRow label={t("employees.phone")}       value={employee.phone || "—"} />
+            <InfoRow label={t("employees.phoneSecondary")} value={employee.phone_secondary || "—"} />
+            <InfoRow label={t("employees.email")}      value={employee.email_professional || "—"} />
+            <InfoRow label={t("employees.emailPersonal")}    value={employee.email_personal || "—"} />
+            <InfoRow label={t("employees.address")}         value={employee.address || "—"} />
+            <InfoRow label={t("employees.cityWilaya")}  value={`${employee.city || "—"} / ${employee.wilaya || "—"}`} />
           </Section>
 
-          {/* Documents */}
-          <Section title="Documents" icon={Shield}>
-            <InfoRow label="NNI / CIN"    value={employee.national_id || "—"} mono />
-            <InfoRow label="Expiration CIN"
+          <Section title={t("employees.documents")} icon={Shield}>
+            <InfoRow label={t("employees.nationalId")}    value={employee.national_id || "—"} mono />
+            <InfoRow label={t("employees.cinExpiry")}
               value={employee.national_id_expiry ? formatDate(employee.national_id_expiry) : "—"}
-              badge={cinExpired ? <Badge variant="error">Expirée</Badge> : undefined}
+              badge={cinExpired ? <Badge variant="error">{t("employees.expired")}</Badge> : undefined}
             />
-            <InfoRow label="N° Séc. Sociale" value={employee.social_security_number || "—"} mono />
-            <InfoRow label="NIF"             value={employee.tax_id || "—"} mono />
+            <InfoRow label={t("employees.socialSecurityNumber")} value={employee.social_security_number || "—"} mono />
+            <InfoRow label={t("employees.taxId")}             value={employee.tax_id || "—"} mono />
           </Section>
 
-          {/* Poste */}
-          <Section title="Poste et carrière" icon={Briefcase}>
-            <InfoRow label="Poste"           value={employee.job_title} />
-            <InfoRow label="Grade"           value={employee.grade || "—"} />
-            <InfoRow label="Niveau grade"    value={employee.grade_level?.toString() || "—"} />
-            <InfoRow label="Catégorie CSP"   value={employee.category || "—"} />
-            <InfoRow label="Type contrat"    value={employee.contract_display} />
-            <InfoRow label="Date embauche"   value={formatDate(employee.date_hired)} />
-            {employee.date_end && <InfoRow label="Fin contrat" value={formatDate(employee.date_end)} />}
-            <InfoRow label="Ancienneté"      value={employee.seniority_label} />
-            {employee.manager_name && <InfoRow label="Responsable" value={employee.manager_name} />}
+          <Section title={t("employees.positionAndCareer")} icon={Briefcase}>
+            <InfoRow label={t("employees.jobTitle")}           value={employee.job_title} />
+            <InfoRow label={t("employees.grade")}           value={employee.grade || "—"} />
+            <InfoRow label={t("employees.gradeLevel")}    value={employee.grade_level?.toString() || "—"} />
+            <InfoRow label={t("employees.category")}   value={employee.category || "—"} />
+            <InfoRow label={t("employees.contractType")}    value={employee.contract_display} />
+            <InfoRow label={t("employees.dateHired")}   value={formatDate(employee.date_hired)} />
+            {employee.date_end && <InfoRow label={t("employees.contractEnd")} value={formatDate(employee.date_end)} />}
+            <InfoRow label={t("employees.seniority")}      value={employee.seniority_label} />
+            {employee.manager_name && <InfoRow label={t("employees.manager")} value={employee.manager_name} />}
           </Section>
 
-          {/* Formation */}
           {(employee.education_level || employee.education_field || employee.competencies.length > 0) && (
-            <Section title="Formation & Compétences" icon={Briefcase}>
-              <InfoRow label="Niveau formation" value={employee.education_level || "—"} />
-              <InfoRow label="Domaine"          value={employee.education_field || "—"} />
+            <Section title={t("employees.training")} icon={Briefcase}>
+              <InfoRow label={t("employees.educationLevel")} value={employee.education_level || "—"} />
+              <InfoRow label={t("employees.educationField")}          value={employee.education_field || "—"} />
               {employee.competencies.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {employee.competencies.map((c) => (
@@ -278,10 +274,9 @@ export function EmployeeDetailPage() {
             </Section>
           )}
 
-          {/* Notes */}
           {employee.notes && (
             <div className="card p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-2">Notes internes</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">{t("employees.internalNotes")}</h3>
               <p className="text-sm text-gray-600 whitespace-pre-wrap">{employee.notes}</p>
             </div>
           )}
@@ -295,24 +290,24 @@ export function EmployeeDetailPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              {employee.beneficiaries.length} ayant{employee.beneficiaries.length > 1 ? "s" : ""} droit
-              {" — "}{employee.beneficiaries.filter((b) => b.is_eligible).length} éligible{employee.beneficiaries.filter((b) => b.is_eligible).length > 1 ? "s" : ""}
+              {t("employees.beneficiaryCount", { count: employee.beneficiaries.length })}
+              {" — "}{t("employees.eligibleCount", { count: employee.beneficiaries.filter((b) => b.is_eligible).length })}
             </p>
             <RoleGuard roles={["admin", "gestionnaire"]}>
               <button onClick={() => setShowAddBene(true)}
                 className="flex items-center gap-2 px-3 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-light">
-                <Plus className="w-4 h-4" />Ajouter
+                <Plus className="w-4 h-4" />{t("beneficiaries.add")}
               </button>
             </RoleGuard>
           </div>
 
           {employee.beneficiaries.length === 0 ? (
-            <EmptyState icon={Users} title="Aucun ayant droit"
-              description="Ajoutez les personnes à charge de cet employé."
+            <EmptyState icon={Users} title={t("beneficiaries.noBeneficiaries")}
+              description={t("employees.noHistoryDescription")}
               action={
                 <RoleGuard roles={["admin", "gestionnaire"]}>
                   <button onClick={() => setShowAddBene(true)} className="btn-primary">
-                    <Plus className="w-4 h-4 inline mr-1" />Ajouter un ayant droit
+                    <Plus className="w-4 h-4 inline mr-1" />{t("beneficiaries.add")}
                   </button>
                 </RoleGuard>
               }
@@ -345,22 +340,22 @@ export function EmployeeDetailPage() {
       {activeTab === "security" && (
         <div className="space-y-4">
           <div className="card p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Statut du dossier</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">{t("employees.fileStatus")}</h3>
             <div className="flex items-center gap-4 mb-6">
               <EmployeeStatusBadge status={employee.status} />
               <span className="text-sm text-gray-500">
-                Depuis le {formatDate(employee.date_hired)}
+                {t("employees.sinceDate", { date: formatDate(employee.date_hired) })}
               </span>
             </div>
             <RoleGuard roles={["admin", "gestionnaire"]}>
               <div className="space-y-3">
-                <p className="text-sm font-medium text-gray-700">Changer le statut</p>
+                <p className="text-sm font-medium text-gray-700">{t("employees.changeStatus")}</p>
                 <div className="flex gap-3 flex-wrap">
                   {[
-                    { s: "active",    label: "Activer",   color: "bg-green-600 hover:bg-green-700 text-white" },
-                    { s: "inactive",  label: "Désactiver",color: "bg-gray-600 hover:bg-gray-700 text-white"  },
-                    { s: "suspended", label: "Suspendre", color: "bg-amber-500 hover:bg-amber-600 text-white"},
-                    { s: "retired",   label: "Retraite",  color: "bg-blue-600 hover:bg-blue-700 text-white"  },
+                    { s: "active",    label: t("employees.activate"),   color: "bg-green-600 hover:bg-green-700 text-white" },
+                    { s: "inactive",  label: t("employees.deactivate"), color: "bg-gray-600 hover:bg-gray-700 text-white"  },
+                    { s: "suspended", label: t("employees.suspendAction"), color: "bg-amber-500 hover:bg-amber-600 text-white"},
+                    { s: "retired",   label: t("employees.retireAction"),  color: "bg-blue-600 hover:bg-blue-700 text-white"  },
                   ].map(({ s, label, color }) => (
                     <button key={s} disabled={employee.status === s}
                       onClick={() => { setNewStatus(s); setShowStatus(true); }}
@@ -373,47 +368,41 @@ export function EmployeeDetailPage() {
             </RoleGuard>
           </div>
 
-          {/* Infos audit */}
           <div className="card p-5">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Informations d'audit</h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">{t("employees.auditInfo")}</h3>
             <div className="space-y-2">
-              <InfoRow label="Créé par"          value={employee.created_by_name || "Système"} />
-              <InfoRow label="Date de création"  value={formatDateTime(employee.created_at)} />
-              <InfoRow label="Dernière modif."   value={formatDateTime(employee.updated_at)} />
+              <InfoRow label={t("employees.createdByLabel")}          value={employee.created_by_name || t("employees.system")} />
+              <InfoRow label={t("employees.createdDateLabel")}  value={formatDateTime(employee.created_at)} />
+              <InfoRow label={t("employees.lastModifiedLabel")}   value={formatDateTime(employee.updated_at)} />
             </div>
           </div>
         </div>
       )}
 
       {/* ── Modals ───────────────────────────────────── */}
-      {/* Edit */}
-      <Modal open={showEdit} onClose={() => setShowEdit(false)} title="Modifier l'employé" size="xl">
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} title={t("employees.edit")} size="xl">
         <EmployeeForm mode="edit" initialData={employee}
           onSubmit={handleUpdate} onCancel={() => setShowEdit(false)}
           isLoading={updateMutation.isPending} />
       </Modal>
 
-      {/* Photo */}
-      <Modal open={showPhotoEdit} onClose={() => setShowPhotoEdit(false)} title="Photo de profil" size="sm">
+      <Modal open={showPhotoEdit} onClose={() => setShowPhotoEdit(false)} title={t("employees.photoTitle")} size="sm">
         <div className="flex justify-center py-4">
           <PhotoUpload employeeId={id!} currentPhotoUrl={employee.photo_url} employeeName={employee.full_name} />
         </div>
       </Modal>
 
-      {/* Delete employee */}
       <ConfirmDialog open={showDelete} onClose={() => setShowDelete(false)}
-        onConfirm={handleDelete} title="Supprimer l'employé"
-        message={`Supprimer ${employee.full_name} ? Le dossier sera archivé. Cette action est irréversible.`}
-        confirmLabel="Supprimer" loading={deleteMutation.isPending} />
+        onConfirm={handleDelete} title={t("employees.confirmDeleteTitle")}
+        message={t("employees.confirmDeleteEmployee", { name: employee.full_name })}
+        confirmLabel={t("common.delete")} loading={deleteMutation.isPending} />
 
-      {/* Add beneficiary */}
-      <Modal open={showAddBene} onClose={() => setShowAddBene(false)} title="Ajouter un ayant droit" size="lg">
+      <Modal open={showAddBene} onClose={() => setShowAddBene(false)} title={t("beneficiaries.add")} size="lg">
         <BeneficiaryForm onSubmit={handleAddBene} onCancel={() => setShowAddBene(false)}
           isLoading={createBene.isPending} />
       </Modal>
 
-      {/* Edit beneficiary */}
-      <Modal open={!!editBene} onClose={() => setEditBene(null)} title="Modifier l'ayant droit" size="lg">
+      <Modal open={!!editBene} onClose={() => setEditBene(null)} title={t("beneficiaries.edit")} size="lg">
         {editBene && (
           <BeneficiaryForm initialData={editBene}
             onSubmit={handleUpdateBene} onCancel={() => setEditBene(null)}
@@ -421,34 +410,32 @@ export function EmployeeDetailPage() {
         )}
       </Modal>
 
-      {/* Delete beneficiary */}
       <ConfirmDialog open={!!deleteBene} onClose={() => setDeleteBene(null)}
-        onConfirm={handleDeleteBene} title="Supprimer l'ayant droit"
-        message="Cet ayant droit sera retiré du dossier. Continuer ?"
-        confirmLabel="Supprimer" loading={deleteBeneM.isPending} />
+        onConfirm={handleDeleteBene} title={t("beneficiaries.deleteConfirmTitle")}
+        message={t("beneficiaries.deleteConfirmMessage")}
+        confirmLabel={t("common.delete")} loading={deleteBeneM.isPending} />
 
-      {/* Change status */}
-      <Modal open={showStatus} onClose={() => setShowStatus(false)} title="Changer le statut" size="sm"
+      <Modal open={showStatus} onClose={() => setShowStatus(false)} title={t("employees.changeStatus")} size="sm"
         footer={
           <>
             <button onClick={() => setShowStatus(false)}
               className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-              Annuler
+              {t("common.cancel")}
             </button>
             <button onClick={handleChangeStatus} disabled={changeStatus.isPending}
               className="px-4 py-2 text-sm bg-brand text-white rounded-lg hover:bg-brand-light disabled:opacity-60">
-              Confirmer
+              {t("app.confirm")}
             </button>
           </>
         }>
         <div className="space-y-3">
           <p className="text-sm text-gray-600">
-            Changer le statut de <strong>{employee.full_name}</strong> vers <strong>{newStatus}</strong>.
+            {t("employees.changeStatusModal", { name: employee.full_name, status: newStatus })}
           </p>
           <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">Motif (optionnel)</label>
+            <label className="text-sm font-medium text-gray-700 block mb-1">{t("employees.reasonLabel")}</label>
             <textarea value={statusReason} onChange={(e) => setStatusReason(e.target.value)}
-              rows={3} placeholder="Précisez la raison de ce changement..."
+              rows={3} placeholder={t("employees.reasonPlaceholder")}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
         </div>
@@ -509,15 +496,15 @@ function BeneficiaryCard({ bene, onEdit, onDelete }: { bene: Beneficiary; onEdit
               {bene.relationship_display}
             </span>
             {bene.is_eligible
-              ? <CheckCircle2 className="w-4 h-4 text-green-500" aria-label="Éligible" />
-              : <XCircle     className="w-4 h-4 text-red-400"   aria-label="Non éligible" />
+              ? <CheckCircle2 className="w-4 h-4 text-green-500" aria-label={t("employees.eligible")} />
+              : <XCircle     className="w-4 h-4 text-red-400"   aria-label={t("employees.notEligible")} />
             }
           </div>
           <p className="font-semibold text-gray-900">{bene.full_name}</p>
           <p className="text-xs text-gray-500">
-            {bene.age != null ? `${bene.age} ans` : "Âge inconnu"}
-            {bene.is_student && " · Étudiant(e)"}
-            {bene.is_handicapped && " · Handicapé(e)"}
+            {bene.age != null ? `${bene.age}` : t("employees.ageUnknown")}
+            {bene.is_student && ` · ${t("employees.student")}`}
+            {bene.is_handicapped && ` · ${t("employees.handicapped")}`}
           </p>
         </div>
         <RoleGuard roles={["admin", "gestionnaire"]}>

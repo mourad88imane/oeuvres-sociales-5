@@ -4,6 +4,7 @@
 import { useState, useCallback } from "react";
 import { Gift, Plus, Search, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useBenefits, useBenefitStatistics, useCreateBenefit, useDeleteBenefit } from "../hooks/useBenefits";
 import { WorkflowBadge, WorkflowTimeline } from "../components/WorkflowComponents";
 import { BenefitForm }  from "../components/BenefitForm";
@@ -12,18 +13,18 @@ import { RoleGuard }    from "@shared/components/layout/ProtectedRoute";
 import { PRIORITY_UI, CATEGORY_UI } from "../types";
 import type { BenefitFilters, WorkflowState, BenefitCreatePayload, BenefitListItem } from "../types";
 
-const ALL_TABS = [
-  { state:"all",          label:"Toutes"        },
-  { state:"draft",        label:"Brouillons"    },
-  { state:"submitted",    label:"Soumises"      },
-  { state:"under_review", label:"En instruction"},
-  { state:"on_hold",      label:"En attente"    },
-  { state:"validated",    label:"Validées"      },
-  { state:"paid",         label:"Payées"        },
-  { state:"rejected",     label:"Rejetées"      },
-];
-
 export function BenefitsPage() {
+  const { t } = useTranslation();
+  const ALL_TABS = [
+    { state:"all",          label: t("common.all") },
+    { state:"draft",        label: t("conventions.draft") },
+    { state:"submitted",    label: t("benefits.submitted") },
+    { state:"under_review", label: t("benefits.underReview") },
+    { state:"on_hold",      label: t("benefits.pending") },
+    { state:"validated",    label: t("benefits.approved") },
+    { state:"paid",         label: t("benefits.paid") },
+    { state:"rejected",     label: t("benefits.rejected") },
+  ];
   const navigate   = useNavigate();
   const [filters,  setFilters]  = useState<BenefitFilters>({ page:1, page_size:20, ordering:"-created_at" });
   const [tab,      setTab]      = useState<string>("all");
@@ -49,8 +50,8 @@ export function BenefitsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Prestations</h1>
-          <p className="text-gray-500 text-sm">{pagination?.count.toLocaleString("fr-DZ") ?? "—"} demande{(pagination?.count ?? 0) > 1 ? "s" : ""}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t("benefits.title")}</h1>
+          <p className="text-gray-500 text-sm">{pagination?.count != null ? t("common.totalItems", { count: pagination.count }) : "—"}</p>
         </div>
         <div className="flex gap-2">
           <button onClick={() => refetch()} className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
@@ -58,7 +59,7 @@ export function BenefitsPage() {
           </button>
           <RoleGuard roles={["admin","gestionnaire"]}>
             <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-sm hover:bg-brand-light">
-              <Plus className="w-4 h-4" />Nouvelle demande
+              <Plus className="w-4 h-4" />{t("benefits.add")}
             </button>
           </RoleGuard>
         </div>
@@ -68,10 +69,10 @@ export function BenefitsPage() {
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label:"En attente", value: stats.pending_count,  color:"text-blue-600"  },
-            { label:"Payées",     value: stats.paid_count,     color:"text-green-600" },
-            { label:"Rejetées",   value: stats.rejected_count, color:"text-red-600"   },
-            { label:"Anomalies IA",value:stats.anomaly_count,  color:"text-amber-600" },
+            { label: t("benefits.pending"), value: stats.pending_count,  color:"text-blue-600"  },
+            { label: t("benefits.paid"),    value: stats.paid_count,     color:"text-green-600" },
+            { label: t("benefits.rejected"),value: stats.rejected_count, color:"text-red-600"   },
+            { label: t("ai.anomalies.title"),value:stats.anomaly_count,  color:"text-amber-600" },
           ].map(({ label,value,color }) => (
             <div key={label} className="card p-4 text-center">
               <p className={`text-2xl font-bold ${color}`}>{value}</p>
@@ -100,7 +101,7 @@ export function BenefitsPage() {
       {/* Search */}
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input type="text" placeholder="Référence, employé, objet..."
+        <input type="text" placeholder={t("benefits.searchPlaceholder")}
           value={filters.search ?? ""} onChange={e => upd("search", e.target.value)}
           className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500" />
       </div>
@@ -110,8 +111,8 @@ export function BenefitsPage() {
         {isLoading ? (
           <div className="flex justify-center py-16"><Spinner size="lg" /></div>
         ) : benefits.length === 0 ? (
-          <EmptyState icon={Gift} title="Aucune prestation" description="Aucune demande trouvée."
-            action={<RoleGuard roles={["admin","gestionnaire"]}><button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-sm"><Plus className="w-4 h-4" />Créer</button></RoleGuard>}
+          <EmptyState icon={Gift} title={t("benefits.noBenefits")} description={t("common.noResults")}
+            action={<RoleGuard roles={["admin","gestionnaire"]}><button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-sm"><Plus className="w-4 h-4" />{t("common.create")}</button></RoleGuard>}
           />
         ) : (
           benefits.map(b => <BenefitCard key={b.id} benefit={b} onClick={() => navigate(`/benefits/${b.id}`)} />)
@@ -128,19 +129,20 @@ export function BenefitsPage() {
       )}
 
       {/* Modals */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Nouvelle demande" size="xl">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t("benefits.add")} size="xl">
         <BenefitForm mode="create"
           onSubmit={async (d: BenefitCreatePayload) => { await createM.mutateAsync(d); setShowCreate(false); }}
           onCancel={() => setShowCreate(false)} isLoading={createM.isPending} />
       </Modal>
       <ConfirmDialog open={!!deleteId} onClose={() => setDeleteId(null)}
         onConfirm={async () => { if (deleteId) { await deleteM.mutateAsync(deleteId); setDeleteId(null); }}}
-        title="Supprimer" message="Supprimer cette demande ?" confirmLabel="Supprimer" loading={deleteM.isPending} />
+        title={t("common.delete")} message={t("common.areYouSure", { action: t("common.delete").toLowerCase() })} confirmLabel={t("common.delete")} loading={deleteM.isPending} />
     </div>
   );
 }
 
 function BenefitCard({ benefit, onClick }: { benefit: BenefitListItem; onClick: () => void }) {
+  const { t } = useTranslation();
   const cat = CATEGORY_UI[benefit.benefit_category];
   const pri = PRIORITY_UI[benefit.priority];
   return (
@@ -157,8 +159,8 @@ function BenefitCard({ benefit, onClick }: { benefit: BenefitListItem; onClick: 
             <span className="font-mono text-xs text-gray-500">{benefit.reference}</span>
             <WorkflowBadge state={benefit.workflow_state as WorkflowState} />
             <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${pri.badgeClass}`}>{pri.label}</span>
-            {benefit.ai_anomaly_flag && <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" />IA</span>}
-            {benefit.is_overdue && <span className="text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">Retard</span>}
+            {benefit.ai_anomaly_flag && <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full"><AlertTriangle className="w-3 h-3" />{t("common.status")}</span>}
+            {benefit.is_overdue && <span className="text-xs text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">{t("common.warning")}</span>}
           </div>
           <p className="font-medium text-gray-900 truncate">{benefit.title}</p>
           <p className="text-xs text-gray-500">{benefit.employee_name} · {benefit.benefit_type_name}</p>

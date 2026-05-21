@@ -2,105 +2,96 @@
  * SIDEBAR — Navigation principale
  * S'adapte aux rôles : affiche uniquement les sections autorisées.
  */
+import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Users, UserCheck, Gift, Wallet,
   FileText, BarChart3, Settings, LogOut, ChevronLeft,
-  Building2, Shield, Lightbulb, Activity, Bot,
+  Building2, Shield, Lightbulb, Activity, Bot, Languages,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuth } from "@modules/auth/hooks/useAuth";
 import { useAuthStore } from "@modules/auth/store/authStore";
+import { LanguageSwitcher } from "@shared/components/ui/LanguageSwitcher";
 
 interface NavItem {
-  label: string;
+  labelKey: string;
   path: string;
   icon: React.ElementType;
   roles?: string[];      // Si vide → tous les rôles
   badge?: number;
 }
 
-const navItems: NavItem[] = [
+const navItemDefs: Omit<NavItem, "labelKey">[] = [
+  { path: "/dashboard", icon: LayoutDashboard },
   {
-    label: "Tableau de bord",
-    path: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Employés",
     path: "/employees",
     icon: Users,
     roles: ["admin", "gestionnaire", "comptable"],
   },
   {
-    label: "Ayants droit",
     path: "/beneficiaries",
     icon: UserCheck,
     roles: ["admin", "gestionnaire"],
   },
+  { path: "/benefits", icon: Gift },
   {
-    label: "Prestations",
-    path: "/benefits",
-    icon: Gift,
-  },
-  {
-    label: "Finance",
     path: "/finance",
     icon: Wallet,
     roles: ["admin", "comptable"],
   },
   {
-    label: "Conventions",
     path: "/conventions",
     icon: Building2,
     roles: ["admin", "gestionnaire", "comptable"],
   },
   {
-    label: "Rapports",
     path: "/reporting",
     icon: FileText,
     roles: ["admin", "gestionnaire", "comptable"],
   },
   {
-    label: "Analytics",
     path: "/analytics",
     icon: BarChart3,
     roles: ["admin"],
   },
   {
-    label: "Décisions IA",
     path: "/analytics/decisions",
     icon: Lightbulb,
     roles: ["admin"],
   },
   {
-    label: "Assistant IA",
     path: "/ai/assistant",
     icon: Bot,
     roles: ["admin"],
   },
   {
-    label: "Monitoring",
     path: "/monitoring",
     icon: Activity,
     roles: ["admin"],
   },
 ];
 
-const adminItems: NavItem[] = [
-  {
-    label: "Utilisateurs",
-    path: "/users",
-    icon: Shield,
-    roles: ["admin"],
-  },
-  {
-    label: "Paramètres",
-    path: "/settings",
-    icon: Settings,
-    roles: ["admin"],
-  },
+const adminItemDefs: Omit<NavItem, "labelKey">[] = [
+  { path: "/users", icon: Shield, roles: ["admin"] },
+  { path: "/settings", icon: Settings, roles: ["admin"] },
 ];
+
+const pathToNavKey: Record<string, string> = {
+  "/dashboard": "dashboard",
+  "/employees": "employees",
+  "/beneficiaries": "beneficiaries",
+  "/benefits": "benefits",
+  "/finance": "finance",
+  "/conventions": "conventions",
+  "/reporting": "reports",
+  "/analytics": "analytics",
+  "/analytics/decisions": "decisions",
+  "/ai/assistant": "assistant",
+  "/monitoring": "monitoring",
+  "/users": "users",
+  "/settings": "settings",
+};
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -108,8 +99,19 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
+  const { t } = useTranslation();
   const { logout } = useAuth();
   const { user } = useAuthStore();
+
+  const navItems: NavItem[] = navItemDefs.map((d) => ({
+    ...d,
+    labelKey: pathToNavKey[d.path],
+  }));
+
+  const adminItems: NavItem[] = adminItemDefs.map((d) => ({
+    ...d,
+    labelKey: pathToNavKey[d.path],
+  }));
 
   const filteredNavItems = navItems.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role))
@@ -163,7 +165,7 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
             {!collapsed && (
               <div className="px-3 pt-4 pb-1">
                 <p className="text-blue-400 text-xs font-semibold uppercase tracking-wider">
-                  Administration
+                  {t("nav.administration")}
                 </p>
               </div>
             )}
@@ -175,6 +177,17 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
           </>
         )}
       </nav>
+
+      {/* ── Langue ─────────────────────────────────────── */}
+      {!collapsed && (
+        <div className="border-t border-blue-800 p-3">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <Languages className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Langue</span>
+          </div>
+          <LanguageSwitcher />
+        </div>
+      )}
 
       {/* ── Profil utilisateur ─────────────────────────── */}
       <div className="border-t border-blue-800 p-3">
@@ -204,7 +217,7 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
           )}
         >
           <LogOut className="w-4 h-4 shrink-0" />
-          {!collapsed && <span>Déconnexion</span>}
+          {!collapsed && <span>{t("auth.logout")}</span>}
         </button>
       </div>
     </aside>
@@ -213,6 +226,8 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
 
 // ── Composant NavItem ──────────────────────────────────────
 function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
+  const { t } = useTranslation();
+  const label = t(`nav.${item.labelKey}`, item.labelKey);
   return (
     <NavLink
       to={item.path}
@@ -225,10 +240,10 @@ function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
             : "text-blue-200 hover:bg-white/10 hover:text-white"
         )
       }
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? label : undefined}
     >
       <item.icon className="w-5 h-5 shrink-0" />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && <span className="truncate">{label}</span>}
       {!collapsed && item.badge != null && item.badge > 0 && (
         <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
           {item.badge > 99 ? "99+" : item.badge}

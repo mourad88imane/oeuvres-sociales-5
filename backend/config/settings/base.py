@@ -73,6 +73,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",  # CORS avant CommonMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     # API uses JWT (no session auth), so skip CSRF for /api/ routes
     # Must be before CsrfViewMiddleware
@@ -139,10 +140,18 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ── Internationalisation ──────────────────────────────────
-LANGUAGE_CODE = "fr-fr"
+LANGUAGE_CODE = "fr"
 TIME_ZONE = "Africa/Algiers"
 USE_I18N = True
 USE_TZ = True
+
+LANGUAGES = [
+    ("fr", "Français"),
+    ("en", "English"),
+    ("ar", "العربية"),
+]
+
+LOCALE_PATHS = [BASE_DIR / "locale"]
 
 # ── Fichiers statiques & médias ───────────────────────────
 STATIC_URL = "/static/"
