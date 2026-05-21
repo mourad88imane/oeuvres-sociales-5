@@ -9,14 +9,17 @@ Méthodes supportées :
   - Seasonal decomposition
   - Ensemble (moyenne pondérée des méthodes)
 """
-import logging
-from datetime import date, timedelta
-from typing import Optional
 
-from django.db.models import Avg, Count, Sum
+import logging
+from datetime import timedelta
+
 from django.utils import timezone
 
-from .ml.math_utils import zscore_anomalies, iqr_anomalies, moving_average_anomalies, seasonal_decompose
+from .ml.math_utils import (
+    iqr_anomalies,
+    moving_average_anomalies,
+    zscore_anomalies,
+)
 from .models import AIAnomaly, AIModelRegistry
 
 logger = logging.getLogger("shared.ai.anomaly")
@@ -28,7 +31,7 @@ class AnomalyDetector:
     def detect_kpi_anomalies(
         self,
         days: int = 90,
-        methods: Optional[list[str]] = None,
+        methods: list[str] | None = None,
         save: bool = True,
     ) -> dict:
         """
@@ -36,6 +39,7 @@ class AnomalyDetector:
         methods : ["zscore", "iqr", "moving_avg", "seasonal", "ensemble"]
         """
         from django.apps import apps
+
         try:
             KpiDef = apps.get_model("reporting", "KpiDefinition")
             KpiSnap = apps.get_model("reporting", "KpiSnapshot")
@@ -48,9 +52,11 @@ class AnomalyDetector:
         kpis = KpiDef.objects.filter(is_active=True)
 
         for kpi in kpis:
-            snapshots = list(KpiSnap.objects.filter(
-                kpi=kpi, date__gte=cutoff
-            ).order_by("date").values_list("value", flat=True))
+            snapshots = list(
+                KpiSnap.objects.filter(kpi=kpi, date__gte=cutoff)
+                .order_by("date")
+                .values_list("value", flat=True)
+            )
 
             if len(snapshots) < 5:
                 continue
@@ -59,25 +65,27 @@ class AnomalyDetector:
 
             for r in results:
                 severity = self._compute_severity(r["deviation_pct"])
-                all_anomalies.append({
-                    "target_type": "KpiSnapshot",
-                    "target_id": kpi.code,
-                    "target_repr": f"{kpi.name} ({kpi.code})",
-                    "metric_name": kpi.code,
-                    "expected_value": r["expected"],
-                    "actual_value": r["actual"],
-                    "deviation": r["deviation"],
-                    "deviation_pct": r["deviation_pct"],
-                    "zscore": r.get("zscore"),
-                    "severity": severity,
-                    "detection_method": r["method"],
-                    "context": {
-                        "kpi_category": kpi.category,
-                        "kpi_unit": kpi.unit,
-                        "method": r["method"],
-                    },
-                    "explanation": self._build_explanation(kpi, r),
-                })
+                all_anomalies.append(
+                    {
+                        "target_type": "KpiSnapshot",
+                        "target_id": kpi.code,
+                        "target_repr": f"{kpi.name} ({kpi.code})",
+                        "metric_name": kpi.code,
+                        "expected_value": r["expected"],
+                        "actual_value": r["actual"],
+                        "deviation": r["deviation"],
+                        "deviation_pct": r["deviation_pct"],
+                        "zscore": r.get("zscore"),
+                        "severity": severity,
+                        "detection_method": r["method"],
+                        "context": {
+                            "kpi_category": kpi.category,
+                            "kpi_unit": kpi.unit,
+                            "method": r["method"],
+                        },
+                        "explanation": self._build_explanation(kpi, r),
+                    }
+                )
 
         all_anomalies.sort(key=lambda a: abs(a["deviation_pct"] or 0), reverse=True)
 
@@ -96,12 +104,13 @@ class AnomalyDetector:
     def detect_benefit_anomalies(self, days: int = 30, save: bool = True) -> dict:
         """Détecte les anomalies sur les demandes de prestations."""
         from django.apps import apps
+
         Benefit = apps.get_model("benefits", "Benefit")
         since = timezone.now() - timedelta(days=days)
         amounts = list(
             Benefit.objects.filter(created_at__gte=since)
-            .exclude(amount__isnull=True)
-            .values_list("amount", flat=True)
+            .exclude(requested_amount__isnull=True)
+            .values_list("requested_amount", flat=True)
         )
         if not amounts:
             return {"total_detected": 0, "anomalies": []}
@@ -111,20 +120,29 @@ class AnomalyDetector:
         for method in ["zscore", "iqr"]:
             if method == "zscore":
                 hits = zscore_anomalies(amounts_f, threshold=2.5)
-                for idx, val, z in hits:
-                    anomalies.append({
-                        "target_type": "Benefit", "detection_method": method,
-                        "metric_name": "amount", "actual_value": val, "zscore": z,
-                        "severity": "high" if abs(z) > 3 else "medium",
-                    })
+                for _idx, val, z in hits:
+                    anomalies.append(
+                        {
+                            "target_type": "Benefit",
+                            "detection_method": method,
+                            "metric_name": "amount",
+                            "actual_value": val,
+                            "zscore": z,
+                            "severity": "high" if abs(z) > 3 else "medium",
+                        }
+                    )
             elif method == "iqr":
                 hits = iqr_anomalies(amounts_f, multiplier=2.0)
-                for idx, val in hits:
-                    anomalies.append({
-                        "target_type": "Benefit", "detection_method": method,
-                        "metric_name": "amount", "actual_value": val,
-                        "severity": "medium",
-                    })
+                for _idx, val in hits:
+                    anomalies.append(
+                        {
+                            "target_type": "Benefit",
+                            "detection_method": method,
+                            "metric_name": "amount",
+                            "actual_value": val,
+                            "severity": "medium",
+                        }
+                    )
 
         if save and anomalies:
             model = self._get_or_create_model()
@@ -136,11 +154,13 @@ class AnomalyDetector:
     def detect_payment_anomalies(self, days: int = 90, save: bool = True) -> dict:
         """Détecte les anomalies sur les paiements."""
         from django.apps import apps
+
         Payment = apps.get_model("finance", "Payment")
         since = timezone.now() - timedelta(days=days)
         amounts = list(
-            Payment.objects.filter(executed_date__gte=since, status="paid")
-            .values_list("amount", flat=True)
+            Payment.objects.filter(executed_date__gte=since, status="paid").values_list(
+                "amount", flat=True
+            )
         )
         if not amounts:
             return {"total_detected": 0, "anomalies": []}
@@ -148,12 +168,19 @@ class AnomalyDetector:
         anomalies = []
         for method in ["zscore", "iqr"]:
             if method == "zscore":
-                for idx, val, z in zscore_anomalies(amounts_f, threshold=3.0):
-                    anomalies.append({
-                        "target_type": "Payment", "detection_method": method,
-                        "metric_name": "amount", "actual_value": val, "zscore": z,
-                        "severity": "critical" if abs(z) > 4 else "high" if abs(z) > 3 else "medium",
-                    })
+                for _idx, val, z in zscore_anomalies(amounts_f, threshold=3.0):
+                    anomalies.append(
+                        {
+                            "target_type": "Payment",
+                            "detection_method": method,
+                            "metric_name": "amount",
+                            "actual_value": val,
+                            "zscore": z,
+                            "severity": (
+                                "critical" if abs(z) > 4 else "high" if abs(z) > 3 else "medium"
+                            ),
+                        }
+                    )
         if save and anomalies:
             model = self._get_or_create_model()
             for a in anomalies[:30]:
@@ -166,30 +193,44 @@ class AnomalyDetector:
         if "zscore" in methods:
             for idx, val, z in zscore_anomalies(values, threshold=2.0):
                 expected = mean_excluding(values, idx)
-                results.append({
-                    "method": "zscore", "expected": expected,
-                    "actual": val, "deviation": val - expected,
-                    "deviation_pct": ((val - expected) / expected * 100) if expected else 0,
-                    "zscore": z,
-                })
+                results.append(
+                    {
+                        "method": "zscore",
+                        "expected": expected,
+                        "actual": val,
+                        "deviation": val - expected,
+                        "deviation_pct": ((val - expected) / expected * 100) if expected else 0,
+                        "zscore": z,
+                    }
+                )
         if "iqr" in methods:
             for idx, val in iqr_anomalies(values, multiplier=1.5):
                 expected = mean_excluding(values, idx)
-                results.append({
-                    "method": "iqr", "expected": expected,
-                    "actual": val, "deviation": val - expected,
-                    "deviation_pct": ((val - expected) / expected * 100) if expected else 0,
-                })
+                results.append(
+                    {
+                        "method": "iqr",
+                        "expected": expected,
+                        "actual": val,
+                        "deviation": val - expected,
+                        "deviation_pct": ((val - expected) / expected * 100) if expected else 0,
+                    }
+                )
         if "moving_avg" in methods:
-            for idx, val, ma, resid in moving_average_anomalies(values, window=3, std_multiplier=2.0):
-                results.append({
-                    "method": "moving_avg", "expected": ma,
-                    "actual": val, "deviation": resid,
-                    "deviation_pct": (resid / ma * 100) if ma else 0,
-                })
+            for _idx, val, ma, resid in moving_average_anomalies(
+                values, window=3, std_multiplier=2.0
+            ):
+                results.append(
+                    {
+                        "method": "moving_avg",
+                        "expected": ma,
+                        "actual": val,
+                        "deviation": resid,
+                        "deviation_pct": (resid / ma * 100) if ma else 0,
+                    }
+                )
         return results
 
-    def _compute_severity(self, deviation_pct: Optional[float]) -> str:
+    def _compute_severity(self, deviation_pct: float | None) -> str:
         if deviation_pct is None:
             return "low"
         adev = abs(deviation_pct)
@@ -231,6 +272,7 @@ def mean_excluding(values: list[float], exclude_idx: int) -> float:
     """Moyenne excluant un index (pour calculer la valeur attendue)."""
     filtered = [v for i, v in enumerate(values) if i != exclude_idx]
     from statistics import mean as _mean
+
     return _mean(filtered) if filtered else 0.0
 
 

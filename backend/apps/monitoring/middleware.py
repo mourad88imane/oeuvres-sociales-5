@@ -1,6 +1,5 @@
-import time
 import logging
-from django.conf import settings
+import time
 
 logger = logging.getLogger("apps.monitoring")
 
@@ -44,7 +43,9 @@ class APIMonitoringMiddleware:
 
             if response.status_code >= 500:
                 try:
-                    log.error_message = response.data.get("detail", "")[:1000] if hasattr(response, "data") else ""
+                    log.error_message = (
+                        response.data.get("detail", "")[:1000] if hasattr(response, "data") else ""
+                    )
                 except Exception:
                     pass
 
@@ -52,6 +53,7 @@ class APIMonitoringMiddleware:
 
             if response.status_code >= 500:
                 from .models import SecurityEvent
+
                 SecurityEvent.objects.create(
                     event_type=SecurityEvent.EventType.API_ABUSE,
                     severity=SecurityEvent.Severity.HIGH,
@@ -68,13 +70,14 @@ class APIMonitoringMiddleware:
 
     def _update_endpoint_status(self, request, response, duration_ms):
         try:
-            from django.db.models import Avg, Max, Min, Count
-            from .models import APIEndpointStatus
+            from django.db.models import Avg, Max, Min
             from django.utils import timezone
 
-            key = f"{request.method}:{request.path}"
+            from .models import APIEndpointStatus
+
             status, _ = APIEndpointStatus.objects.get_or_create(
-                endpoint=request.path, method=request.method,
+                endpoint=request.path,
+                method=request.method,
             )
             status.total_calls += 1
             if response.status_code >= 400:
@@ -83,11 +86,16 @@ class APIMonitoringMiddleware:
             status.last_status = response.status_code
 
             # Rolling averages from recent 100 calls
+            from .models import APIRequestLog
+
             recent = APIRequestLog.objects.filter(
-                method=request.method, endpoint=request.path,
+                method=request.method,
+                endpoint=request.path,
             ).order_by("-timestamp")[:100]
             agg = recent.aggregate(
-                avg=Avg("duration_ms"), mx=Max("duration_ms"), mn=Min("duration_ms"),
+                avg=Avg("duration_ms"),
+                mx=Max("duration_ms"),
+                mn=Min("duration_ms"),
             )
             status.avg_duration_ms = agg["avg"] or duration_ms
             status.max_duration_ms = agg["mx"] or duration_ms

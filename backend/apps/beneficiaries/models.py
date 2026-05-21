@@ -3,45 +3,52 @@
 BENEFICIARIES MODELS — Ayants droit
 ============================================================
 """
+
 from datetime import date
-from django.db import models
+
 from core.models import BaseModel
+from django.db import models
 
 
 class Beneficiary(BaseModel):
 
     class Relationship(models.TextChoices):
-        SPOUSE  = "spouse",  "Conjoint(e)"
-        CHILD   = "child",   "Enfant"
-        PARENT  = "parent",  "Parent"
+        SPOUSE = "spouse", "Conjoint(e)"
+        CHILD = "child", "Enfant"
+        PARENT = "parent", "Parent"
         SIBLING = "sibling", "Frère/Sœur"
-        OTHER   = "other",   "Autre"
+        OTHER = "other", "Autre"
 
     class Gender(models.TextChoices):
-        MALE   = "M", "Masculin"
+        MALE = "M", "Masculin"
         FEMALE = "F", "Féminin"
 
-    employee      = models.ForeignKey("employees.Employee", on_delete=models.CASCADE,
-                                      related_name="beneficiaries", verbose_name="Employé")
-    first_name    = models.CharField(max_length=100, verbose_name="Prénom")
-    last_name     = models.CharField(max_length=100, verbose_name="Nom")
+    employee = models.ForeignKey(
+        "employees.Employee",
+        on_delete=models.CASCADE,
+        related_name="beneficiaries",
+        verbose_name="Employé",
+    )
+    first_name = models.CharField(max_length=100, verbose_name="Prénom")
+    last_name = models.CharField(max_length=100, verbose_name="Nom")
     first_name_ar = models.CharField(max_length=100, blank=True)
-    last_name_ar  = models.CharField(max_length=100, blank=True)
-    gender        = models.CharField(max_length=1, choices=Gender.choices)
+    last_name_ar = models.CharField(max_length=100, blank=True)
+    gender = models.CharField(max_length=1, choices=Gender.choices)
     date_of_birth = models.DateField(verbose_name="Date de naissance")
-    national_id   = models.CharField(max_length=20, blank=True, verbose_name="NNI")
-    relationship  = models.CharField(max_length=20, choices=Relationship.choices,
-                                     verbose_name="Lien de parenté")
-    is_eligible        = models.BooleanField(default=True, verbose_name="Éligible")
+    national_id = models.CharField(max_length=20, blank=True, verbose_name="NNI")
+    relationship = models.CharField(
+        max_length=20, choices=Relationship.choices, verbose_name="Lien de parenté"
+    )
+    is_eligible = models.BooleanField(default=True, verbose_name="Éligible")
     ineligibility_reason = models.CharField(max_length=300, blank=True)
-    is_student     = models.BooleanField(default=False, verbose_name="Étudiant(e)")
+    is_student = models.BooleanField(default=False, verbose_name="Étudiant(e)")
     is_handicapped = models.BooleanField(default=False, verbose_name="Handicapé(e)")
-    school_name   = models.CharField(max_length=200, blank=True)
-    school_year   = models.CharField(max_length=20, blank=True)
+    school_name = models.CharField(max_length=200, blank=True)
+    school_year = models.CharField(max_length=20, blank=True)
     spouse_is_employed = models.BooleanField(null=True, blank=True)
-    spouse_employer    = models.CharField(max_length=200, blank=True)
-    birth_certificate_uploaded   = models.BooleanField(default=False)
-    marriage_certificate_uploaded= models.BooleanField(default=False)
+    spouse_employer = models.CharField(max_length=200, blank=True)
+    birth_certificate_uploaded = models.BooleanField(default=False)
+    marriage_certificate_uploaded = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
 
     class Meta:

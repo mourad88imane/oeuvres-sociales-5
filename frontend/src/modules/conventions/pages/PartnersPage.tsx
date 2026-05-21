@@ -7,10 +7,8 @@ import { clsx } from "clsx";
 import { usePartners } from "../api/index";
 import { EmptyState, Spinner, Modal, Field, inputCls } from "@shared/components/ui/index";
 import { RoleGuard } from "@shared/components/layout/ProtectedRoute";
-import { fmtDate } from "../utils/formatters";
 import { PARTNER_TYPE_UI } from "../types";
 import { useCreatePartner } from "../api/index";
-import type { PartnerType } from "../types";
 
 export function PartnersPage() {
   const navigate = useNavigate();

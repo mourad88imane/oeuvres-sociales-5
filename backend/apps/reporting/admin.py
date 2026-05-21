@@ -1,8 +1,14 @@
-from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
+
+from django.contrib import admin
+
 from .models import (
-    KpiDefinition, KpiSnapshot, DashboardWidget,
-    ReportDefinition, ReportSchedule, DataExport,
+    DashboardWidget,
+    DataExport,
+    KpiDefinition,
+    KpiSnapshot,
+    ReportDefinition,
+    ReportSchedule,
 )
 
 
@@ -19,7 +25,15 @@ class KpiSnapshotInline(admin.TabularInline):
 
 @admin.register(KpiDefinition)
 class KpiDefinitionAdmin(SimpleHistoryAdmin):
-    list_display = ["code", "name", "category", "unit", "target_value", "is_active", "display_order"]
+    list_display = [
+        "code",
+        "name",
+        "category",
+        "unit",
+        "target_value",
+        "is_active",
+        "display_order",
+    ]
     list_filter = ["category", "is_active"]
     search_fields = ["code", "name"]
     ordering = ["category", "display_order"]
@@ -39,7 +53,15 @@ class KpiSnapshotAdmin(SimpleHistoryAdmin):
 
 @admin.register(DashboardWidget)
 class DashboardWidgetAdmin(SimpleHistoryAdmin):
-    list_display = ["title", "widget_type", "size", "is_global", "is_active", "display_order", "user"]
+    list_display = [
+        "title",
+        "widget_type",
+        "size",
+        "is_global",
+        "is_active",
+        "display_order",
+        "user",
+    ]
     list_filter = ["widget_type", "is_global", "is_active"]
     search_fields = ["title"]
     ordering = ["display_order"]
@@ -62,7 +84,15 @@ class ReportScheduleAdmin(SimpleHistoryAdmin):
 
 @admin.register(DataExport)
 class DataExportAdmin(SimpleHistoryAdmin):
-    list_display = ["report", "export_format", "status", "row_count", "file_size", "completed_at", "created_at"]
+    list_display = [
+        "report",
+        "export_format",
+        "status",
+        "row_count",
+        "file_size",
+        "completed_at",
+        "created_at",
+    ]
     list_filter = ["status", "export_format"]
     search_fields = ["report__title", "report__code"]
 

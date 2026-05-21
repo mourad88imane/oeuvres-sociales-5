@@ -3,15 +3,17 @@
 BENEFICIARY SERVICE — Logique métier ayants droit
 ============================================================
 """
+
 import logging
+
 from django.db import transaction
 from django.db.models import QuerySet
-
 from shared.audit.services import AuditService
+
 from .models import Beneficiary
 
 logger = logging.getLogger("apps.beneficiaries")
-audit  = AuditService()
+audit = AuditService()
 
 
 class BeneficiaryService:
@@ -32,17 +34,22 @@ class BeneficiaryService:
         bene.update_eligibility()
 
         audit.log_create(user=user, obj=bene, request=request)
-        logger.info("Beneficiary created", extra={
-            "beneficiary_id": str(bene.id),
-            "employee": employee.matricule,
-            "relationship": bene.relationship,
-        })
+        logger.info(
+            "Beneficiary created",
+            extra={
+                "beneficiary_id": str(bene.id),
+                "employee": employee.matricule,
+                "relationship": bene.relationship,
+            },
+        )
         return bene
 
     @transaction.atomic
-    def update(self, bene: Beneficiary, validated_data: dict,
-               user=None, request=None) -> Beneficiary:
+    def update(
+        self, bene: Beneficiary, validated_data: dict, user=None, request=None
+    ) -> Beneficiary:
         from django.forms.models import model_to_dict
+
         before_data = model_to_dict(bene)
 
         for attr, value in validated_data.items():
@@ -53,8 +60,7 @@ class BeneficiaryService:
         # Recalcul éligibilité après chaque modification
         bene.update_eligibility()
 
-        audit.log_update(user=user, obj=bene,
-                         before_data=before_data, request=request)
+        audit.log_update(user=user, obj=bene, before_data=before_data, request=request)
         return bene
 
     @transaction.atomic

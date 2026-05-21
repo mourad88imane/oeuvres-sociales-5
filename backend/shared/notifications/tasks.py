@@ -1,13 +1,14 @@
 """
 Notifications Celery tasks.
 """
+
 import logging
 from datetime import timedelta
 
 from celery import shared_task
+
 from django.conf import settings
-from django.core.mail import send_mail, EmailMultiAlternatives
-from django.template.loader import render_to_string
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.utils import timezone
 
 logger = logging.getLogger("shared.notifications.tasks")
@@ -79,21 +80,20 @@ def send_digest_emails():
             cutoff = today - timedelta(days=7)
 
         unread = Notification.objects.filter(
-            recipient=user, is_read=False, created_at__date__gte=cutoff,
+            recipient=user,
+            is_read=False,
+            created_at__date__gte=cutoff,
         ).order_by("-created_at")
 
         if not unread.exists():
             continue
 
-        lines = [
-            f"- [{n.get_priority_display()}] {n.title}"
-            for n in unread[:20]
-        ]
+        lines = [f"- [{n.get_priority_display()}] {n.title}" for n in unread[:20]]
         body = (
             f"Vous avez {unread.count()} notification(s) non lues "
             f"depuis le {cutoff} :\n\n"
             + "\n".join(lines)
-            + f"\n\nConnectez-vous pour voir les détails."
+            + "\n\nConnectez-vous pour voir les détails."
         )
 
         send_notification_email.delay(
@@ -112,6 +112,8 @@ def send_digest_emails():
 @shared_task(name="cleanup_old_notifications")
 def cleanup_old_notifications(days=90):
     """Soft-delete read notifications older than `days`."""
+    from ..models import Notification
+
     cutoff = timezone.now() - timedelta(days=days)
     qs = Notification.objects.filter(is_deleted=False, is_read=True, created_at__lt=cutoff)
     count = qs.count()

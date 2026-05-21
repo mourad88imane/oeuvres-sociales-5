@@ -8,19 +8,20 @@ Méthodes :
   - What-if (scénarios paramétriques)
   - Décomposition saisonnière (détection des cycles)
 """
-import logging
-from datetime import date, timedelta
-from statistics import mean, stdev
-from typing import Optional
 
-from django.db.models import Sum, Avg
+import logging
+from datetime import timedelta
+from statistics import mean
+
+from django.db.models import Count, Sum
 from django.utils import timezone
 
 from .ml.math_utils import (
-    linear_regression, exponential_smoothing, monte_carlo_simulation,
-    seasonal_decompose, moving_average,
+    linear_regression,
+    monte_carlo_simulation,
+    seasonal_decompose,
 )
-from .models import AIPrediction, AIModelRegistry
+from .models import AIModelRegistry, AIPrediction
 
 logger = logging.getLogger("shared.ai.forecasting")
 
@@ -39,6 +40,7 @@ class ForecastingService:
         method : "linear", "monte_carlo", "seasonal", "ensemble"
         """
         from django.apps import apps
+
         try:
             Payment = apps.get_model("finance", "Payment")
             Budget = apps.get_model("finance", "Budget")
@@ -47,9 +49,15 @@ class ForecastingService:
 
         today = timezone.localdate()
         year = today.year
-        total_budget = Budget.objects.filter(
-            fiscal_year__year=year, is_deleted=False,
-        ).aggregate(s=Sum("amount"))["s"] or 0
+        total_budget = (
+            Budget.objects.filter(
+                fiscal_year__year=year,
+                is_deleted=False,
+            ).aggregate(
+                s=Sum("allocated_amount")
+            )["s"]
+            or 0
+        )
 
         monthly_payments = self._get_monthly_payments(Payment, years=3)
         if not monthly_payments:
@@ -71,11 +79,15 @@ class ForecastingService:
             if "error" not in sd:
                 trend_forecast = self._extend_trend(sd["trend"], months_ahead)
                 seasonal = sd["seasonal"][-12:] if len(sd["seasonal"]) >= 12 else [0] * 12
-                combined = [trend_forecast[i] + seasonal[i % len(seasonal)] for i in range(months_ahead)]
+                combined = [
+                    trend_forecast[i] + seasonal[i % len(seasonal)] for i in range(months_ahead)
+                ]
                 forecasts["seasonal"] = {
                     "method": "seasonal_decomposition",
                     "horizon": months_ahead,
-                    "forecasts": [{"step": i + 1, "value": round(v, 2)} for i, v in enumerate(combined)],
+                    "forecasts": [
+                        {"step": i + 1, "value": round(v, 2)} for i, v in enumerate(combined)
+                    ],
                 }
 
         if method == "ensemble" and len(forecasts) > 1:
@@ -103,6 +115,7 @@ class ForecastingService:
     ) -> dict:
         """Prévision du nombre de demandes de prestations."""
         from django.apps import apps
+
         try:
             Benefit = apps.get_model("benefits", "Benefit")
         except LookupError:
@@ -119,12 +132,14 @@ class ForecastingService:
         for i in range(1, months_ahead + 1):
             x = len(values) + i - 1
             pred = max(0, slope * x + intercept)
-            predictions.append({
-                "month": i,
-                "predicted_count": round(pred),
-                "lower_bound": max(0, round(pred * 0.8)),
-                "upper_bound": round(pred * 1.2),
-            })
+            predictions.append(
+                {
+                    "month": i,
+                    "predicted_count": round(pred),
+                    "lower_bound": max(0, round(pred * 0.8)),
+                    "upper_bound": round(pred * 1.2),
+                }
+            )
 
         return {
             "target": "benefits_volume",
@@ -140,7 +155,7 @@ class ForecastingService:
         Scénario what-if paramétrique.
         scenario = {"budget_change_pct": -10, "new_hires": 50, ...}
         """
-        from django.apps import apps
+
         base = self.forecast_budget(months_ahead=12, method="linear", save=False)
         if "error" in base:
             return base
@@ -153,7 +168,9 @@ class ForecastingService:
             val = f.get("value", 0)
             val += val * adjustment
             val += new_hires_cost / 12
-            adjusted.append({"step": f["step"], "base": f.get("value", 0), "adjusted": round(val, 2)})
+            adjusted.append(
+                {"step": f["step"], "base": f.get("value", 0), "adjusted": round(val, 2)}
+            )
 
         return {
             "scenario": scenario,
@@ -169,9 +186,16 @@ class ForecastingService:
         start = today.replace(year=today.year - years, month=1, day=1)
         return list(
             Payment.objects.filter(
-                executed_date__gte=start, status="paid", is_deleted=False,
+                executed_date__gte=start,
+                status="paid",
+                is_deleted=False,
             )
-            .extra({"year": "EXTRACT(year FROM executed_date)", "month": "EXTRACT(month FROM executed_date)"})
+            .extra(
+                {
+                    "year": "EXTRACT(year FROM executed_date)",
+                    "month": "EXTRACT(month FROM executed_date)",
+                }
+            )
             .values("year", "month")
             .annotate(total=Sum("amount"), count=Count("id"))
             .order_by("year", "month")
@@ -181,7 +205,9 @@ class ForecastingService:
         since = timezone.now() - timedelta(days=months * 31)
         return list(
             Model.objects.filter(created_at__gte=since, is_deleted=False)
-            .extra({"year": "EXTRACT(year FROM created_at)", "month": "EXTRACT(month FROM created_at)"})
+            .extra(
+                {"year": "EXTRACT(year FROM created_at)", "month": "EXTRACT(month FROM created_at)"}
+            )
             .values("year", "month")
             .annotate(count=Count("id"))
             .order_by("year", "month")
@@ -232,8 +258,10 @@ class ForecastingService:
             defaults={"version": "1.0.0", "task_type": "forecast", "status": "production"},
         )
         AIPrediction.objects.create(
-            model=model, prediction_type="budget_forecast",
-            target_type="Budget", output_data=result,
+            model=model,
+            prediction_type="budget_forecast",
+            target_type="Budget",
+            output_data=result,
             confidence=0.7,
         )
 

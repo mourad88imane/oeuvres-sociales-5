@@ -4,7 +4,7 @@
  * Tabs : Identité | Contact | Poste | Complément
  */
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, User, Phone, Briefcase, GraduationCap } from "lucide-react";
@@ -85,7 +85,6 @@ export function EmployeeForm({
     register,
     handleSubmit,
     formState: { errors, isDirty },
-    control,
   } = useForm<FormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: initialData
@@ -129,7 +128,7 @@ export function EmployeeForm({
   const handleFormSubmit = handleSubmit(async (data) => {
     const cleaned = Object.fromEntries(
       Object.entries(data).filter(([, v]) => v !== "" && v != null)
-    ) as EmployeeCreatePayload;
+    ) as unknown as EmployeeCreatePayload;
     await onSubmit(cleaned);
   });
 
@@ -325,7 +324,7 @@ export function EmployeeForm({
       {/* ── Navigation onglets + Boutons ─────────────── */}
       <div className="flex items-center justify-between pt-5 mt-5 border-t border-gray-200">
         <div className="flex gap-2">
-          {TABS.map(({ id }, i) => (
+          {TABS.map(({ id }) => (
             <button
               key={id} type="button" onClick={() => setActiveTab(id)}
               className={clsx(

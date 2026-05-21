@@ -4,7 +4,9 @@ AI MODELS — Stockage des prédictions, scores, anomalies,
 recommandations, features, événements et registre de modèles
 ============================================================
 """
+
 import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -14,6 +16,7 @@ class AIModelRegistry(models.Model):
     Registre des modèles ML — versioning, cycle de vie, performance.
     Chaque modèle entraîné est enregistré ici.
     """
+
     class Status(models.TextChoices):
         DEV = "dev", "Développement"
         STAGING = "staging", "Test"
@@ -36,17 +39,27 @@ class AIModelRegistry(models.Model):
     status = models.CharField(max_length=15, choices=Status.choices, default=Status.DEV)
     description = models.TextField(blank=True)
     algorithm = models.CharField(max_length=100, blank=True, help_text="Algorithme utilisé")
-    features_used = models.JSONField(default=list, blank=True, help_text="Liste des features utilisées")
+    features_used = models.JSONField(
+        default=list, blank=True, help_text="Liste des features utilisées"
+    )
     training_date = models.DateTimeField(null=True, blank=True)
     training_duration_s = models.FloatField(null=True, blank=True)
     training_data_count = models.PositiveIntegerField(null=True, blank=True)
-    metrics = models.JSONField(default=dict, blank=True, help_text="Métriques d'évaluation (accuracy, precision, recall, f1, mae, rmse)")
+    metrics = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Métriques d'évaluation (accuracy, precision, recall, f1, mae, rmse)",
+    )
     hyperparams = models.JSONField(default=dict, blank=True)
-    artifact_path = models.CharField(max_length=500, blank=True, help_text="Chemin vers l'artefact du modèle")
+    artifact_path = models.CharField(
+        max_length=500, blank=True, help_text="Chemin vers l'artefact du modèle"
+    )
     metadata = models.JSONField(default=dict, blank=True)
     trained_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -67,21 +80,32 @@ class AIModelRegistry(models.Model):
 
 class AIPrediction(models.Model):
     """Stocke toutes les prédictions générées par les modèles IA."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey(
-        AIModelRegistry, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        AIModelRegistry,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
-    prediction_type = models.CharField(max_length=30, db_index=True, help_text="Type de prédiction (trend, budget, scoring)")
-    target_type = models.CharField(max_length=50, blank=True, help_text="Type d'objet prédit (Benefit, Budget, etc.)")
+    prediction_type = models.CharField(
+        max_length=30, db_index=True, help_text="Type de prédiction (trend, budget, scoring)"
+    )
+    target_type = models.CharField(
+        max_length=50, blank=True, help_text="Type d'objet prédit (Benefit, Budget, etc.)"
+    )
     target_id = models.CharField(max_length=255, blank=True)
     input_data = models.JSONField(default=dict, blank=True)
     output_data = models.JSONField(default=dict, blank=True)
     confidence = models.FloatField(null=True, blank=True, help_text="Indice de confiance 0-1")
     features_used = models.JSONField(default=list, blank=True)
-    explanation = models.JSONField(default=dict, blank=True, help_text="Explication de la prédiction (SHAP-like)")
+    explanation = models.JSONField(
+        default=dict, blank=True, help_text="Explication de la prédiction (SHAP-like)"
+    )
     execution_time_ms = models.PositiveIntegerField(default=0)
-    is_active = models.BooleanField(default=True, help_text="Invalider manuellement les prédictions obsolètes")
+    is_active = models.BooleanField(
+        default=True, help_text="Invalider manuellement les prédictions obsolètes"
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -93,9 +117,13 @@ class AIPrediction(models.Model):
             models.Index(fields=["target_type", "target_id"]),
         ]
 
+    def __str__(self):
+        return f"Prédiction {self.id}"
+
 
 class AIAnomaly(models.Model):
     """Anomalies détectées par les modèles IA."""
+
     class Severity(models.TextChoices):
         LOW = "low", "Faible"
         MEDIUM = "medium", "Moyen"
@@ -111,26 +139,37 @@ class AIAnomaly(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey(
-        AIModelRegistry, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        AIModelRegistry,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
-    detection_method = models.CharField(max_length=50, help_text="Méthode ayant détecté (zscore, iqr, moving_avg, seasonal, ensemble)")
+    detection_method = models.CharField(
+        max_length=50,
+        help_text="Méthode ayant détecté (zscore, iqr, moving_avg, seasonal, ensemble)",
+    )
     severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.MEDIUM)
     status = models.CharField(max_length=15, choices=Status.choices, default=Status.NEW)
     target_type = models.CharField(max_length=50, help_text="Type d'objet concerné")
     target_id = models.CharField(max_length=255)
     target_repr = models.CharField(max_length=500, blank=True)
-    metric_name = models.CharField(max_length=100, blank=True, help_text="Nom de la métrique anormale")
+    metric_name = models.CharField(
+        max_length=100, blank=True, help_text="Nom de la métrique anormale"
+    )
     expected_value = models.FloatField(null=True, blank=True)
     actual_value = models.FloatField(null=True, blank=True)
     deviation = models.FloatField(null=True, blank=True, help_text="Écart absolu")
     deviation_pct = models.FloatField(null=True, blank=True, help_text="Écart en %")
     zscore = models.FloatField(null=True, blank=True)
-    context = models.JSONField(default=dict, blank=True, help_text="Données contextuelles au moment de la détection")
+    context = models.JSONField(
+        default=dict, blank=True, help_text="Données contextuelles au moment de la détection"
+    )
     explanation = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     resolution_note = models.TextField(blank=True)
@@ -146,22 +185,34 @@ class AIAnomaly(models.Model):
             models.Index(fields=["detection_method"]),
         ]
 
+    def __str__(self):
+        return f"Anomalie {self.id}"
+
 
 class AIScore(models.Model):
     """Scores calculés avec explications (SHAP-like feature attribution)."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey(
-        AIModelRegistry, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        AIModelRegistry,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
-    score_type = models.CharField(max_length=30, db_index=True, help_text="Type de score (demand, risk, priority, fraud)")
+    score_type = models.CharField(
+        max_length=30, db_index=True, help_text="Type de score (demand, risk, priority, fraud)"
+    )
     target_type = models.CharField(max_length=50)
     target_id = models.CharField(max_length=255)
     target_repr = models.CharField(max_length=500, blank=True)
     score = models.FloatField(help_text="Score 0-100")
     confidence = models.FloatField(null=True, blank=True, help_text="Confiance du modèle 0-1")
-    features = models.JSONField(default=dict, blank=True, help_text="Features utilisées pour le score")
-    feature_importance = models.JSONField(default=dict, blank=True, help_text="Importance de chaque feature (SHAP-like)")
+    features = models.JSONField(
+        default=dict, blank=True, help_text="Features utilisées pour le score"
+    )
+    feature_importance = models.JSONField(
+        default=dict, blank=True, help_text="Importance de chaque feature (SHAP-like)"
+    )
     explanation = models.TextField(blank=True, help_text="Explication lisible du score")
     decision_boundary = models.FloatField(null=True, blank=True, help_text="Seuil de décision")
     recommendation = models.CharField(max_length=50, blank=True, help_text="Action recommandée")
@@ -179,9 +230,13 @@ class AIScore(models.Model):
             models.Index(fields=["score"]),
         ]
 
+    def __str__(self):
+        return f"Score {self.id}"
+
 
 class AIRecommendation(models.Model):
     """Recommandations générées avec suivi des retours utilisateur."""
+
     class Priority(models.TextChoices):
         LOW = "low", "Basse"
         MEDIUM = "medium", "Moyenne"
@@ -197,24 +252,34 @@ class AIRecommendation(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     model = models.ForeignKey(
-        AIModelRegistry, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        AIModelRegistry,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
-    domain = models.CharField(max_length=30, db_index=True, help_text="Domaine (finance, conventions, benefits, hr)")
+    domain = models.CharField(
+        max_length=30, db_index=True, help_text="Domaine (finance, conventions, benefits, hr)"
+    )
     priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
     title = models.CharField(max_length=200)
     detail = models.TextField(blank=True)
     action_url = models.CharField(max_length=500, blank=True, help_text="Lien vers l'action")
     action_label = models.CharField(max_length=100, blank=True)
-    source_data = models.JSONField(default=dict, blank=True, help_text="Données ayant généré la recommandation")
+    source_data = models.JSONField(
+        default=dict, blank=True, help_text="Données ayant généré la recommandation"
+    )
     confidence = models.FloatField(null=True, blank=True)
     feedback = models.CharField(max_length=15, choices=Feedback.choices, default=Feedback.PENDING)
     feedback_at = models.DateTimeField(null=True, blank=True)
     feedback_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
-    expires_at = models.DateTimeField(null=True, blank=True, help_text="La recommandation expire après cette date")
+    expires_at = models.DateTimeField(
+        null=True, blank=True, help_text="La recommandation expire après cette date"
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
@@ -227,9 +292,13 @@ class AIRecommendation(models.Model):
             models.Index(fields=["feedback"]),
         ]
 
+    def __str__(self):
+        return self.title or str(self.id)
+
 
 class AIFeature(models.Model):
     """Feature store — valeurs de features calculées pour le ML."""
+
     class FeatureType(models.TextChoices):
         NUMERIC = "numeric", "Numérique"
         CATEGORICAL = "categorical", "Catégorielle"
@@ -241,15 +310,21 @@ class AIFeature(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     feature_name = models.CharField(max_length=100, db_index=True)
     feature_type = models.CharField(max_length=15, choices=FeatureType.choices)
-    entity_type = models.CharField(max_length=50, db_index=True, help_text="Type d'entité (Benefit, Employee, etc.)")
+    entity_type = models.CharField(
+        max_length=50, db_index=True, help_text="Type d'entité (Benefit, Employee, etc.)"
+    )
     entity_id = models.CharField(max_length=255, db_index=True)
     value_numeric = models.FloatField(null=True, blank=True)
     value_text = models.TextField(blank=True)
     value_bool = models.BooleanField(null=True)
     value_json = models.JSONField(default=dict, blank=True)
-    source = models.CharField(max_length=100, blank=True, help_text="Source de la feature (pipeline, model)")
+    source = models.CharField(
+        max_length=100, blank=True, help_text="Source de la feature (pipeline, model)"
+    )
     computed_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    ttl_seconds = models.PositiveIntegerField(null=True, blank=True, help_text="Durée de validité en secondes")
+    ttl_seconds = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Durée de validité en secondes"
+    )
 
     class Meta:
         verbose_name = "Feature IA"
@@ -259,9 +334,13 @@ class AIFeature(models.Model):
             models.Index(fields=["entity_type", "entity_id", "feature_name"]),
         ]
 
+    def __str__(self):
+        return self.feature_name or str(self.id)
+
 
 class AIEvent(models.Model):
     """Événements bruts pour l'analyse comportementale."""
+
     class EventCategory(models.TextChoices):
         NAVIGATION = "navigation", "Navigation"
         ACTION = "action", "Action utilisateur"
@@ -273,8 +352,10 @@ class AIEvent(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     user_email = models.EmailField(blank=True)
     user_role = models.CharField(max_length=30, blank=True)
@@ -283,7 +364,9 @@ class AIEvent(models.Model):
     event_name = models.CharField(max_length=100, db_index=True)
     target_type = models.CharField(max_length=50, blank=True)
     target_id = models.CharField(max_length=255, blank=True)
-    properties = models.JSONField(default=dict, blank=True, help_text="Propriétés contextuelles de l'événement")
+    properties = models.JSONField(
+        default=dict, blank=True, help_text="Propriétés contextuelles de l'événement"
+    )
     duration_ms = models.PositiveIntegerField(default=0)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
@@ -300,9 +383,13 @@ class AIEvent(models.Model):
             models.Index(fields=["-timestamp"]),
         ]
 
+    def __str__(self):
+        return f"Événement {self.id}"
+
 
 class AIFeedback(models.Model):
     """Retour utilisateur sur les prédictions/scores/recommandations."""
+
     class Rating(models.IntegerChoices):
         TERRIBLE = 1, "Pas du tout pertinent"
         POOR = 2, "Peu pertinent"
@@ -312,15 +399,21 @@ class AIFeedback(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
-    feedback_type = models.CharField(max_length=20, help_text="Type (prediction, anomaly, score, recommendation)")
+    feedback_type = models.CharField(
+        max_length=20, help_text="Type (prediction, anomaly, score, recommendation)"
+    )
     target_type = models.CharField(max_length=50)
     target_id = models.CharField(max_length=255)
     rating = models.PositiveSmallIntegerField(choices=Rating.choices)
     comment = models.TextField(blank=True)
-    expected_value = models.FloatField(null=True, blank=True, help_text="Valeur attendue par l'utilisateur")
+    expected_value = models.FloatField(
+        null=True, blank=True, help_text="Valeur attendue par l'utilisateur"
+    )
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -332,3 +425,6 @@ class AIFeedback(models.Model):
             models.Index(fields=["feedback_type", "-created_at"]),
             models.Index(fields=["user", "-created_at"]),
         ]
+
+    def __str__(self):
+        return f"Feedback {self.id}"

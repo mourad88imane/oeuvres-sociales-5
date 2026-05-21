@@ -15,7 +15,7 @@ import axios, {
 import { v4 as uuidv4 } from "uuid";
 import { useAuthStore } from "@modules/auth/store/authStore";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || "/api/v1";
 
 // ── Instance principale ────────────────────────────────────
 const apiClient: AxiosInstance = axios.create({

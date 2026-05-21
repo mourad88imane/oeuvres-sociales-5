@@ -30,11 +30,15 @@ export function useAuth() {
 
   // ── Logout ──────────────────────────────────────────────
   const logoutMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const { refreshToken } = useAuthStore.getState();
-      return refreshToken
-        ? authApi.logout(refreshToken)
-        : Promise.resolve();
+      if (refreshToken) {
+        try {
+          await authApi.logout(refreshToken);
+        } catch {
+          return;
+        }
+      }
     },
     onSettled: () => {
       // Toujours nettoyer le store même si l'API échoue

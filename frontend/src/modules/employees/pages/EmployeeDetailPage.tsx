@@ -509,8 +509,8 @@ function BeneficiaryCard({ bene, onEdit, onDelete }: { bene: Beneficiary; onEdit
               {bene.relationship_display}
             </span>
             {bene.is_eligible
-              ? <CheckCircle2 className="w-4 h-4 text-green-500" title="Éligible" />
-              : <XCircle     className="w-4 h-4 text-red-400"   title="Non éligible" />
+              ? <CheckCircle2 className="w-4 h-4 text-green-500" aria-label="Éligible" />
+              : <XCircle     className="w-4 h-4 text-red-400"   aria-label="Non éligible" />
             }
           </div>
           <p className="font-semibold text-gray-900">{bene.full_name}</p>

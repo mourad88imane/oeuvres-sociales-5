@@ -1,11 +1,14 @@
 """
 Finance tests — modèles, services, API.
 """
-import pytest
+
+from datetime import date
 from decimal import Decimal
-from datetime import date, timedelta
-from django.contrib.auth import get_user_model
+
+import pytest
 from rest_framework.test import APIClient
+
+from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -13,77 +16,116 @@ User = get_user_model()
 # ── Fixtures ──────────────────────────────────────────────
 @pytest.fixture
 def admin_user(db):
-    return User.objects.create_user(email="admin@f.dz", password="P@ss!", first_name="A", last_name="D", role="admin")
+    return User.objects.create_user(
+        email="admin@f.dz", password="P@ss!", first_name="A", last_name="D", role="admin"
+    )
+
 
 @pytest.fixture
 def comptable(db):
-    return User.objects.create_user(email="comp@f.dz", password="P@ss!", first_name="C", last_name="D", role="comptable")
+    return User.objects.create_user(
+        email="comp@f.dz", password="P@ss!", first_name="C", last_name="D", role="comptable"
+    )
+
 
 @pytest.fixture
 def gestionnaire(db):
-    return User.objects.create_user(email="gest@f.dz", password="P@ss!", first_name="G", last_name="D", role="gestionnaire")
+    return User.objects.create_user(
+        email="gest@f.dz", password="P@ss!", first_name="G", last_name="D", role="gestionnaire"
+    )
+
 
 @pytest.fixture
 def fiscal_year(db, admin_user):
     from apps.finance.models import FiscalYear
+
     today = date.today()
     return FiscalYear.objects.create(
-        year=today.year, label=f"Exercice {today.year}",
-        start_date=date(today.year, 1, 1), end_date=date(today.year, 12, 31),
-        status="open", total_budget=Decimal("10000000"),
+        year=today.year,
+        label=f"Exercice {today.year}",
+        start_date=date(today.year, 1, 1),
+        end_date=date(today.year, 12, 31),
+        status="open",
+        total_budget=Decimal("10000000"),
         created_by=admin_user,
     )
+
 
 @pytest.fixture
 def department(db, admin_user):
     from apps.departments.models import Department
+
     return Department.objects.create(code="FIN", name="Finance", created_by=admin_user)
+
 
 @pytest.fixture
 def employee(db, department, admin_user):
     from apps.employees.models import Employee
+
     return Employee.objects.create(
-        first_name="Emp", last_name="Test", gender="M",
-        date_of_birth=date(1985,1,1), department=department,
-        job_title="Agent", date_hired=date(2010,1,1), status="active",
-        bank_account="CCP-123456", created_by=admin_user,
+        first_name="Emp",
+        last_name="Test",
+        gender="M",
+        date_of_birth=date(1985, 1, 1),
+        department=department,
+        job_title="Agent",
+        date_hired=date(2010, 1, 1),
+        status="active",
+        bank_account="CCP-123456",
+        created_by=admin_user,
     )
+
 
 @pytest.fixture
 def benefit_type(db, admin_user):
     from apps.benefits.models import BenefitType
+
     return BenefitType.objects.create(
-        code="MED01", name="Médical", category="medical",
-        max_amount=100000, created_by=admin_user,
+        code="MED01",
+        name="Médical",
+        category="medical",
+        max_amount=100000,
+        created_by=admin_user,
     )
+
 
 @pytest.fixture
 def budget(db, fiscal_year, benefit_type, admin_user):
     from apps.finance.models import Budget
+
     b = Budget.objects.create(
-        fiscal_year=fiscal_year, benefit_type=benefit_type,
-        code="BUD-MED", label="Budget Médical 2024",
-        allocated_amount=Decimal("5000000"), status="approved",
+        fiscal_year=fiscal_year,
+        benefit_type=benefit_type,
+        code="BUD-MED",
+        label="Budget Médical 2024",
+        allocated_amount=Decimal("5000000"),
+        status="approved",
         created_by=admin_user,
     )
     b.approved_by = admin_user
     b.save()
     return b
 
+
 @pytest.fixture
 def validated_benefit(db, employee, benefit_type, admin_user):
     from apps.benefits.models import Benefit
-    from apps.benefits.services import BenefitService
+
     b = Benefit.objects.create(
-        employee=employee, benefit_type=benefit_type,
-        title="Test", requested_amount=Decimal("45000"),
+        employee=employee,
+        benefit_type=benefit_type,
+        title="Test",
+        requested_amount=Decimal("45000"),
         approved_amount=Decimal("45000"),
-        workflow_state="validated", created_by=admin_user,
+        workflow_state="validated",
+        created_by=admin_user,
     )
     return b
 
+
 def auth(client, user):
     from rest_framework_simplejwt.tokens import RefreshToken
+
     t = RefreshToken.for_user(user)
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.access_token}")
     return client
@@ -101,7 +143,7 @@ class TestFiscalYear:
         assert fiscal_year.consumption_rate == Decimal("25.00")
 
     def test_available_budget(self, fiscal_year):
-        fiscal_year.total_paid      = Decimal("2000000")
+        fiscal_year.total_paid = Decimal("2000000")
         fiscal_year.total_committed = Decimal("1000000")
         assert fiscal_year.available_budget == Decimal("7000000")
 
@@ -115,18 +157,18 @@ class TestFiscalYear:
 
 class TestBudget:
     def test_available_amount(self, budget):
-        budget.paid_amount      = Decimal("1000000")
+        budget.paid_amount = Decimal("1000000")
         budget.committed_amount = Decimal("500000")
         assert budget.available_amount == Decimal("3500000")
 
     def test_consumption_rate(self, budget):
-        budget.paid_amount      = Decimal("2000000")
+        budget.paid_amount = Decimal("2000000")
         budget.committed_amount = Decimal("500000")
         rate = budget.consumption_rate
         assert rate == Decimal("50.00")
 
     def test_alert_triggered(self, budget):
-        budget.paid_amount      = Decimal("4200000")
+        budget.paid_amount = Decimal("4200000")
         budget.committed_amount = Decimal("100000")
         assert budget.is_alert_triggered is True
 
@@ -136,11 +178,13 @@ class TestBudget:
 
     def test_budget_check_available(self, budget):
         from apps.finance.services import BudgetService
+
         ok, msg = BudgetService().check_budget_availability(budget, Decimal("100000"))
         assert ok is True
 
     def test_budget_check_insufficient(self, budget):
         from apps.finance.services import BudgetService
+
         ok, msg = BudgetService().check_budget_availability(budget, Decimal("9999999"))
         assert ok is False
         assert "insuffisant" in msg.lower()
@@ -149,6 +193,7 @@ class TestBudget:
 class TestPayment:
     def test_reference_generated(self, db, validated_benefit, fiscal_year, admin_user):
         from apps.finance.services import PaymentService
+
         p = PaymentService().create_from_benefit(
             validated_benefit, fiscal_year=fiscal_year, user=admin_user
         )
@@ -156,6 +201,7 @@ class TestPayment:
 
     def test_net_amount_calculated(self, db, validated_benefit, fiscal_year, admin_user):
         from apps.finance.services import PaymentService
+
         p = PaymentService().create_from_benefit(
             validated_benefit, fiscal_year=fiscal_year, user=admin_user
         )
@@ -163,6 +209,7 @@ class TestPayment:
 
     def test_amount_from_approved(self, db, validated_benefit, fiscal_year, admin_user):
         from apps.finance.services import PaymentService
+
         validated_benefit.approved_amount = Decimal("40000")
         validated_benefit.save()
         p = PaymentService().create_from_benefit(
@@ -171,7 +218,8 @@ class TestPayment:
         assert p.amount == Decimal("40000")
 
     def test_duplicate_payment_raises(self, db, validated_benefit, fiscal_year, admin_user):
-        from apps.finance.services import PaymentService, FinanceValidationError
+        from apps.finance.services import FinanceValidationError, PaymentService
+
         svc = PaymentService()
         svc.create_from_benefit(validated_benefit, fiscal_year=fiscal_year, user=admin_user)
         with pytest.raises(FinanceValidationError) as exc:
@@ -179,19 +227,25 @@ class TestPayment:
         assert "DUPLICATE_PAYMENT" in exc.value.code
 
     def test_cannot_pay_unapproved(self, db, validated_benefit, fiscal_year, admin_user, comptable):
-        from apps.finance.services import PaymentService, FinanceValidationError
+        from apps.finance.services import FinanceValidationError, PaymentService
+
         p = PaymentService().create_from_benefit(
             validated_benefit, fiscal_year=fiscal_year, user=admin_user
         )
         with pytest.raises(FinanceValidationError):
             PaymentService().mark_paid(p, "REF-001", user=comptable)
 
-    def test_full_payment_cycle(self, db, validated_benefit, fiscal_year, budget, admin_user, comptable):
-        from apps.finance.services import PaymentService
+    def test_full_payment_cycle(
+        self, db, validated_benefit, fiscal_year, budget, admin_user, comptable
+    ):
         from apps.finance.models import FinancialEntry
+        from apps.finance.services import PaymentService
+
         svc = PaymentService()
         # Créer
-        p = svc.create_from_benefit(validated_benefit, budget=budget, fiscal_year=fiscal_year, user=admin_user)
+        p = svc.create_from_benefit(
+            validated_benefit, budget=budget, fiscal_year=fiscal_year, user=admin_user
+        )
         assert p.status == "pending"
         # Approuver
         p = svc.approve(p, user=comptable)
@@ -209,13 +263,17 @@ class TestPayment:
 
     def test_cancel_pending_payment(self, db, validated_benefit, fiscal_year, admin_user):
         from apps.finance.services import PaymentService
+
         svc = PaymentService()
         p = svc.create_from_benefit(validated_benefit, fiscal_year=fiscal_year, user=admin_user)
         p = svc.cancel(p, "Test annulation", user=admin_user)
         assert p.status == "cancelled"
 
-    def test_cannot_cancel_paid_payment(self, db, validated_benefit, fiscal_year, admin_user, comptable):
-        from apps.finance.services import PaymentService, FinanceValidationError
+    def test_cannot_cancel_paid_payment(
+        self, db, validated_benefit, fiscal_year, admin_user, comptable
+    ):
+        from apps.finance.services import FinanceValidationError, PaymentService
+
         svc = PaymentService()
         p = svc.create_from_benefit(validated_benefit, fiscal_year=fiscal_year, user=admin_user)
         p = svc.approve(p, user=comptable)
@@ -225,8 +283,9 @@ class TestPayment:
         assert "CANNOT_CANCEL_PAID" in exc.value.code
 
     def test_accounting_entry_immutable(self, db, validated_benefit, fiscal_year, admin_user):
-        from apps.finance.services import PaymentService
         from apps.finance.models import FinancialEntry
+        from apps.finance.services import PaymentService
+
         svc = PaymentService()
         svc.create_from_benefit(validated_benefit, fiscal_year=fiscal_year, user=admin_user)
         entry = FinancialEntry.objects.first()
@@ -252,17 +311,22 @@ class TestFinanceAPI:
 
     def test_create_payment_api(self, db, validated_benefit, fiscal_year, budget, comptable):
         client = auth(APIClient(), comptable)
-        r = client.post("/api/v1/finance/payments/", {
-            "benefit_id":     str(validated_benefit.id),
-            "fiscal_year_id": str(fiscal_year.id),
-            "budget_id":      str(budget.id),
-            "payment_method": "virement",
-        }, format="json")
+        r = client.post(
+            "/api/v1/finance/payments/",
+            {
+                "benefit_id": str(validated_benefit.id),
+                "fiscal_year_id": str(fiscal_year.id),
+                "budget_id": str(budget.id),
+                "payment_method": "virement",
+            },
+            format="json",
+        )
         assert r.status_code == 201
         assert r.json()["data"]["status"] == "pending"
 
     def test_approve_payment_api(self, db, validated_benefit, fiscal_year, comptable):
         from apps.finance.services import PaymentService
+
         p = PaymentService().create_from_benefit(
             validated_benefit, fiscal_year=fiscal_year, user=comptable
         )
@@ -273,13 +337,18 @@ class TestFinanceAPI:
 
     def test_mark_paid_api(self, db, validated_benefit, fiscal_year, comptable):
         from apps.finance.services import PaymentService
+
         svc = PaymentService()
-        p   = svc.create_from_benefit(validated_benefit, fiscal_year=fiscal_year, user=comptable)
-        p   = svc.approve(p, user=comptable)
+        p = svc.create_from_benefit(validated_benefit, fiscal_year=fiscal_year, user=comptable)
+        p = svc.approve(p, user=comptable)
         client = auth(APIClient(), comptable)
-        r = client.post(f"/api/v1/finance/payments/{p.id}/mark-paid/", {
-            "bank_reference": "VIR-API-001",
-        }, format="json")
+        r = client.post(
+            f"/api/v1/finance/payments/{p.id}/mark-paid/",
+            {
+                "bank_reference": "VIR-API-001",
+            },
+            format="json",
+        )
         assert r.status_code == 200
         assert r.json()["data"]["status"] == "paid"
 
@@ -289,11 +358,14 @@ class TestFinanceAPI:
         assert r.status_code == 200
         data = r.json()["data"]
         assert "fiscal_year" in data
-        assert "payments"    in data
-        assert "budgets"     in data
+        assert "payments" in data
+        assert "budgets" in data
 
-    def test_gestionnaire_cannot_approve_payment(self, db, validated_benefit, fiscal_year, gestionnaire, comptable):
+    def test_gestionnaire_cannot_approve_payment(
+        self, db, validated_benefit, fiscal_year, gestionnaire, comptable
+    ):
         from apps.finance.services import PaymentService
+
         p = PaymentService().create_from_benefit(
             validated_benefit, fiscal_year=fiscal_year, user=comptable
         )

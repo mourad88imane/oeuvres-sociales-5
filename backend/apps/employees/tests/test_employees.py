@@ -4,12 +4,13 @@ EMPLOYEE TESTS — Tests unitaires et d'intégration
 ============================================================
 Couverture : modèles, services, API endpoints, permissions.
 """
-import uuid
+
 from datetime import date, timedelta
 
 import pytest
-from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
+
+from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -56,6 +57,7 @@ def consultant_user(db):
 @pytest.fixture
 def department(db, admin_user):
     from apps.departments.models import Department
+
     return Department.objects.create(
         code="RH",
         name="Ressources Humaines",
@@ -66,6 +68,7 @@ def department(db, admin_user):
 @pytest.fixture
 def employee(db, department, admin_user):
     from apps.employees.models import Employee
+
     return Employee.objects.create(
         first_name="Ahmed",
         last_name="Benali",
@@ -83,6 +86,7 @@ def employee(db, department, admin_user):
 @pytest.fixture
 def auth_admin(api_client, admin_user):
     from rest_framework_simplejwt.tokens import RefreshToken
+
     token = RefreshToken.for_user(admin_user)
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return api_client
@@ -91,6 +95,7 @@ def auth_admin(api_client, admin_user):
 @pytest.fixture
 def auth_consultant(api_client, consultant_user):
     from rest_framework_simplejwt.tokens import RefreshToken
+
     token = RefreshToken.for_user(consultant_user)
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
     return api_client
@@ -125,16 +130,23 @@ class TestEmployeeModel:
 
     def test_matricule_unique(self, db, department, admin_user):
         from apps.employees.models import Employee
+
         e1 = Employee.objects.create(
-            first_name="A", last_name="B", gender="M",
+            first_name="A",
+            last_name="B",
+            gender="M",
             date_of_birth=date(1990, 1, 1),
-            department=department, job_title="Dev",
+            department=department,
+            job_title="Dev",
             date_hired=date(2020, 1, 1),
         )
         e2 = Employee.objects.create(
-            first_name="C", last_name="D", gender="F",
+            first_name="C",
+            last_name="D",
+            gender="F",
             date_of_birth=date(1992, 1, 1),
-            department=department, job_title="Dev",
+            department=department,
+            job_title="Dev",
             date_hired=date(2021, 1, 1),
         )
         assert e1.matricule != e2.matricule
@@ -145,6 +157,7 @@ class TestEmployeeModel:
         assert employee.deleted_at is not None
         # Ne doit plus apparaître dans le manager par défaut
         from apps.employees.models import Employee
+
         assert not Employee.objects.filter(pk=employee.pk).exists()
         # Mais visible via all_objects
         assert Employee.all_objects.filter(pk=employee.pk).exists()
@@ -163,6 +176,7 @@ class TestEmployeeService:
 
     def test_create_employee(self, db, department, admin_user):
         from apps.employees.services import EmployeeService
+
         service = EmployeeService()
         data = {
             "first_name": "Fatima",
@@ -182,12 +196,14 @@ class TestEmployeeService:
 
     def test_search_by_name(self, db, employee):
         from apps.employees.services import EmployeeService
+
         service = EmployeeService()
         qs = service.search(service.get_queryset(), search_term="Ahmed")
         assert employee in qs
 
     def test_search_by_status(self, db, employee):
         from apps.employees.services import EmployeeService
+
         service = EmployeeService()
         qs = service.search(service.get_queryset(), status="active")
         assert employee in qs
@@ -196,6 +212,7 @@ class TestEmployeeService:
 
     def test_statistics_structure(self, db, employee):
         from apps.employees.services import EmployeeService
+
         stats = EmployeeService().get_statistics()
         assert "total" in stats
         assert "by_status" in stats
@@ -205,14 +222,16 @@ class TestEmployeeService:
 
     def test_update_employee(self, db, employee, admin_user):
         from apps.employees.services import EmployeeService
+
         service = EmployeeService()
         updated = service.update(employee, {"job_title": "Senior Ingénieur"}, user=admin_user)
         assert updated.job_title == "Senior Ingénieur"
         assert updated.updated_by == admin_user
 
     def test_soft_delete_via_service(self, db, employee, admin_user):
-        from apps.employees.services import EmployeeService
         from apps.employees.models import Employee
+        from apps.employees.services import EmployeeService
+
         service = EmployeeService()
         service.delete(employee, user=admin_user)
         assert not Employee.objects.filter(pk=employee.pk).exists()
@@ -275,10 +294,15 @@ class TestEmployeeAPI:
     def test_consultant_cannot_create(self, auth_consultant, department):
         """Les consultants n'ont pas le droit de créer des employés."""
         payload = {
-            "first_name": "X", "last_name": "Y", "gender": "M",
-            "date_of_birth": "1990-01-01", "department": str(department.id),
-            "job_title": "Dev", "contract_type": "cdi",
-            "date_hired": "2020-01-01", "status": "active",
+            "first_name": "X",
+            "last_name": "Y",
+            "gender": "M",
+            "date_of_birth": "1990-01-01",
+            "department": str(department.id),
+            "job_title": "Dev",
+            "contract_type": "cdi",
+            "date_hired": "2020-01-01",
+            "status": "active",
         }
         resp = auth_consultant.post("/api/v1/employees/", data=payload, format="json")
         assert resp.status_code == 403
@@ -314,10 +338,15 @@ class TestEmployeeAPI:
         """La date d'embauche dans le futur doit être rejetée."""
         future = (date.today() + timedelta(days=30)).isoformat()
         payload = {
-            "first_name": "X", "last_name": "Y", "gender": "M",
-            "date_of_birth": "1990-01-01", "department": str(department.id),
-            "job_title": "Dev", "contract_type": "cdi",
-            "date_hired": future, "status": "active",
+            "first_name": "X",
+            "last_name": "Y",
+            "gender": "M",
+            "date_of_birth": "1990-01-01",
+            "department": str(department.id),
+            "job_title": "Dev",
+            "contract_type": "cdi",
+            "date_hired": future,
+            "status": "active",
         }
         resp = auth_admin.post("/api/v1/employees/", data=payload, format="json")
         assert resp.status_code == 400
@@ -330,20 +359,30 @@ class TestBeneficiaryModel:
 
     def test_child_under_18_eligible(self, db, employee, admin_user):
         from apps.beneficiaries.models import Beneficiary
+
         child = Beneficiary.objects.create(
-            employee=employee, first_name="Ali", last_name="Benali",
-            gender="M", date_of_birth=date(2015, 1, 1),
-            relationship="child", created_by=admin_user,
+            employee=employee,
+            first_name="Ali",
+            last_name="Benali",
+            gender="M",
+            date_of_birth=date(2015, 1, 1),
+            relationship="child",
+            created_by=admin_user,
         )
         eligible, reason = child.check_eligibility()
         assert eligible is True
 
     def test_child_over_25_not_eligible(self, db, employee, admin_user):
         from apps.beneficiaries.models import Beneficiary
+
         child = Beneficiary.objects.create(
-            employee=employee, first_name="Youcef", last_name="Benali",
-            gender="M", date_of_birth=date(1990, 1, 1),  # > 25 ans
-            relationship="child", created_by=admin_user,
+            employee=employee,
+            first_name="Youcef",
+            last_name="Benali",
+            gender="M",
+            date_of_birth=date(1990, 1, 1),  # > 25 ans
+            relationship="child",
+            created_by=admin_user,
         )
         eligible, reason = child.check_eligibility()
         assert eligible is False
@@ -351,20 +390,31 @@ class TestBeneficiaryModel:
 
     def test_spouse_always_eligible(self, db, employee, admin_user):
         from apps.beneficiaries.models import Beneficiary
+
         spouse = Beneficiary.objects.create(
-            employee=employee, first_name="Sara", last_name="Kaci",
-            gender="F", date_of_birth=date(1987, 3, 15),
-            relationship="spouse", created_by=admin_user,
+            employee=employee,
+            first_name="Sara",
+            last_name="Kaci",
+            gender="F",
+            date_of_birth=date(1987, 3, 15),
+            relationship="spouse",
+            created_by=admin_user,
         )
         eligible, reason = spouse.check_eligibility()
         assert eligible is True
 
     def test_handicapped_child_always_eligible(self, db, employee, admin_user):
         from apps.beneficiaries.models import Beneficiary
+
         child = Beneficiary.objects.create(
-            employee=employee, first_name="Amine", last_name="Benali",
-            gender="M", date_of_birth=date(1988, 5, 10),  # > 25 ans
-            relationship="child", is_handicapped=True, created_by=admin_user,
+            employee=employee,
+            first_name="Amine",
+            last_name="Benali",
+            gender="M",
+            date_of_birth=date(1988, 5, 10),  # > 25 ans
+            relationship="child",
+            is_handicapped=True,
+            created_by=admin_user,
         )
         eligible, reason = child.check_eligibility()
         assert eligible is True

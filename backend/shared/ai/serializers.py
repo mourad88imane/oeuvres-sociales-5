@@ -1,7 +1,14 @@
 from rest_framework import serializers
+
 from .models import (
-    AIModelRegistry, AIPrediction, AIAnomaly, AIScore,
-    AIRecommendation, AIFeature, AIEvent, AIFeedback,
+    AIAnomaly,
+    AIEvent,
+    AIFeature,
+    AIFeedback,
+    AIModelRegistry,
+    AIPrediction,
+    AIRecommendation,
+    AIScore,
 )
 
 
@@ -13,12 +20,27 @@ class AIModelRegistrySerializer(serializers.ModelSerializer):
     class Meta:
         model = AIModelRegistry
         fields = [
-            "id", "name", "version", "task_type", "task_type_display",
-            "status", "status_display", "description", "algorithm",
-            "features_used", "training_date", "training_duration_s",
-            "training_data_count", "metrics", "hyperparams",
-            "artifact_path", "metadata", "trained_by", "trained_by_email",
-            "created_at", "updated_at",
+            "id",
+            "name",
+            "version",
+            "task_type",
+            "task_type_display",
+            "status",
+            "status_display",
+            "description",
+            "algorithm",
+            "features_used",
+            "training_date",
+            "training_duration_s",
+            "training_data_count",
+            "metrics",
+            "hyperparams",
+            "artifact_path",
+            "metadata",
+            "trained_by",
+            "trained_by_email",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -33,6 +55,7 @@ class AIPredictionSerializer(serializers.ModelSerializer):
 
     def get_time_ago(self, obj):
         from django.utils.timesince import timesince
+
         return timesince(obj.created_at)
 
 
@@ -48,6 +71,7 @@ class AIAnomalySerializer(serializers.ModelSerializer):
 
     def get_time_ago(self, obj):
         from django.utils.timesince import timesince
+
         return timesince(obj.created_at)
 
 
@@ -66,6 +90,7 @@ class AIScoreSerializer(serializers.ModelSerializer):
 
     def get_time_ago(self, obj):
         from django.utils.timesince import timesince
+
         return timesince(obj.created_at)
 
 
@@ -81,6 +106,7 @@ class AIRecommendationSerializer(serializers.ModelSerializer):
 
     def get_time_ago(self, obj):
         from django.utils.timesince import timesince
+
         return timesince(obj.created_at)
 
 
@@ -99,7 +125,9 @@ class AIFeatureSerializer(serializers.ModelSerializer):
 
 
 class AIEventSerializer(serializers.ModelSerializer):
-    event_category_display = serializers.CharField(source="get_event_category_display", read_only=True)
+    event_category_display = serializers.CharField(
+        source="get_event_category_display", read_only=True
+    )
     time_ago = serializers.SerializerMethodField()
 
     class Meta:
@@ -109,6 +137,7 @@ class AIEventSerializer(serializers.ModelSerializer):
 
     def get_time_ago(self, obj):
         from django.utils.timesince import timesince
+
         return timesince(obj.timestamp)
 
 

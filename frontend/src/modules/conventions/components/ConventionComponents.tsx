@@ -3,15 +3,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  Building2, CheckCircle2, XCircle, AlertTriangle,
-  AlertCircle, Clock, Loader2, FileText,
+  CheckCircle2, XCircle, AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { fmtDate, fmtDZD } from "../utils/formatters";
 import {
   useRenewConvention, useTerminateConvention, useResolveAlert,
 } from "../api/index";
-import { Modal, ConfirmDialog, Field, inputCls } from "@shared/components/ui/index";
+import { Modal, Field, inputCls } from "@shared/components/ui/index";
 import { CONVENTION_STATUS_UI, ALERT_SEVERITY_UI } from "../types";
 import type { Convention, ConventionAlert, ConventionStatus } from "../types";
 
@@ -240,8 +240,8 @@ export function ConventionActions({ convention, onUpdate }: ConventionActionsPro
             </p>
             <p className="text-xs text-blue-600">Échéance actuelle : {fmtDate(convention.end_date)}</p>
           </div>
-          <Field label="Nouvelle date d'échéance" error={errRenew.new_end_date?.message} required>
-            <input type="date" {...regRenew("new_end_date")} className={inputCls(errRenew.new_end_date?.message)} />
+          <Field label="Nouvelle date d'échéance" error={errRenew.new_end_date?.message?.toString()} required>
+            <input type="date" {...regRenew("new_end_date")} className={inputCls(errRenew.new_end_date?.message?.toString())} />
           </Field>
           <Field label="Nouveau montant (DZD)" hint="Optionnel">
             <input type="number" {...regRenew("new_amount")} className={inputCls()} defaultValue={convention.amount ?? ""} />
@@ -267,8 +267,8 @@ export function ConventionActions({ convention, onUpdate }: ConventionActionsPro
         <Field label="Date de résiliation">
           <input type="date" {...regTerm("terminated_date")} className={inputCls()} />
         </Field>
-        <Field label="Motif" error={errTerm.reason?.message} required>
-          <textarea {...regTerm("reason")} rows={3} className={inputCls(errTerm.reason?.message)}
+        <Field label="Motif" error={errTerm.reason?.message?.toString()} required>
+          <textarea {...regTerm("reason")} rows={3} className={inputCls(errTerm.reason?.message?.toString())}
             placeholder="Précisez la raison de la résiliation..." />
         </Field>
       </Modal>

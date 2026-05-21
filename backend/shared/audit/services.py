@@ -7,6 +7,7 @@ Usage dans les vues et services :
     audit = AuditService()
     audit.log_action(user=request.user, action="CREATE", obj=instance)
 """
+
 import logging
 
 from django.forms.models import model_to_dict
@@ -83,7 +84,7 @@ class AuditService:
                     "audit_object": log_data.get("content_type_name", ""),
                     "audit_object_id": log_data.get("object_id", ""),
                     "audit_severity": severity,
-                }
+                },
             )
 
             return entry
@@ -96,7 +97,9 @@ class AuditService:
     def log_create(self, user, obj, request=None, **kwargs):
         return self.log_action(
             action=AuditLog.Action.CREATE,
-            user=user, obj=obj, request=request,
+            user=user,
+            obj=obj,
+            request=request,
             after_data=self._obj_to_dict(obj),
             **kwargs,
         )
@@ -104,7 +107,9 @@ class AuditService:
     def log_update(self, user, obj, before_data: dict, request=None, **kwargs):
         return self.log_action(
             action=AuditLog.Action.UPDATE,
-            user=user, obj=obj, request=request,
+            user=user,
+            obj=obj,
+            request=request,
             before_data=before_data,
             after_data=self._obj_to_dict(obj),
             severity=AuditLog.Severity.MEDIUM,
@@ -114,7 +119,9 @@ class AuditService:
     def log_delete(self, user, obj, request=None, **kwargs):
         return self.log_action(
             action=AuditLog.Action.DELETE,
-            user=user, obj=obj, request=request,
+            user=user,
+            obj=obj,
+            request=request,
             before_data=self._obj_to_dict(obj),
             severity=AuditLog.Severity.HIGH,
             **kwargs,
@@ -136,7 +143,9 @@ class AuditService:
     def log_workflow_transition(self, user, obj, from_state: str, to_state: str, request=None):
         return self.log_action(
             action=AuditLog.Action.WORKFLOW_TRANSITION,
-            user=user, obj=obj, request=request,
+            user=user,
+            obj=obj,
+            request=request,
             severity=AuditLog.Severity.MEDIUM,
             extra_data={"from_state": from_state, "to_state": to_state},
         )
@@ -144,7 +153,8 @@ class AuditService:
     def log_export(self, user, content_type: str, filters: dict = None, request=None):
         return self.log_action(
             action=AuditLog.Action.EXPORT,
-            user=user, request=request,
+            user=user,
+            request=request,
             severity=AuditLog.Severity.MEDIUM,
             extra_data={"content_type": content_type, "filters": filters or {}},
         )
@@ -169,6 +179,7 @@ class AuditService:
         for key, value in data.items():
             try:
                 import json
+
                 json.dumps(value)  # Test de sérialisation
                 result[key] = value
             except (TypeError, ValueError):

@@ -1,18 +1,30 @@
 """Reporting engine — generic report definitions, schedules, exports, KPIs, widgets."""
+
 from django.conf import settings
 from django.db import models
 
 
 class BaseReportDefinition(models.Model):
     """Abstract base for report definitions — subclass per project."""
+
     FORMATS = [
-        ("excel", "Excel"), ("csv", "CSV"), ("pdf", "PDF"), ("json", "JSON"),
+        ("excel", "Excel"),
+        ("csv", "CSV"),
+        ("pdf", "PDF"),
+        ("json", "JSON"),
     ]
-    CATEGORIES = getattr(settings, "REPORT_CATEGORIES", [
-        ("employees", "Employés"), ("benefits", "Prestations"),
-        ("finance", "Finance"), ("conventions", "Conventions"),
-        ("kpi", "Indicateurs KPI"), ("custom", "Personnalisé"),
-    ])
+    CATEGORIES = getattr(
+        settings,
+        "REPORT_CATEGORIES",
+        [
+            ("employees", "Employés"),
+            ("benefits", "Prestations"),
+            ("finance", "Finance"),
+            ("conventions", "Conventions"),
+            ("kpi", "Indicateurs KPI"),
+            ("custom", "Personnalisé"),
+        ],
+    )
     code = models.CharField(max_length=50, unique=True)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -35,10 +47,14 @@ class BaseReportDefinition(models.Model):
 
 class BaseReportSchedule(models.Model):
     """Abstract base for scheduled reports."""
+
     FREQUENCIES = [
-        ("daily", "Quotidien"), ("weekly", "Hebdomadaire"),
-        ("monthly", "Mensuel"), ("quarterly", "Trimestriel"),
-        ("yearly", "Annuel"), ("custom", "Personnalisé"),
+        ("daily", "Quotidien"),
+        ("weekly", "Hebdomadaire"),
+        ("monthly", "Mensuel"),
+        ("quarterly", "Trimestriel"),
+        ("yearly", "Annuel"),
+        ("custom", "Personnalisé"),
     ]
 
     frequency = models.CharField(max_length=15, choices=FREQUENCIES)
@@ -60,9 +76,12 @@ class BaseReportSchedule(models.Model):
 
 class BaseDataExport(models.Model):
     """Abstract base for data exports."""
+
     STATUSES = [
-        ("pending", "En attente"), ("processing", "En cours"),
-        ("completed", "Terminé"), ("failed", "Échoué"),
+        ("pending", "En attente"),
+        ("processing", "En cours"),
+        ("completed", "Terminé"),
+        ("failed", "Échoué"),
     ]
     export_format = models.CharField(max_length=10)
     file = models.FileField(upload_to="exports/%Y/%m/", null=True, blank=True)
@@ -84,9 +103,12 @@ class BaseDataExport(models.Model):
 
 class BaseKpiDefinition(models.Model):
     """Abstract base for KPI definitions."""
+
     CATEGORIES = [
-        ("hr", "Ressources Humaines"), ("finance", "Finance"),
-        ("benefits", "Prestations"), ("conventions", "Conventions"),
+        ("hr", "Ressources Humaines"),
+        ("finance", "Finance"),
+        ("benefits", "Prestations"),
+        ("conventions", "Conventions"),
         ("global", "Global"),
     ]
     code = models.CharField(max_length=50, unique=True)
@@ -110,6 +132,7 @@ class BaseKpiDefinition(models.Model):
 
 class BaseKpiSnapshot(models.Model):
     """Abstract base for KPI snapshots."""
+
     value = models.FloatField()
     date = models.DateField()
     previous_value = models.FloatField(null=True, blank=True)
@@ -124,14 +147,25 @@ class BaseKpiSnapshot(models.Model):
 
 class BaseDashboardWidget(models.Model):
     """Abstract base for dashboard widgets."""
+
     WIDGET_TYPES = [
-        ("kpi_summary", "Résumé KPI"), ("kpi_card", "Carte KPI"),
-        ("chart_bar", "Barres"), ("chart_line", "Courbes"),
-        ("chart_pie", "Camembert"), ("table", "Tableau"),
-        ("alert_feed", "Flux d'alertes"), ("stat_card", "Carte statistique"),
+        ("kpi_summary", "Résumé KPI"),
+        ("kpi_card", "Carte KPI"),
+        ("chart_bar", "Barres"),
+        ("chart_line", "Courbes"),
+        ("chart_pie", "Camembert"),
+        ("table", "Tableau"),
+        ("alert_feed", "Flux d'alertes"),
+        ("stat_card", "Carte statistique"),
         ("custom", "Personnalisé"),
     ]
-    SIZES = [("sm", "Petit"), ("md", "Moyen"), ("lg", "Grand"), ("xl", "Très grand"), ("full", "Plein largeur")]
+    SIZES = [
+        ("sm", "Petit"),
+        ("md", "Moyen"),
+        ("lg", "Grand"),
+        ("xl", "Très grand"),
+        ("full", "Plein largeur"),
+    ]
     title = models.CharField(max_length=200)
     widget_type = models.CharField(max_length=20, choices=WIDGET_TYPES)
     size = models.CharField(max_length=10, choices=SIZES, default="md")

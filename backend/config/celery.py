@@ -3,9 +3,10 @@
 CELERY — Configuration du worker de tâches asynchrones
 ============================================================
 """
+
 import os
+
 from celery import Celery
-from celery.signals import setup_logging
 
 # Settings Django par défaut pour Celery
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")

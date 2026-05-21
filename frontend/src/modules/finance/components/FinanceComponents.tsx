@@ -7,13 +7,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
-  AlertTriangle, CheckCircle2, XCircle, Clock,
-  TrendingUp, Wallet, AlertCircle, Loader2,
+  AlertTriangle, CheckCircle2, XCircle,
+  Wallet, Loader2,
 } from "lucide-react";
 import { clsx } from "clsx";
 import {
   fmtDZD, fmtPct, fmtDate, consumptionColor,
-  progressBarClass, CHART_COLORS,
+  progressBarClass,
 } from "../utils/formatters";
 import {
   useApprovePayment, useApproveBudget, useMarkPaid, useCancelPayment, useResolveAlert,
@@ -261,8 +261,8 @@ export function PaymentActions({ payment, onUpdate }: PaymentActionsProps) {
             </p>
             <p className="text-xs text-green-600">{payment.benefit_type_name}</p>
           </div>
-          <Field label="Référence bancaire" error={errPay.bank_reference?.message} required>
-            <input {...regPay("bank_reference")} className={inputCls(errPay.bank_reference?.message)}
+          <Field label="Référence bancaire" error={errPay.bank_reference?.message?.toString()} required>
+            <input {...regPay("bank_reference")} className={inputCls(errPay.bank_reference?.message?.toString())}
               placeholder="Ex : VIR-2024-00123" />
           </Field>
           <Field label="Montant payé (DZD)" hint={`Montant approuvé : ${fmtDZD(payment.amount)}`}>
@@ -285,8 +285,8 @@ export function PaymentActions({ payment, onUpdate }: PaymentActionsProps) {
             </button>
           </>
         }>
-        <Field label="Motif d'annulation" error={errCan.reason?.message} required>
-          <textarea {...regCan("reason")} rows={3} className={inputCls(errCan.reason?.message)}
+        <Field label="Motif d'annulation" error={errCan.reason?.message?.toString()} required>
+          <textarea {...regCan("reason")} rows={3} className={inputCls(errCan.reason?.message?.toString())}
             placeholder="Précisez la raison de l'annulation..." />
         </Field>
       </Modal>

@@ -1,8 +1,14 @@
 from django.contrib import admin
 
 from .models import (
-    AIModelRegistry, AIPrediction, AIAnomaly, AIScore,
-    AIRecommendation, AIFeature, AIEvent, AIFeedback,
+    AIAnomaly,
+    AIEvent,
+    AIFeature,
+    AIFeedback,
+    AIModelRegistry,
+    AIPrediction,
+    AIRecommendation,
+    AIScore,
 )
 
 
@@ -15,21 +21,42 @@ class AIModelRegistryAdmin(admin.ModelAdmin):
 
 @admin.register(AIPrediction)
 class AIPredictionAdmin(admin.ModelAdmin):
-    list_display = ["prediction_type", "target_type", "target_id", "confidence", "is_active", "created_at"]
+    list_display = [
+        "prediction_type",
+        "target_type",
+        "target_id",
+        "confidence",
+        "is_active",
+        "created_at",
+    ]
     list_filter = ["prediction_type", "is_active"]
     search_fields = ["target_type", "target_id"]
 
 
 @admin.register(AIAnomaly)
 class AIAnomalyAdmin(admin.ModelAdmin):
-    list_display = ["metric_name", "severity", "status", "detection_method", "target_repr", "created_at"]
+    list_display = [
+        "metric_name",
+        "severity",
+        "status",
+        "detection_method",
+        "target_repr",
+        "created_at",
+    ]
     list_filter = ["severity", "status", "detection_method"]
     search_fields = ["target_repr", "metric_name"]
 
 
 @admin.register(AIScore)
 class AIScoreAdmin(admin.ModelAdmin):
-    list_display = ["score_type", "target_repr", "score", "confidence", "recommendation", "created_at"]
+    list_display = [
+        "score_type",
+        "target_repr",
+        "score",
+        "confidence",
+        "recommendation",
+        "created_at",
+    ]
     list_filter = ["score_type", "recommendation"]
     search_fields = ["target_repr"]
 

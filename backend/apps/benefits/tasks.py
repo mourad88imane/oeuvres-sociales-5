@@ -1,14 +1,21 @@
 """Benefits Celery tasks."""
+
 import logging
+
 from celery import shared_task
 
 logger = logging.getLogger("apps.benefits.tasks")
 
 STATE_LABELS = {
-    "submitted": "Soumise", "under_review": "En cours d'instruction",
-    "on_hold": "En attente", "validated": "Validée",
-    "paid": "Payée", "rejected": "Rejetée", "cancelled": "Annulée",
+    "submitted": "Soumise",
+    "under_review": "En cours d'instruction",
+    "on_hold": "En attente",
+    "validated": "Validée",
+    "paid": "Payée",
+    "rejected": "Rejetée",
+    "cancelled": "Annulée",
 }
+
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def notify_benefit_transition(self, benefit_id: str, to_state: str, actor_name: str, reason: str):
@@ -18,9 +25,9 @@ def notify_benefit_transition(self, benefit_id: str, to_state: str, actor_name: 
         from shared.notifications.models import Notification, NotificationPreference
         from shared.notifications.services import notification_service
 
-        benefit = Benefit.objects.select_related(
-            "employee", "benefit_type", "created_by"
-        ).get(pk=benefit_id)
+        benefit = Benefit.objects.select_related("employee", "benefit_type", "created_by").get(
+            pk=benefit_id
+        )
 
         label = STATE_LABELS.get(to_state, to_state)
         title = f"Prestation {label}"

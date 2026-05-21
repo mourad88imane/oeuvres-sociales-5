@@ -1,29 +1,44 @@
 import logging
 
-from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
+from django.utils import timezone
+
+from .anomaly import AnomalyDetector
+from .assistant import AIAssistant
+from .behavior import BehaviorAnalyzer
+from .forecasting import ForecastingService
 from .models import (
-    AIModelRegistry, AIPrediction, AIAnomaly, AIScore,
-    AIRecommendation, AIFeature, AIEvent, AIFeedback,
+    AIAnomaly,
+    AIEvent,
+    AIFeature,
+    AIFeedback,
+    AIModelRegistry,
+    AIPrediction,
+    AIRecommendation,
+    AIScore,
 )
+from .pipeline import AIPipeline
+from .recommendations import RecommendationEngine
+from .scoring import ScoringEngine
 from .serializers import (
-    AIModelRegistrySerializer, AIPredictionSerializer, AIAnomalySerializer,
-    ResolveAnomalySerializer, AIScoreSerializer, AIRecommendationSerializer,
-    RecommendationFeedbackSerializer, AIFeatureSerializer, AIEventSerializer,
-    AIFeedbackSerializer, AssistantQuerySerializer, ForecastRequestSerializer,
+    AIAnomalySerializer,
+    AIEventSerializer,
+    AIFeatureSerializer,
+    AIFeedbackSerializer,
+    AIModelRegistrySerializer,
+    AIPredictionSerializer,
+    AIRecommendationSerializer,
+    AIScoreSerializer,
+    AssistantQuerySerializer,
+    ForecastRequestSerializer,
+    RecommendationFeedbackSerializer,
+    ResolveAnomalySerializer,
     WhatIfSerializer,
 )
-from .anomaly import AnomalyDetector
-from .scoring import ScoringEngine
-from .recommendations import RecommendationEngine
-from .forecasting import ForecastingService
-from .behavior import BehaviorAnalyzer
-from .assistant import AIAssistant
-from .pipeline import AIPipeline
 
 logger = logging.getLogger("shared.ai")
 
@@ -69,7 +84,9 @@ class AIAnomalyViewSet(viewsets.ReadOnlyModelViewSet):
         anomaly.reviewed_by = request.user
         anomaly.reviewed_at = timezone.now()
         anomaly.save(update_fields=["status", "resolution_note", "reviewed_by", "reviewed_at"])
-        return Response({"status": "success", "data": {"id": str(anomaly.pk), "status": anomaly.status}})
+        return Response(
+            {"status": "success", "data": {"id": str(anomaly.pk), "status": anomaly.status}}
+        )
 
     @action(detail=False, methods=["get"])
     def unresolved(self, request):
@@ -108,7 +125,12 @@ class AIRecommendationViewSet(viewsets.ReadOnlyModelViewSet):
         if serializer.validated_data.get("comment"):
             recommendation.detail += f"\n[Feedback] {serializer.validated_data['comment']}"
         recommendation.save(update_fields=["feedback", "feedback_at", "feedback_by", "detail"])
-        return Response({"status": "success", "data": {"id": str(recommendation.pk), "feedback": recommendation.feedback}})
+        return Response(
+            {
+                "status": "success",
+                "data": {"id": str(recommendation.pk), "feedback": recommendation.feedback},
+            }
+        )
 
     @action(detail=False, methods=["get"])
     def active(self, request):
@@ -214,16 +236,19 @@ class AIServiceViewSet(viewsets.GenericViewSet):
         days = int(request.query_params.get("days", 30))
         user_id = request.query_params.get("user_id")
         analysis = behavior_analyzer.analyze_user_activity(
-            days=days, user_id=user_id,
+            days=days,
+            user_id=user_id,
         )
         risk_profiles = behavior_analyzer.get_user_risk_profiles(days=days)
-        return Response({
-            "status": "success",
-            "data": {
-                "activity_analysis": analysis,
-                "risk_profiles": risk_profiles,
-            },
-        })
+        return Response(
+            {
+                "status": "success",
+                "data": {
+                    "activity_analysis": analysis,
+                    "risk_profiles": risk_profiles,
+                },
+            }
+        )
 
     @action(detail=False, methods=["get"])
     def segmentation(self, request):

@@ -5,12 +5,13 @@ CORE MODELS — Fondation de tous les modèles du projet
 Principe : Tous les modèles héritent de BaseModel.
 Cela garantit : UUID, timestamps, soft delete, historique.
 """
+
 import uuid
 
-from django.contrib.auth import get_user_model
+from simple_history.models import HistoricalRecords
+
 from django.db import models
 from django.utils import timezone
-from simple_history.models import HistoricalRecords
 
 
 class SoftDeleteQuerySet(models.QuerySet):
@@ -64,27 +65,22 @@ class BaseModel(models.Model):
     - Soft delete (is_deleted, deleted_at)
     - Historique complet (django-simple-history) pour préparation AI
     """
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
         editable=False,
-        help_text="Identifiant unique universel"
+        help_text="Identifiant unique universel",
     )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        help_text="Date de création"
-    )
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        help_text="Date de dernière modification"
-    )
+    created_at = models.DateTimeField(auto_now_add=True, help_text="Date de création")
+    updated_at = models.DateTimeField(auto_now=True, help_text="Date de dernière modification")
     created_by = models.ForeignKey(
         "users.User",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="%(app_label)s_%(class)s_created",
-        help_text="Utilisateur créateur"
+        help_text="Utilisateur créateur",
     )
     updated_by = models.ForeignKey(
         "users.User",
@@ -92,16 +88,11 @@ class BaseModel(models.Model):
         null=True,
         blank=True,
         related_name="%(app_label)s_%(class)s_updated",
-        help_text="Dernier utilisateur modificateur"
+        help_text="Dernier utilisateur modificateur",
     )
-    is_deleted = models.BooleanField(
-        default=False,
-        help_text="Suppression logique (soft delete)"
-    )
+    is_deleted = models.BooleanField(default=False, help_text="Suppression logique (soft delete)")
     deleted_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        help_text="Date de suppression logique"
+        null=True, blank=True, help_text="Date de suppression logique"
     )
     deleted_by = models.ForeignKey(
         "users.User",
@@ -109,19 +100,26 @@ class BaseModel(models.Model):
         null=True,
         blank=True,
         related_name="%(app_label)s_%(class)s_deleted",
-        help_text="Utilisateur ayant supprimé"
+        help_text="Utilisateur ayant supprimé",
     )
 
     # Historique complet pour audit et préparation AI
     history = HistoricalRecords(inherit=True)
 
     # Managers
-    objects = SoftDeleteManager()       # Exclut les supprimés par défaut
-    all_objects = models.Manager()      # Inclut tout (admin, audit)
+    all_objects = models.Manager()  # Inclut tout (admin, audit)
+    objects = SoftDeleteManager()  # Exclut les supprimés par défaut
 
     class Meta:
         abstract = True
         ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.__class__.__name__} ({self.id})"
+
+    def save(self, *args, **kwargs):
+        """Override save pour s'assurer que les FKs sont cohérentes."""
+        super().save(*args, **kwargs)
 
     def soft_delete(self, user=None):
         """Suppression logique avec traçabilité."""
@@ -137,10 +135,3 @@ class BaseModel(models.Model):
         self.deleted_at = None
         self.deleted_by = None
         self.save(update_fields=["is_deleted", "deleted_at", "deleted_by", "updated_at"])
-
-    def save(self, *args, **kwargs):
-        """Override save pour s'assurer que les FKs sont cohérentes."""
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.__class__.__name__} ({self.id})"

@@ -8,15 +8,14 @@ logger = logging.getLogger("apps.benefits.signals")
 
 def wire_benefit_signals():
     """Connect benefit AI signals — called from apps.ready() to avoid import issues."""
-    from django.apps import apps
     from .models import Benefit
 
     @receiver(post_save, sender=Benefit, weak=False, dispatch_uid="benefit_ai_scoring")
     def benefit_ai_scoring(sender, instance, created, **kwargs):
         """Trigger AI scoring and pipeline when a benefit is saved."""
         try:
-            from shared.ai.scoring import ScoringEngine
             from shared.ai.pipeline import AIPipeline
+            from shared.ai.scoring import ScoringEngine
 
             scoring = ScoringEngine()
             pipeline = AIPipeline()

@@ -5,8 +5,9 @@ DEPARTMENTS MODELS
 Gestion des départements et structures organisationnelles.
 Prêt pour analytics : hiérarchie, effectifs, budgets.
 """
-from django.db import models
+
 from core.models import BaseModel
+from django.db import models
 
 
 class Department(BaseModel):
@@ -83,9 +84,7 @@ class Department(BaseModel):
     @property
     def employee_count(self):
         """Nombre d'employés actifs dans ce département."""
-        return self.employees.filter(
-            status=Employee.Status.ACTIVE, is_deleted=False
-        ).count()
+        return self.employees.filter(status=Employee.Status.ACTIVE, is_deleted=False).count()
 
     @property
     def full_path(self):

@@ -2,10 +2,11 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
-from django.db.models import Count, Avg
+
+from django.db.models import Avg
 from django.utils import timezone
 
-from .models import APIRequestLog, SecurityEvent, BusinessMetric, APIEndpointStatus
+from .models import APIEndpointStatus, APIRequestLog, BusinessMetric, SecurityEvent
 
 logger = logging.getLogger("apps.monitoring.tasks")
 
@@ -26,22 +27,30 @@ def aggregate_api_metrics():
 
         BusinessMetric.objects.update_or_create(
             metric_type=BusinessMetric.MetricType.API_CALLS,
-            granularity=grain, label="total", timestamp=since,
+            granularity=grain,
+            label="total",
+            timestamp=since,
             defaults={"value": total},
         )
         BusinessMetric.objects.update_or_create(
             metric_type=BusinessMetric.MetricType.API_ERRORS,
-            granularity=grain, label="total", timestamp=since,
+            granularity=grain,
+            label="total",
+            timestamp=since,
             defaults={"value": errors},
         )
         BusinessMetric.objects.update_or_create(
             metric_type=BusinessMetric.MetricType.API_ERRORS,
-            granularity=grain, label="error_rate", timestamp=since,
+            granularity=grain,
+            label="error_rate",
+            timestamp=since,
             defaults={"value": round(errors / max(total, 1) * 100, 2)},
         )
         BusinessMetric.objects.update_or_create(
             metric_type=BusinessMetric.MetricType.API_DURATION,
-            granularity=grain, label="avg", timestamp=since,
+            granularity=grain,
+            label="avg",
+            timestamp=since,
             defaults={"value": round(avg_dur, 1)},
         )
 
@@ -55,11 +64,14 @@ def cleanup_old_monitoring_data(days=90):
     cutoff = timezone.now() - timedelta(days=days)
     deleted_logs, _ = APIRequestLog.objects.filter(timestamp__lt=cutoff).delete()
     deleted_security, _ = SecurityEvent.objects.filter(
-        timestamp__lt=cutoff, resolved=True,
+        timestamp__lt=cutoff,
+        resolved=True,
     ).delete()
     logger.info(
         "Cleanup: %d logs, %d resolved security events purged (>= %d days)",
-        deleted_logs, deleted_security, days,
+        deleted_logs,
+        deleted_security,
+        days,
     )
     return {"logs": deleted_logs, "security": deleted_security}
 

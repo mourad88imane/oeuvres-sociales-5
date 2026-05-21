@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Lightbulb, TrendingUp, AlertTriangle, Building2, Gift, Wallet, Users,
-  RefreshCw, ChevronDown, ChevronUp, ExternalLink,
+  Lightbulb, TrendingUp, Building2, Gift, Wallet, Users,
+  RefreshCw, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { clsx } from "clsx";
 import apiClient from "@shared/api/apiClient";

@@ -1,10 +1,12 @@
-from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
+
 from .views import (
-    PartnerViewSet,
-    ConventionViewSet,
-    ConventionDocumentViewSet,
     ConventionAlertViewSet,
+    ConventionDocumentViewSet,
+    ConventionViewSet,
+    PartnerViewSet,
 )
 
 app_name = "conventions"

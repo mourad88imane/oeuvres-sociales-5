@@ -27,9 +27,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-django = ["django"]
-known-first-party = ["apps", "core", "shared", "config"]
-sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLDER"]
+known-first-party = ["django", "apps", "core", "shared", "config"]
 
 [tool.black]
 line-length = 100

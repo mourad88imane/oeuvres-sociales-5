@@ -1,4 +1,5 @@
 """Utilitaires pour le module d'authentification."""
+
 from django.http import JsonResponse
 
 

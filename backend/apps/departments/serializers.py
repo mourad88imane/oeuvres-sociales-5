@@ -3,41 +3,55 @@
 DEPARTMENT SERIALIZERS
 ============================================================
 """
+
 from rest_framework import serializers
+
 from core.serializers import BaseModelSerializer
+
 from .models import Department
 
 
 class DepartmentListSerializer(serializers.ModelSerializer):
     """Sérialiseur léger pour les listes déroulantes et références."""
+
     employee_count = serializers.ReadOnlyField()
-    full_path      = serializers.ReadOnlyField()
+    full_path = serializers.ReadOnlyField()
 
     class Meta:
-        model  = Department
-        fields = ["id", "code", "name", "full_path",
-                  "employee_count", "is_active"]
+        model = Department
+        fields = ["id", "code", "name", "full_path", "employee_count", "is_active"]
 
 
 class DepartmentSerializer(BaseModelSerializer):
     """Sérialiseur complet."""
-    employee_count   = serializers.ReadOnlyField()
-    full_path        = serializers.ReadOnlyField()
-    parent_name      = serializers.CharField(
-        source="parent.name", read_only=True, default=None
-    )
-    manager_name     = serializers.SerializerMethodField()
-    children_count   = serializers.SerializerMethodField()
+
+    employee_count = serializers.ReadOnlyField()
+    full_path = serializers.ReadOnlyField()
+    parent_name = serializers.CharField(source="parent.name", read_only=True, default=None)
+    manager_name = serializers.SerializerMethodField()
+    children_count = serializers.SerializerMethodField()
 
     class Meta:
-        model  = Department
+        model = Department
         fields = [
-            "id", "code", "name", "description",
-            "parent", "parent_name", "full_path",
-            "manager", "manager_name",
-            "is_active", "budget_annual", "cost_center", "location",
-            "employee_count", "children_count",
-            "created_at", "updated_at", "created_by_name",
+            "id",
+            "code",
+            "name",
+            "description",
+            "parent",
+            "parent_name",
+            "full_path",
+            "manager",
+            "manager_name",
+            "is_active",
+            "budget_annual",
+            "cost_center",
+            "location",
+            "employee_count",
+            "children_count",
+            "created_at",
+            "updated_at",
+            "created_by_name",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
@@ -64,10 +78,18 @@ class DepartmentSerializer(BaseModelSerializer):
 
 class DepartmentCreateSerializer(BaseModelSerializer):
     class Meta:
-        model  = Department
-        fields = ["code", "name", "description", "parent",
-                  "manager", "is_active", "budget_annual",
-                  "cost_center", "location"]
+        model = Department
+        fields = [
+            "code",
+            "name",
+            "description",
+            "parent",
+            "manager",
+            "is_active",
+            "budget_annual",
+            "cost_center",
+            "location",
+        ]
 
     def validate_code(self, value):
         return value.upper().strip()

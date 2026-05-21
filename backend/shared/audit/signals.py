@@ -1,5 +1,6 @@
 import logging
-from django.db.models.signals import post_save, post_delete
+
+from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.forms.models import model_to_dict
 
@@ -12,6 +13,7 @@ def get_audit_model_set():
     """Get audited models from registry or fallback to settings."""
     try:
         from shared.registry import registry
+
         models = registry.get_audit_models()
         if models:
             return models
@@ -19,6 +21,7 @@ def get_audit_model_set():
         pass
     # Fallback : configuration Django
     from django.conf import settings
+
     return set(getattr(settings, "ENGINE_AUDIT_MODELS", []))
 
 
@@ -34,6 +37,7 @@ def get_user(request=None):
 
 
 try:
+
     @receiver(post_save)
     def audit_model_create_update(sender, instance, created, **kwargs):
         if not should_audit(sender):
@@ -56,7 +60,9 @@ try:
                     before = model_to_dict(instance, exclude=EXCLUDE_FIELDS)
                     history = instance.history.all()
                     if history.exists() and history.first().prev_record:
-                        before = model_to_dict(history.first().prev_record.instance, exclude=EXCLUDE_FIELDS)
+                        before = model_to_dict(
+                            history.first().prev_record.instance, exclude=EXCLUDE_FIELDS
+                        )
                 except Exception:
                     before = {}
                 audit.log_update(user=user, obj=instance, before_data=before, request=request)

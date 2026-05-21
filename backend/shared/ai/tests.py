@@ -1,10 +1,11 @@
 """Tests for shared AI / prediction services."""
-import pytest
 
-pytestmark = [pytest.mark.django_db, pytest.mark.unit]
+import pytest
 
 from django.test import TestCase
 from shared.ai.services import PredictionService, _linear_regression, _zscore_anomalies
+
+pytestmark = [pytest.mark.django_db, pytest.mark.unit]
 
 
 class TestLinearRegression(TestCase):
@@ -71,11 +72,14 @@ class TestPredictionService(TestCase):
 
         # Seed KPI snapshots for trend prediction
         from datetime import date, timedelta
+
         from apps.reporting.models import KpiDefinition, KpiSnapshot
 
         self.kpi = KpiDefinition.objects.create(
-            code="consumption_rate", name="Consumption Rate",
-            category="finance", target_value=100.0,
+            code="consumption_rate",
+            name="Consumption Rate",
+            category="finance",
+            target_value=100.0,
         )
         today = date.today()
         for i in range(30):

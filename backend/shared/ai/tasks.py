@@ -2,14 +2,15 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+
 from django.utils import timezone
 
 from .anomaly import AnomalyDetector
-from .scoring import ScoringEngine
-from .recommendations import RecommendationEngine
 from .forecasting import ForecastingService
+from .models import AIAnomaly, AIEvent, AIFeature, AIRecommendation
 from .pipeline import AIPipeline
-from .models import AIEvent, AIAnomaly, AIRecommendation, AIFeature
+from .recommendations import RecommendationEngine
+from .scoring import ScoringEngine
 
 logger = logging.getLogger("shared.ai.tasks")
 
@@ -61,14 +62,19 @@ def cleanup_old_ai_data(days=90):
     deleted_events, _ = AIEvent.objects.filter(timestamp__lt=cutoff).delete()
     deleted_features, _ = AIFeature.objects.filter(computed_at__lt=cutoff).delete()
     deleted_anomalies, _ = AIAnomaly.objects.filter(
-        created_at__lt=cutoff, status__in=["resolved", "false_positive"],
+        created_at__lt=cutoff,
+        status__in=["resolved", "false_positive"],
     ).delete()
     expired_recs = AIRecommendation.objects.filter(
-        expires_at__lt=timezone.now(), feedback="pending",
+        expires_at__lt=timezone.now(),
+        feedback="pending",
     ).update(is_active=False)
     logger.info(
         "AI data cleanup: %d events, %d features, %d resolved anomalies, %d recs expired",
-        deleted_events, deleted_features, deleted_anomalies, expired_recs,
+        deleted_events,
+        deleted_features,
+        deleted_anomalies,
+        expired_recs,
     )
     return {
         "events": deleted_events,

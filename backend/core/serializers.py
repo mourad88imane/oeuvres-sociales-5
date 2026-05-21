@@ -3,6 +3,7 @@
 SERIALIZERS DE BASE — Fondation pour tous les serializers
 ============================================================
 """
+
 from rest_framework import serializers
 
 
@@ -11,6 +12,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
     Serializer de base avec champs communs automatiques.
     Tous les serializers du projet héritent de cette classe.
     """
+
     created_at = serializers.DateTimeField(read_only=True, format="%Y-%m-%dT%H:%M:%SZ")
     updated_at = serializers.DateTimeField(read_only=True, format="%Y-%m-%dT%H:%M:%SZ")
     created_by_name = serializers.SerializerMethodField(read_only=True)
@@ -49,6 +51,7 @@ class BaseModelSerializer(serializers.ModelSerializer):
 
 class SuccessResponseSerializer(serializers.Serializer):
     """Format de réponse succès standard."""
+
     status = serializers.CharField(default="success")
     message = serializers.CharField()
     data = serializers.DictField(required=False)

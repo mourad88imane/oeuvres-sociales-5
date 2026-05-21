@@ -2,7 +2,7 @@
  * BENEFITS LIST PAGE
  */
 import { useState, useCallback } from "react";
-import { Gift, Plus, Search, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle, SlidersHorizontal } from "lucide-react";
+import { Gift, Plus, Search, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBenefits, useBenefitStatistics, useCreateBenefit, useDeleteBenefit } from "../hooks/useBenefits";
 import { WorkflowBadge, WorkflowTimeline } from "../components/WorkflowComponents";

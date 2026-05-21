@@ -1,17 +1,20 @@
 import logging
 from datetime import timedelta
 
-from django.db.models import Count
-from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
-from .models import APIRequestLog, SecurityEvent, BusinessMetric, APIEndpointStatus
+from django.utils import timezone
+
+from .models import BusinessMetric, SecurityEvent
 from .serializers import (
-    APIRequestLogSerializer, SecurityEventSerializer, ResolveSecurityEventSerializer,
-    APIEndpointStatusSerializer, DashboardStatsSerializer, BusinessMetricSerializer,
+    APIEndpointStatusSerializer,
+    APIRequestLogSerializer,
+    BusinessMetricSerializer,
+    ResolveSecurityEventSerializer,
+    SecurityEventSerializer,
 )
 from .services import monitoring_service
 

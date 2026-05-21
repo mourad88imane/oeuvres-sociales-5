@@ -5,12 +5,14 @@ USERS MODELS — Modèle utilisateur personnalisé
 Remplace le modèle User Django par défaut.
 AUTH_USER_MODEL = "users.User"
 """
+
 import uuid
+
+from simple_history.models import HistoricalRecords
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
-from simple_history.models import HistoricalRecords
 
 
 class UserManager(BaseUserManager):
@@ -56,39 +58,20 @@ class User(AbstractBaseUser, PermissionsMixin):
         CONSULTANT = "consultant", "Consultant"
 
     # ── Identifiant ──────────────────────────────────────
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # ── Authentification ─────────────────────────────────
-    email = models.EmailField(
-        unique=True,
-        verbose_name="Adresse email"
-    )
+    email = models.EmailField(unique=True, verbose_name="Adresse email")
 
     # ── Profil ───────────────────────────────────────────
     first_name = models.CharField(max_length=150, verbose_name="Prénom")
     last_name = models.CharField(max_length=150, verbose_name="Nom")
-    phone = models.CharField(
-        max_length=20,
-        blank=True,
-        verbose_name="Téléphone"
-    )
-    avatar = models.ImageField(
-        upload_to="avatars/",
-        null=True,
-        blank=True,
-        verbose_name="Avatar"
-    )
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Téléphone")
+    avatar = models.ImageField(upload_to="avatars/", null=True, blank=True, verbose_name="Avatar")
 
     # ── Rôle et permissions ───────────────────────────────
     role = models.CharField(
-        max_length=20,
-        choices=Role.choices,
-        default=Role.CONSULTANT,
-        verbose_name="Rôle"
+        max_length=20, choices=Role.choices, default=Role.CONSULTANT, verbose_name="Rôle"
     )
 
     # ── Statut ───────────────────────────────────────────
@@ -99,17 +82,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     must_change_password = models.BooleanField(
         default=True,
         verbose_name="Doit changer le mot de passe",
-        help_text="Forcé après la première connexion ou reset admin"
+        help_text="Forcé après la première connexion ou reset admin",
     )
     last_login_ip = models.GenericIPAddressField(
-        null=True,
-        blank=True,
-        verbose_name="Dernière IP de connexion"
+        null=True, blank=True, verbose_name="Dernière IP de connexion"
     )
-    failed_login_count = models.PositiveIntegerField(
-        default=0,
-        verbose_name="Tentatives échouées"
-    )
+    failed_login_count = models.PositiveIntegerField(default=0, verbose_name="Tentatives échouées")
 
     # ── Timestamps ───────────────────────────────────────
     date_joined = models.DateTimeField(default=timezone.now, verbose_name="Date d'inscription")
@@ -121,7 +99,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         default=dict,
         blank=True,
         verbose_name="Préférences utilisateur",
-        help_text="Stockage JSON pour préférences UI et paramètres personnalisés"
+        help_text="Stockage JSON pour préférences UI et paramètres personnalisés",
     )
 
     # Historique complet (django-simple-history)

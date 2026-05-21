@@ -1,11 +1,13 @@
-from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
+from django.urls import include, path
+
 from .views import (
     AnalyticsViewSet,
-    KpiViewSet,
     DashboardConfigViewSet,
-    ReportViewSet,
     ExportViewSet,
+    KpiViewSet,
+    ReportViewSet,
 )
 
 app_name = "reporting"

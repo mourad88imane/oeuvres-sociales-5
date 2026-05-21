@@ -1,7 +1,7 @@
 /**
  * BENEFIT FORM — Création / modification de prestation
  */
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2 } from "lucide-react";
@@ -71,7 +71,7 @@ export function BenefitForm({
   const handleFormSubmit = handleSubmit(async (data) => {
     const cleaned = Object.fromEntries(
       Object.entries(data).filter(([, v]) => v !== "" && v != null)
-    ) as BenefitCreatePayload;
+    ) as unknown as BenefitCreatePayload;
     await onSubmit(cleaned);
   });
 

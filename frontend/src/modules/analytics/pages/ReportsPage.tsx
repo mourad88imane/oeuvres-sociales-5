@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { FileText, Download, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
-import { clsx } from "clsx";
 import { useReports, useGenerateReport, useExports } from "../api/index";
 import { Modal, Spinner, Badge } from "@shared/components/ui/index";
-import { fmtDate, fmtDateTime, CATEGORY_LABELS } from "../utils/formatters";
+import { fmtDateTime, CATEGORY_LABELS } from "../utils/formatters";
 import type { ReportCategory, DataExport } from "../types";
 
 export function ReportsPage() {

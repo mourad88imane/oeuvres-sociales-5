@@ -3,17 +3,16 @@
  */
 import { useState } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp, Download, RefreshCw, Plus } from "lucide-react";
+import { TrendingUp, Download, RefreshCw } from "lucide-react";
 import { useBudgets, useConsumptionReport, useActiveFiscalYear, useApproveBudget } from "../api/index";
 import { financeApi } from "../api/index";
 import { BudgetCard } from "../components/FinanceComponents";
 import { EmptyState, Spinner } from "@shared/components/ui/index";
-import { RoleGuard } from "@shared/components/layout/ProtectedRoute";
-import { fmtDZD, fmtPct, CHART_COLORS } from "../utils/formatters";
+import { fmtDZD, fmtPct } from "../utils/formatters";
 import type { BudgetFilters } from "../types";
 
 export function BudgetsPage() {
-  const [filters, setFilters] = useState<BudgetFilters>({});
+  const [filters] = useState<BudgetFilters>({});
   const { data: activeFY }    = useActiveFiscalYear();
   const fyId = activeFY?.id;
 

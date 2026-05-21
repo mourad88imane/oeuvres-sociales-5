@@ -3,8 +3,7 @@
  * Données en temps réel depuis l'endpoint d'analytics.
  */
 import {
-  Users, Gift, Wallet, TrendingUp,
-  Clock, CheckCircle2, XCircle, AlertTriangle,
+  Users, Gift, Wallet, Clock,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -16,15 +15,6 @@ import { Spinner } from "@shared/components/ui/index";
 import { fmtNumber, fmtDZD } from "@modules/analytics/utils/formatters";
 import { RecommendationsWidget } from "@modules/ai/components/RecommendationsWidget";
 import { AnomalyFeedWidget } from "@modules/ai/components/AnomalyFeedWidget";
-
-// ── Couleurs statuts workflow ──────────────────────────────
-const STATUS_CONFIG = {
-  draft:     { label: "Brouillon",  color: "text-gray-600",  bg: "bg-gray-100",  icon: Clock },
-  submitted: { label: "Soumise",    color: "text-blue-600",  bg: "bg-blue-100",  icon: TrendingUp },
-  validated: { label: "Validée",    color: "text-amber-600", bg: "bg-amber-100", icon: AlertTriangle },
-  paid:      { label: "Payée",      color: "text-green-600", bg: "bg-green-100", icon: CheckCircle2 },
-  rejected:  { label: "Rejetée",    color: "text-red-600",   bg: "bg-red-100",   icon: XCircle },
-};
 
 const MONTH_LABELS: Record<string, string> = {
   "01": "Jan", "02": "Fév", "03": "Mar", "04": "Avr",
@@ -147,13 +137,13 @@ export function DashboardPage() {
                   <YAxis type="category" dataKey="benefit_type__name" tick={{ fontSize: 11 }} width={80} />
                   <Tooltip
                     contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
-                    formatter={(value, name) => [value, "Prestations"]}
+                    formatter={(value) => [value, "Prestations"]}
                   />
                   <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} name="Count" />
                 </BarChart>
               </ResponsiveContainer>
               <div className="mt-4 space-y-2">
-                {(s?.benefits?.by_type || []).slice(0, 5).map(({ benefit_type__name, count, total }, i) => (
+                {(s?.benefits?.by_type || []).slice(0, 5).map(({ benefit_type__name, count }, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-blue-500" />

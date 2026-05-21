@@ -8,11 +8,12 @@ Pipeline de données pour le ML :
   3. Feature engineering
   4. Stockage dans le feature store (AIFeature)
 """
-import logging
-from datetime import date, timedelta
-from typing import Any, Optional
 
-from django.db.models import Count, Sum, Avg, Q
+import logging
+from datetime import timedelta
+from typing import Any
+
+from django.db.models import Avg, Count, Sum
 from django.utils import timezone
 
 logger = logging.getLogger("shared.ai.pipeline")
@@ -24,6 +25,7 @@ class DataCollector:
     @staticmethod
     def _get_model(model_path: str):
         from django.apps import apps
+
         try:
             return apps.get_model(model_path)
         except LookupError:
@@ -31,29 +33,25 @@ class DataCollector:
 
     def collect_benefits_stats(self, days: int = 90) -> dict[str, Any]:
         Benefit = self._get_model("benefits.Benefit")
-        BenefitType = self._get_model("benefits.BenefitType")
+        self._get_model("benefits.BenefitType")
         since = timezone.now() - timedelta(days=days)
         qs = Benefit.objects.filter(created_at__gte=since)
         by_type = list(
             qs.values("benefit_type__name")
-            .annotate(count=Count("id"), total_amount=Sum("amount"))
+            .annotate(count=Count("id"), total_amount=Sum("requested_amount"))
             .order_by("-count")
         )
-        by_status = list(
-            qs.values("workflow_state")
-            .annotate(count=Count("id"))
-            .order_by("-count")
-        )
+        by_status = list(qs.values("workflow_state").annotate(count=Count("id")).order_by("-count"))
         return {
             "period_days": days,
             "total": qs.count(),
             "by_type": by_type,
             "by_status": by_status,
             "pending": qs.filter(workflow_state__in=["submitted", "under_review"]).count(),
-            "avg_amount": qs.aggregate(avg=Avg("amount"))["avg"] or 0,
+            "avg_amount": qs.aggregate(avg=Avg("requested_amount"))["avg"] or 0,
         }
 
-    def collect_finance_stats(self, year: Optional[int] = None) -> dict[str, Any]:
+    def collect_finance_stats(self, year: int | None = None) -> dict[str, Any]:
         Budget = self._get_model("finance.Budget")
         Payment = self._get_model("finance.Payment")
         year = year or timezone.now().year
@@ -61,7 +59,7 @@ class DataCollector:
         payments = Payment.objects.filter(executed_date__year=year)
         return {
             "year": year,
-            "total_budget": budgets.aggregate(s=Sum("amount"))["s"] or 0,
+            "total_budget": budgets.aggregate(s=Sum("allocated_amount"))["s"] or 0,
             "total_paid": payments.filter(status="paid").aggregate(s=Sum("amount"))["s"] or 0,
             "payment_count": payments.count(),
             "pending_payments": payments.filter(status__in=["pending", "approved"]).count(),
@@ -71,10 +69,7 @@ class DataCollector:
         Employee = self._get_model("employees.Employee")
         total = Employee.objects.alive().count()
         by_status = list(
-            Employee.objects.alive()
-            .values("status")
-            .annotate(count=Count("id"))
-            .order_by("-count")
+            Employee.objects.alive().values("status").annotate(count=Count("id")).order_by("-count")
         )
         by_dept = list(
             Employee.objects.alive()
@@ -92,7 +87,11 @@ class DataCollector:
         Convention = self._get_model("conventions.Convention")
         today = timezone.localdate()
         active = Convention.objects.alive().filter(status__in=["active", "expiring_soon"]).count()
-        expiring_30 = Convention.objects.alive().filter(end_date__gte=today, end_date__lte=today + timedelta(days=30)).count()
+        expiring_30 = (
+            Convention.objects.alive()
+            .filter(end_date__gte=today, end_date__lte=today + timedelta(days=30))
+            .count()
+        )
         return {
             "active": active,
             "expiring_30_days": expiring_30,
@@ -109,13 +108,15 @@ class FeatureTransformer:
         created = benefit.created_at
         age_days = (now - created).days if created else 0
         features["age_days"] = age_days
-        features["amount"] = float(benefit.amount or 0)
+        features["amount"] = float(benefit.requested_amount or 0)
 
         # Workflow velocity features
         if hasattr(benefit, "analytics_data") and benefit.analytics_data:
             ad = benefit.analytics_data
             durations = [v for k, v in ad.items() if k.endswith("_duration_hours")]
-            features["avg_state_duration_hours"] = sum(durations) / len(durations) if durations else 0
+            features["avg_state_duration_hours"] = (
+                sum(durations) / len(durations) if durations else 0
+            )
             features["total_processing_hours"] = sum(durations)
             features["state_transition_count"] = len(ad)
         else:
@@ -130,14 +131,18 @@ class FeatureTransformer:
         features["age"] = 0
         if employee.date_of_birth:
             features["age"] = (timezone.localdate() - employee.date_of_birth).days / 365.25
-        features["has_beneficiaries"] = 1 if hasattr(employee, "beneficiaries") and employee.beneficiaries.alive().count() > 0 else 0
+        features["has_beneficiaries"] = (
+            1
+            if hasattr(employee, "beneficiaries") and employee.beneficiaries.alive().count() > 0
+            else 0
+        )
         beneficiaries_count = 0
         if hasattr(employee, "beneficiaries"):
-            beneficiaries_count = employee.beneficiaries.alive().count()
+            beneficiaries_count = employee.beneficiaries.filter(is_deleted=False).count()
         features["beneficiaries_count"] = beneficiaries_count
         benefits_count = 0
         if hasattr(employee, "benefits"):
-            benefits_count = employee.benefits.alive().count()
+            benefits_count = employee.benefits.filter(is_deleted=False).count()
         features["benefits_count"] = benefits_count
         return features
 
@@ -145,8 +150,9 @@ class FeatureTransformer:
 class FeatureStore:
     """Stocke et récupère les features dans AIFeature."""
 
-    def get_feature(self, entity_type: str, entity_id: str, feature_name: str) -> Optional[Any]:
+    def get_feature(self, entity_type: str, entity_id: str, feature_name: str) -> Any | None:
         from ..models import AIFeature
+
         try:
             f = AIFeature.objects.filter(
                 entity_type=entity_type, entity_id=str(entity_id), feature_name=feature_name
@@ -157,11 +163,23 @@ class FeatureStore:
         except AIFeature.DoesNotExist:
             return None
 
-    def set_feature(self, entity_type: str, entity_id: str, feature_name: str, value, ftype: str = "numeric", source: str = "pipeline"):
+    def set_feature(
+        self,
+        entity_type: str,
+        entity_id: str,
+        feature_name: str,
+        value,
+        ftype: str = "numeric",
+        source: str = "pipeline",
+    ):
         from ..models import AIFeature
+
         kwargs = {
-            "entity_type": entity_type, "entity_id": str(entity_id),
-            "feature_name": feature_name, "feature_type": ftype, "source": source,
+            "entity_type": entity_type,
+            "entity_id": str(entity_id),
+            "feature_name": feature_name,
+            "feature_type": ftype,
+            "source": source,
         }
         if ftype == "numeric":
             kwargs["value_numeric"] = float(value)
@@ -175,6 +193,7 @@ class FeatureStore:
 
     def get_entity_features(self, entity_type: str, entity_id: str) -> dict[str, Any]:
         from ..models import AIFeature
+
         features = AIFeature.objects.filter(
             entity_type=entity_type, entity_id=str(entity_id)
         ).order_by("-computed_at")

@@ -1,10 +1,19 @@
 from django.contrib import admin
-from .models import APIRequestLog, SecurityEvent, BusinessMetric, APIEndpointStatus
+
+from .models import APIEndpointStatus, APIRequestLog, BusinessMetric, SecurityEvent
 
 
 @admin.register(APIRequestLog)
 class APIRequestLogAdmin(admin.ModelAdmin):
-    list_display = ["timestamp", "method", "endpoint", "status_code", "duration_ms", "is_error", "user"]
+    list_display = [
+        "timestamp",
+        "method",
+        "endpoint",
+        "status_code",
+        "duration_ms",
+        "is_error",
+        "user",
+    ]
     list_filter = ["method", "is_error", "status_code", "timestamp"]
     search_fields = ["endpoint", "error_message"]
     readonly_fields = [f.name for f in APIRequestLog._meta.get_fields()]
@@ -47,7 +56,14 @@ class BusinessMetricAdmin(admin.ModelAdmin):
 
 @admin.register(APIEndpointStatus)
 class APIEndpointStatusAdmin(admin.ModelAdmin):
-    list_display = ["endpoint", "method", "total_calls", "error_count", "avg_duration_ms", "is_degraded"]
+    list_display = [
+        "endpoint",
+        "method",
+        "total_calls",
+        "error_count",
+        "avg_duration_ms",
+        "is_degraded",
+    ]
     list_filter = ["is_degraded", "method"]
     search_fields = ["endpoint"]
     ordering = ["-total_calls"]

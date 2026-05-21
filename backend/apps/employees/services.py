@@ -10,14 +10,13 @@ Ce service est aussi le point d'intégration futur pour :
 - Les recommandations
 - Les alertes automatiques
 """
-import logging
-from typing import Optional
 
-from django.core.files.base import ContentFile
+import logging
+
 from django.db import transaction
 from django.db.models import Q, QuerySet
-
 from shared.audit.services import AuditService
+
 from .models import Employee
 
 logger = logging.getLogger("apps.employees")
@@ -33,10 +32,8 @@ class EmployeeService:
     # ── Requêtes ─────────────────────────────────────────
     def get_queryset(self) -> QuerySet:
         """QuerySet de base avec les relations nécessaires."""
-        return (
-            Employee.objects
-            .select_related("department", "manager")
-            .prefetch_related("beneficiaries")
+        return Employee.objects.select_related("department", "manager").prefetch_related(
+            "beneficiaries"
         )
 
     def search(
@@ -47,10 +44,10 @@ class EmployeeService:
         department_id: str = "",
         contract_type: str = "",
         gender: str = "",
-        min_age: Optional[int] = None,
-        max_age: Optional[int] = None,
-        min_seniority: Optional[float] = None,
-        grade_level: Optional[int] = None,
+        min_age: int | None = None,
+        max_age: int | None = None,
+        min_seniority: float | None = None,
+        grade_level: int | None = None,
         ordering: str = "-created_at",
     ) -> QuerySet:
         """
@@ -59,12 +56,12 @@ class EmployeeService:
         """
         if search_term:
             queryset = queryset.filter(
-                Q(first_name__icontains=search_term) |
-                Q(last_name__icontains=search_term) |
-                Q(matricule__icontains=search_term) |
-                Q(email_professional__icontains=search_term) |
-                Q(job_title__icontains=search_term) |
-                Q(national_id__icontains=search_term)
+                Q(first_name__icontains=search_term)
+                | Q(last_name__icontains=search_term)
+                | Q(matricule__icontains=search_term)
+                | Q(email_professional__icontains=search_term)
+                | Q(job_title__icontains=search_term)
+                | Q(national_id__icontains=search_term)
             )
 
         if status:
@@ -85,28 +82,45 @@ class EmployeeService:
         # Filtres sur âge — calculés via date_of_birth
         if min_age is not None:
             from datetime import date
+
             from dateutil.relativedelta import relativedelta
+
             max_dob = date.today() - relativedelta(years=min_age)
             queryset = queryset.filter(date_of_birth__lte=max_dob)
 
         if max_age is not None:
             from datetime import date
+
             from dateutil.relativedelta import relativedelta
+
             min_dob = date.today() - relativedelta(years=max_age + 1)
             queryset = queryset.filter(date_of_birth__gte=min_dob)
 
         # Filtre ancienneté (en années)
         if min_seniority is not None:
             from datetime import date, timedelta
+
             max_hire_date = date.today() - timedelta(days=int(min_seniority * 365.25))
             queryset = queryset.filter(date_hired__lte=max_hire_date)
 
         # Ordering sécurisé (whitelist)
         allowed_orderings = {
-            "last_name", "-last_name", "first_name", "-first_name",
-            "matricule", "-matricule", "date_hired", "-date_hired",
-            "date_of_birth", "-date_of_birth", "status", "-status",
-            "created_at", "-created_at", "grade_level", "-grade_level",
+            "last_name",
+            "-last_name",
+            "first_name",
+            "-first_name",
+            "matricule",
+            "-matricule",
+            "date_hired",
+            "-date_hired",
+            "date_of_birth",
+            "-date_of_birth",
+            "status",
+            "-status",
+            "created_at",
+            "-created_at",
+            "grade_level",
+            "-grade_level",
         }
         if ordering in allowed_orderings:
             queryset = queryset.order_by(ordering)
@@ -129,11 +143,14 @@ class EmployeeService:
             employee.save(update_fields=["photo"])
 
         audit.log_create(user=user, obj=employee, request=request)
-        logger.info("Employee created", extra={
-            "employee_id": str(employee.id),
-            "matricule": employee.matricule,
-            "by": str(user.id) if user else "system",
-        })
+        logger.info(
+            "Employee created",
+            extra={
+                "employee_id": str(employee.id),
+                "matricule": employee.matricule,
+                "by": str(user.id) if user else "system",
+            },
+        )
         return employee
 
     @transaction.atomic
@@ -147,6 +164,7 @@ class EmployeeService:
     ) -> Employee:
         """Met à jour un employé avec audit log (avant/après)."""
         from django.forms.models import model_to_dict
+
         before_data = model_to_dict(employee, exclude=["photo", "password"])
 
         photo = validated_data.pop("photo", None)
@@ -166,13 +184,18 @@ class EmployeeService:
             employee.save(update_fields=["photo", "updated_at"])
 
         audit.log_update(
-            user=user, obj=employee,
-            before_data=before_data, request=request,
+            user=user,
+            obj=employee,
+            before_data=before_data,
+            request=request,
         )
-        logger.info("Employee updated", extra={
-            "employee_id": str(employee.id),
-            "matricule": employee.matricule,
-        })
+        logger.info(
+            "Employee updated",
+            extra={
+                "employee_id": str(employee.id),
+                "matricule": employee.matricule,
+            },
+        )
         return employee
 
     @transaction.atomic
@@ -180,10 +203,13 @@ class EmployeeService:
         """Soft delete avec audit log."""
         audit.log_delete(user=user, obj=employee, request=request)
         employee.soft_delete(user=user)
-        logger.warning("Employee deleted (soft)", extra={
-            "employee_id": str(employee.id),
-            "matricule": employee.matricule,
-        })
+        logger.warning(
+            "Employee deleted (soft)",
+            extra={
+                "employee_id": str(employee.id),
+                "matricule": employee.matricule,
+            },
+        )
 
     def upload_photo(self, employee: Employee, photo, user=None, request=None) -> Employee:
         """Upload/remplacement de la photo avec validation."""
@@ -221,51 +247,41 @@ class EmployeeService:
         Statistiques agrégées des employés.
         Utilisées par le dashboard et futures analytics AI.
         """
-        from django.db.models import Count, Avg
         from datetime import date
+
+        from django.db.models import Avg, Count
 
         qs = Employee.objects.filter(is_deleted=False)
 
         stats = {
             "total": qs.count(),
-            "by_status": list(
-                qs.values("status").annotate(count=Count("id")).order_by("status")
-            ),
+            "by_status": list(qs.values("status").annotate(count=Count("id")).order_by("status")),
             "by_department": list(
                 qs.filter(status=Employee.Status.ACTIVE)
                 .values("department__name", "department__code")
                 .annotate(count=Count("id"))
                 .order_by("-count")
             ),
-            "by_contract_type": list(
-                qs.values("contract_type").annotate(count=Count("id"))
-            ),
-            "by_gender": list(
-                qs.values("gender").annotate(count=Count("id"))
-            ),
+            "by_contract_type": list(qs.values("contract_type").annotate(count=Count("id"))),
+            "by_gender": list(qs.values("gender").annotate(count=Count("id"))),
             "active_count": qs.filter(status=Employee.Status.ACTIVE).count(),
             "retired_count": qs.filter(status=Employee.Status.RETIRED).count(),
-            "new_this_year": qs.filter(
-                date_hired__year=date.today().year
-            ).count(),
+            "new_this_year": qs.filter(date_hired__year=date.today().year).count(),
         }
 
         # Calcul ancienneté moyenne (en années)
         active = qs.filter(status=Employee.Status.ACTIVE, date_hired__isnull=False)
         if active.exists():
-            from django.db.models import ExpressionWrapper, F, DurationField
+
+            from django.db.models import DurationField, ExpressionWrapper, F
             from django.utils import timezone as tz
-            import datetime
-            avg_days = (
-                active
-                .annotate(
-                    tenure=ExpressionWrapper(
-                        tz.now().date() - F("date_hired"),
-                        output_field=DurationField(),
-                    )
+
+            avg_days = active.annotate(
+                tenure=ExpressionWrapper(
+                    tz.now().date() - F("date_hired"),
+                    output_field=DurationField(),
                 )
-                .aggregate(avg=Avg("tenure"))["avg"]
-            )
+            ).aggregate(avg=Avg("tenure"))["avg"]
             if avg_days:
                 stats["avg_seniority_years"] = round(avg_days.days / 365.25, 1)
             else:

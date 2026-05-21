@@ -1,22 +1,20 @@
 import { useState } from "react";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area,
 } from "recharts";
 import {
   Users, UserCheck, Gift, Wallet, Building2,
   RefreshCw, BarChart3,
 } from "lucide-react";
-import { clsx } from "clsx";
 import { useGlobalAnalytics, useKpiHistory, useSnapshotKpis } from "../api/index";
 import {
   AnalyticsKpiCard, AnalyticsStatCard, CategorySummaryCard,
   ChartTooltip,
 } from "../components/AnalyticsComponents";
 import { Spinner } from "@shared/components/ui/index";
-import { fmtDZD, fmtPct, fmtNumber, fmtDate, CHART_COLORS, CATEGORY_LABELS } from "../utils/formatters";
-import type { MonthlyTrend } from "../types";
+import { fmtDZD, fmtPct, fmtNumber, fmtDate, CHART_COLORS } from "../utils/formatters";
 
 export function AnalyticsDashboardPage() {
   const [period, setPeriod] = useState<string>("12m");

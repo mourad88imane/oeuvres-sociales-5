@@ -1,5 +1,7 @@
 """Notification serializers."""
+
 from rest_framework import serializers
+
 from .models import Notification, NotificationPreference
 
 
@@ -11,15 +13,28 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = [
-            "id", "title", "body", "channel", "channel_display",
-            "priority", "priority_display", "is_read", "read_at",
-            "action_url", "icon", "content_type", "object_id",
-            "metadata", "time_ago", "created_at",
+            "id",
+            "title",
+            "body",
+            "channel",
+            "channel_display",
+            "priority",
+            "priority_display",
+            "is_read",
+            "read_at",
+            "action_url",
+            "icon",
+            "content_type",
+            "object_id",
+            "metadata",
+            "time_ago",
+            "created_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def get_time_ago(self, obj):
         from django.utils import timezone
+
         delta = timezone.now() - obj.created_at
         if delta.days > 0:
             return f"Il y a {delta.days}j"
@@ -34,8 +49,13 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = NotificationPreference
         fields = [
-            "id", "email_alerts", "sms_alerts", "push_alerts",
-            "digest_frequency", "quiet_hours_start", "quiet_hours_end",
+            "id",
+            "email_alerts",
+            "sms_alerts",
+            "push_alerts",
+            "digest_frequency",
+            "quiet_hours_start",
+            "quiet_hours_end",
         ]
 
 

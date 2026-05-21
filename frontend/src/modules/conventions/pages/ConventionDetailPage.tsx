@@ -12,7 +12,6 @@ import {
 } from "../components/ConventionComponents";
 import { Spinner, Modal, Field, inputCls } from "@shared/components/ui/index";
 import { fmtDZD, fmtDate } from "../utils/formatters";
-import { PARTNER_TYPE_UI, CONVENTION_STATUS_UI } from "../types";
 
 export function ConventionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -60,7 +59,6 @@ export function ConventionDetailPage() {
 
   const isExpiring = conv.status === "expiring_soon";
   const isExpired = conv.status === "expired";
-  const isActive = conv.status === "active";
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl">

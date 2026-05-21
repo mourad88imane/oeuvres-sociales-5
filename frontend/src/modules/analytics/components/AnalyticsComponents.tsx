@@ -1,8 +1,8 @@
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { clsx } from "clsx";
 import { TREND_UI, KPI_CATEGORY_UI } from "../types";
-import { fmtNumber, fmtPct, fmtDZD, progressBarClass, CHART_COLORS } from "../utils/formatters";
-import type { KpiValue, TrendDirection, KpiCategory, GlobalStats, MonthlyTrend } from "../types";
+import { fmtNumber, fmtPct, progressBarClass } from "../utils/formatters";
+import type { KpiValue, KpiCategory } from "../types";
 
 interface KpiCardProps {
   kpi: KpiValue;

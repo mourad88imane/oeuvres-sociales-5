@@ -7,8 +7,11 @@ Utilisation :
         serializer_class = MySerializer
         permission_classes = [IsAuthenticated]
 """
-from rest_framework import viewsets, mixins
+
+from rest_framework import mixins, viewsets
+
 from core.pagination import StandardResultsSetPagination
+
 from .responses import success_response
 
 
@@ -22,10 +25,11 @@ class GenericModelViewSet(
 ):
     """
     ViewSet CRUD complet avec pagination standard.
-    
+
     - Pagination : StandardResultsSetPagination (25/page)
     - Réponses formatées automatiquement
     """
+
     pagination_class = StandardResultsSetPagination
 
     def create(self, request, *args, **kwargs):
@@ -58,4 +62,5 @@ class GenericModelViewSet(
 
     def get_paginated_response(self, data):
         from .responses import paginated_response
+
         return paginated_response(data, self)

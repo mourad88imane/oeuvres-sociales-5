@@ -1,6 +1,7 @@
 """Reporting engine — base aggregation service."""
+
 import logging
-from typing import Optional, Any
+from typing import Any
 
 logger = logging.getLogger("shared.reporting")
 
@@ -8,7 +9,7 @@ logger = logging.getLogger("shared.reporting")
 class BaseAggregationService:
     """
     Abstract aggregation service for reporting.
-    
+
     Subclasses must implement the data-fetching methods for their project.
     """
 
@@ -27,6 +28,6 @@ class BaseAggregationService:
     def compute_and_snapshot_kpis(self) -> list[dict]:
         raise NotImplementedError
 
-    def get_report_data(self, report, filters: Optional[dict] = None) -> list[dict]:
+    def get_report_data(self, report, filters: dict | None = None) -> list[dict]:
         """Fetch data for a given report definition."""
         raise NotImplementedError

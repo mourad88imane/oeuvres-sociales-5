@@ -1,9 +1,9 @@
 import uuid
-from decimal import Decimal
+
+from core.models import BaseModel
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from core.models import BaseModel
 
 
 def document_upload_path(instance, filename):
@@ -32,7 +32,9 @@ class Partner(BaseModel):
     is_active = models.BooleanField(default=True, verbose_name="Actif")
 
     legal_form = models.CharField(max_length=100, blank=True, verbose_name="Forme juridique")
-    registration_number = models.CharField(max_length=50, blank=True, verbose_name="N° d'enregistrement")
+    registration_number = models.CharField(
+        max_length=50, blank=True, verbose_name="N° d'enregistrement"
+    )
     tax_id = models.CharField(max_length=50, blank=True, verbose_name="N° fiscal")
     rc_number = models.CharField(max_length=50, blank=True, verbose_name="N° registre de commerce")
 
@@ -80,14 +82,27 @@ class Convention(BaseModel):
         MANUAL = "manual", "Reconduction expresse"
         NONE = "none", "Non reconductible"
 
-    reference = models.CharField(max_length=30, unique=True, editable=False, verbose_name="Référence")
-    partner = models.ForeignKey(Partner, on_delete=models.PROTECT, related_name="conventions", verbose_name="Partenaire")
+    reference = models.CharField(
+        max_length=30, unique=True, editable=False, verbose_name="Référence"
+    )
+    partner = models.ForeignKey(
+        Partner, on_delete=models.PROTECT, related_name="conventions", verbose_name="Partenaire"
+    )
     title = models.CharField(max_length=300, verbose_name="Objet de la convention")
     description = models.TextField(blank=True, verbose_name="Description")
 
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, verbose_name="Statut")
-    renewal_mode = models.CharField(max_length=10, choices=Renewal.choices, default=Renewal.MANUAL, verbose_name="Mode de reconduction")
-    renewal_notice_days = models.PositiveSmallIntegerField(default=30, verbose_name="Préavis reconduction (jours)")
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.DRAFT, verbose_name="Statut"
+    )
+    renewal_mode = models.CharField(
+        max_length=10,
+        choices=Renewal.choices,
+        default=Renewal.MANUAL,
+        verbose_name="Mode de reconduction",
+    )
+    renewal_notice_days = models.PositiveSmallIntegerField(
+        default=30, verbose_name="Préavis reconduction (jours)"
+    )
 
     start_date = models.DateField(verbose_name="Date d'effet")
     end_date = models.DateField(verbose_name="Date d'échéance")
@@ -95,10 +110,18 @@ class Convention(BaseModel):
     terminated_date = models.DateField(null=True, blank=True, verbose_name="Date de résiliation")
     renewed_at = models.DateField(null=True, blank=True, verbose_name="Dernier renouvellement le")
 
-    amount = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Montant (DZD)")
-    auto_renewal_days = models.PositiveSmallIntegerField(default=0, help_text="Si > 0, reconduction automatique J jours avant échéance", verbose_name="Reconduction auto (jours)")
+    amount = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Montant (DZD)"
+    )
+    auto_renewal_days = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Si > 0, reconduction automatique J jours avant échéance",
+        verbose_name="Reconduction auto (jours)",
+    )
 
-    requires_attachments = models.BooleanField(default=False, verbose_name="Pièces jointes obligatoires")
+    requires_attachments = models.BooleanField(
+        default=False, verbose_name="Pièces jointes obligatoires"
+    )
 
     ai_metadata = models.JSONField(default=dict, blank=True, verbose_name="Données AI")
     analytics_data = models.JSONField(default=dict, blank=True, verbose_name="Données analytiques")
@@ -139,7 +162,9 @@ class Convention(BaseModel):
     @classmethod
     def _gen_ref(cls) -> str:
         year = timezone.now().year
-        last = cls.objects.filter(reference__startswith=f"CONV-{year}-").order_by("reference").last()
+        last = (
+            cls.objects.filter(reference__startswith=f"CONV-{year}-").order_by("reference").last()
+        )
         if last:
             num = int(last.reference.split("-")[-1]) + 1
         else:
@@ -189,8 +214,15 @@ class ConventionDocument(BaseModel):
         REPORT = "report", "Rapport"
         OTHER = "other", "Autre"
 
-    convention = models.ForeignKey(Convention, on_delete=models.CASCADE, related_name="documents", verbose_name="Convention")
-    doc_type = models.CharField(max_length=20, choices=DocType.choices, default=DocType.CONTRACT, verbose_name="Type de document")
+    convention = models.ForeignKey(
+        Convention, on_delete=models.CASCADE, related_name="documents", verbose_name="Convention"
+    )
+    doc_type = models.CharField(
+        max_length=20,
+        choices=DocType.choices,
+        default=DocType.CONTRACT,
+        verbose_name="Type de document",
+    )
     file = models.FileField(upload_to=document_upload_path, verbose_name="Fichier")
     original_name = models.CharField(max_length=255, verbose_name="Nom original")
     description = models.CharField(max_length=300, blank=True, verbose_name="Description")
@@ -222,15 +254,28 @@ class ConventionAlert(BaseModel):
         HIGH = "high", "Haute"
         CRITICAL = "critical", "Critique"
 
-    convention = models.ForeignKey(Convention, on_delete=models.CASCADE, related_name="alerts", verbose_name="Convention")
-    alert_type = models.CharField(max_length=30, choices=AlertType.choices, verbose_name="Type d'alerte")
-    severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.MEDIUM, verbose_name="Sévérité")
+    convention = models.ForeignKey(
+        Convention, on_delete=models.CASCADE, related_name="alerts", verbose_name="Convention"
+    )
+    alert_type = models.CharField(
+        max_length=30, choices=AlertType.choices, verbose_name="Type d'alerte"
+    )
+    severity = models.CharField(
+        max_length=10, choices=Severity.choices, default=Severity.MEDIUM, verbose_name="Sévérité"
+    )
     title = models.CharField(max_length=200, verbose_name="Titre")
     message = models.TextField(verbose_name="Message")
     is_read = models.BooleanField(default=False, verbose_name="Lue")
     is_resolved = models.BooleanField(default=False, verbose_name="Résolue")
     resolved_at = models.DateTimeField(null=True, blank=True, verbose_name="Résolue le")
-    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="convention_alerts_resolved", verbose_name="Résolue par")
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="convention_alerts_resolved",
+        verbose_name="Résolue par",
+    )
     ai_generated = models.BooleanField(default=False, verbose_name="Générée par IA")
     ai_confidence = models.FloatField(null=True, blank=True, verbose_name="Confiance IA")
     metadata = models.JSONField(default=dict, blank=True, verbose_name="Métadonnées")

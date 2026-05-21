@@ -1,19 +1,31 @@
-from django.utils import timezone
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 from core.pagination import StandardResultsSetPagination
 from core.permissions import IsAdminOrGestionnaire, IsAdminOrReadOnly
-from .models import Partner, Convention, ConventionDocument, ConventionAlert
+from django.utils import timezone
+
+from .models import Convention, ConventionDocument
 from .serializers import (
-    PartnerListSerializer, PartnerSerializer, PartnerCreateSerializer,
-    ConventionListSerializer, ConventionSerializer, ConventionCreateSerializer,
-    ConventionRenewSerializer,
-    ConventionDocumentSerializer, ConventionDocumentUploadSerializer,
     ConventionAlertSerializer,
+    ConventionCreateSerializer,
+    ConventionDocumentSerializer,
+    ConventionDocumentUploadSerializer,
+    ConventionListSerializer,
+    ConventionRenewSerializer,
+    ConventionSerializer,
+    PartnerCreateSerializer,
+    PartnerListSerializer,
+    PartnerSerializer,
 )
-from .services import PartnerService, ConventionService, ConventionAlertService, ConventionValidationError
+from .services import (
+    ConventionAlertService,
+    ConventionService,
+    ConventionValidationError,
+    PartnerService,
+)
 
 partner_service = PartnerService()
 convention_service = ConventionService()
@@ -115,7 +127,9 @@ class ConventionViewSet(viewsets.ModelViewSet):
                 request=request,
             )
         except ConventionValidationError as e:
-            return Response({"detail": e.message, "code": e.code}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": e.message, "code": e.code}, status=status.HTTP_400_BAD_REQUEST
+            )
         out = ConventionSerializer(new_conv, context={"request": request})
         return Response(out.data, status=status.HTTP_201_CREATED)
 
@@ -133,7 +147,9 @@ class ConventionViewSet(viewsets.ModelViewSet):
                 request=request,
             )
         except ConventionValidationError as e:
-            return Response({"detail": e.message, "code": e.code}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": e.message, "code": e.code}, status=status.HTTP_400_BAD_REQUEST
+            )
         out = ConventionSerializer(convention, context={"request": request})
         return Response(out.data)
 
@@ -141,7 +157,9 @@ class ConventionViewSet(viewsets.ModelViewSet):
     def mark_expired(self, request, pk=None):
         convention = self.get_object()
         if convention.status in (Convention.Status.EXPIRED, Convention.Status.TERMINATED):
-            return Response({"detail": "Déjà expirée ou résiliée."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Déjà expirée ou résiliée."}, status=status.HTTP_400_BAD_REQUEST
+            )
         convention.status = Convention.Status.EXPIRED
         convention.save(update_fields=["status", "updated_at"])
         return Response({"detail": f"Convention {convention.reference} marquée comme expirée."})
@@ -177,14 +195,16 @@ class ConventionViewSet(viewsets.ModelViewSet):
         expired = qs.filter(end_date__lt=today).count()
         draft = qs.filter(status=Convention.Status.DRAFT).count()
         terminated = qs.filter(status=Convention.Status.TERMINATED).count()
-        return Response({
-            "total": total,
-            "active": active,
-            "expiring_soon": expiring_soon,
-            "expired": expired,
-            "draft": draft,
-            "terminated": terminated,
-        })
+        return Response(
+            {
+                "total": total,
+                "active": active,
+                "expiring_soon": expiring_soon,
+                "expired": expired,
+                "draft": draft,
+                "terminated": terminated,
+            }
+        )
 
 
 class ConventionDocumentViewSet(viewsets.ModelViewSet):

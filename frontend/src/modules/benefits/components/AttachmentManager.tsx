@@ -2,7 +2,7 @@
  * ATTACHMENTS MANAGER — Gestion des pièces jointes
  */
 import { useRef, useState } from "react";
-import { Upload, FileText, Trash2, Download, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, FileText, Trash2, Download, Loader2 } from "lucide-react";
 import { clsx } from "clsx";
 import { useUploadAttachment } from "../hooks/useBenefits";
 import { ConfirmDialog } from "@shared/components/ui/index";

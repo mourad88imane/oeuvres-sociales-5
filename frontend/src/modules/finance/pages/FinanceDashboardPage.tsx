@@ -14,10 +14,7 @@ import {
 import { useFinanceDashboard, useFiscalYears, useAlerts, useExportPayments } from "../api/index";
 import { AlertPanel, FinanceKpiCard, ConsumptionBar } from "../components/FinanceComponents";
 import { Spinner } from "@shared/components/ui/index";
-import { fmtDZD, fmtPct, CHART_COLORS, fmtDate } from "../utils/formatters";
-
-// Formateur tooltip recharts
-const TooltipFormatter = (value: number) => fmtDZD(value);
+import { fmtDZD, fmtPct, CHART_COLORS } from "../utils/formatters";
 
 export function FinanceDashboardPage() {
   const [selectedFY, setSelectedFY] = useState<string>("");

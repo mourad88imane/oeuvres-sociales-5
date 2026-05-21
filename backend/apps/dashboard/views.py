@@ -1,10 +1,9 @@
-from django.db import models
-from django.utils import timezone
-from django.apps import apps
-from rest_framework import status, views
+from rest_framework import views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
 from apps.reporting.services import aggregation_service
+from django.utils import timezone
 
 
 class GlobalDashboardView(views.APIView):
@@ -18,13 +17,15 @@ class GlobalDashboardView(views.APIView):
         top = aggregation_service.get_top_stats(limit=5)
         today = timezone.localdate()
 
-        return Response({
-            "status": "success",
-            "data": {
-                "kpis": kpis,
-                "summary": stats,
-                "trends": trends,
-                "top": top,
-                "date": today.isoformat(),
-            },
-        })
+        return Response(
+            {
+                "status": "success",
+                "data": {
+                    "kpis": kpis,
+                    "summary": stats,
+                    "trends": trends,
+                    "top": top,
+                    "date": today.isoformat(),
+                },
+            }
+        )

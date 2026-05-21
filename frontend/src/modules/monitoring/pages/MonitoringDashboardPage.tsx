@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  Activity, AlertTriangle, Clock, Server, CheckCircle2, XCircle,
+  Activity, AlertTriangle, Server, CheckCircle2, XCircle,
   TrendingUp, Users, Shield, ArrowUp, ArrowDown, BarChart3, Eye,
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -315,8 +315,8 @@ function EndpointsTab() {
 }
 
 function AuditTab() {
-  const { data: stats, isLoading: statsLoading } = useAuditStats(30);
-  const { data: logs, isLoading: logsLoading } = useAuditLogs({ limit: 50 });
+  const { data: stats } = useAuditStats(30);
+  const { data: logs } = useApiLogs({ limit: 50 });
 
   return (
     <div className="space-y-6">
@@ -346,11 +346,9 @@ function AuditTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {logsLoading ? (
-              <tr><td colSpan={5} className="py-8 text-center"><Spinner size="sm" /></td></tr>
-            ) : !logs?.length ? (
+            {!logs?.length ? (
               <tr><td colSpan={5} className="py-8 text-center text-gray-400">Aucun log d'audit</td></tr>
-            ) : logs.map(log => (
+            ) : logs.map((log: any) => (
               <tr key={log.id}>
                 <td className="px-4 py-2">
                   <span className={clsx("text-xs font-medium px-1.5 py-0.5 rounded",

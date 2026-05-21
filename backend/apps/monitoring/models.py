@@ -1,4 +1,5 @@
 import uuid
+
 from django.conf import settings
 from django.db import models
 
@@ -6,8 +7,10 @@ from django.db import models
 class APIRequestLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     method = models.CharField(max_length=10)
     endpoint = models.CharField(max_length=500)
@@ -34,6 +37,9 @@ class APIRequestLog(models.Model):
             models.Index(fields=["is_error", "-timestamp"]),
             models.Index(fields=["user", "-timestamp"]),
         ]
+
+    def __str__(self):
+        return f"{self.method} {self.endpoint} ({self.status_code})"
 
 
 class SecurityEvent(models.Model):
@@ -65,8 +71,10 @@ class SecurityEvent(models.Model):
     event_type = models.CharField(max_length=30, choices=EventType.choices, db_index=True)
     severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.INFO)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
     )
     user_email = models.EmailField(blank=True)
     user_role = models.CharField(max_length=20, blank=True)
@@ -79,8 +87,11 @@ class SecurityEvent(models.Model):
     resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
-        null=True, blank=True, related_name="security_events_resolved",
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="security_events_resolved",
     )
     resolution_note = models.TextField(blank=True)
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
@@ -96,6 +107,9 @@ class SecurityEvent(models.Model):
             models.Index(fields=["ip_address", "-timestamp"]),
             models.Index(fields=["resolved", "-timestamp"]),
         ]
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} ({self.severity})"
 
 
 class BusinessMetric(models.Model):
@@ -122,9 +136,13 @@ class BusinessMetric(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     metric_type = models.CharField(max_length=30, choices=MetricType.choices, db_index=True)
-    granularity = models.CharField(max_length=5, choices=Granularity.choices, default=Granularity.HOUR)
+    granularity = models.CharField(
+        max_length=5, choices=Granularity.choices, default=Granularity.HOUR
+    )
     value = models.FloatField()
-    label = models.CharField(max_length=100, blank=True, help_text="Libellé optionnel (ex: endpoint name)")
+    label = models.CharField(
+        max_length=100, blank=True, help_text="Libellé optionnel (ex: endpoint name)"
+    )
     tags = models.JSONField(default=dict, blank=True)
     timestamp = models.DateTimeField(db_index=True)
 
@@ -142,6 +160,9 @@ class BusinessMetric(models.Model):
                 name="uq_metric_grain_label_ts",
             ),
         ]
+
+    def __str__(self):
+        return f"{self.get_metric_type_display()} - {self.value} ({self.timestamp})"
 
 
 class APIEndpointStatus(models.Model):
@@ -165,3 +186,6 @@ class APIEndpointStatus(models.Model):
             models.Index(fields=["endpoint"]),
             models.Index(fields=["is_degraded"]),
         ]
+
+    def __str__(self):
+        return f"{self.method} {self.endpoint}"

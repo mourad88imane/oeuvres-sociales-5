@@ -5,9 +5,9 @@ AI MATH UTILITIES — Fonctions statistiques avancées
 Pure Python / numpy-ready pour calculs ML.
 Toutes les méthodes gèrent les cas aux limites.
 """
+
 import math
 from statistics import mean, stdev
-from typing import Optional
 
 
 def linear_regression(xs: list[float], ys: list[float]) -> tuple[float, float, float]:
@@ -17,11 +17,11 @@ def linear_regression(xs: list[float], ys: list[float]) -> tuple[float, float, f
         return 0.0, (ys[0] if ys else 0.0), 0.0
     mx = mean(xs)
     my = mean(ys)
-    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
     den = sum((x - mx) ** 2 for x in xs)
     slope = num / den if den else 0.0
     intercept = my - slope * mx
-    ss_res = sum((y - (slope * x + intercept)) ** 2 for x, y in zip(xs, ys))
+    ss_res = sum((y - (slope * x + intercept)) ** 2 for x, y in zip(xs, ys, strict=False))
     ss_tot = sum((y - my) ** 2 for y in ys)
     r2 = 1.0 - (ss_res / ss_tot) if ss_tot else 0.0
     return slope, intercept, r2
@@ -59,7 +59,7 @@ def moving_average(values: list[float], window: int = 3) -> list[float]:
     result = []
     for i in range(len(values)):
         start = max(0, i - window + 1)
-        chunk = values[start:i + 1]
+        chunk = values[start : i + 1]
         result.append(mean(chunk))
     return result
 
@@ -137,21 +137,24 @@ def monte_carlo_simulation(
     forecasts = []
     for step in range(horizon):
         vals = sorted(p[step + 1] for p in paths)
-        forecasts.append({
-            "step": step + 1,
-            "median": vals[len(vals) // 2],
-            "p10": vals[len(vals) * 10 // 100],
-            "p90": vals[len(vals) * 90 // 100],
-            "mean": mean(vals),
-            "min": vals[0],
-            "max": vals[-1],
-        })
+        forecasts.append(
+            {
+                "step": step + 1,
+                "median": vals[len(vals) // 2],
+                "p10": vals[len(vals) * 10 // 100],
+                "p90": vals[len(vals) * 90 // 100],
+                "mean": mean(vals),
+                "min": vals[0],
+                "max": vals[-1],
+            }
+        )
     return {"n_simulations": n_simulations, "horizon": horizon, "forecasts": forecasts}
 
 
 def random_gauss(mu: float = 0.0, sigma: float = 1.0) -> float:
     """Gaussienne approximative (Box-Muller) sans numpy."""
     import random as _random
+
     u1 = _random.random()
     u2 = _random.random()
     return mu + sigma * math.sqrt(-2 * math.log(u1)) * math.cos(2 * math.pi * u2)

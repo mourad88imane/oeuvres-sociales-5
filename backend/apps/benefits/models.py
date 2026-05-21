@@ -13,19 +13,23 @@ PRÉPARATION AI :
   - ai_score, ai_anomaly_flag → résultats futurs du moteur AI
   - risk_score → scoring du risque de la demande
 """
+
 import os
 import uuid
+
+from apps.benefits.workflow import benefit_workflow
+from core.models import BaseModel
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from core.models import BaseModel
 from shared.workflow.models import WorkflowMixin
-from apps.benefits.workflow import benefit_workflow
 
 
 def attachment_upload_path(instance, filename):
     ext = filename.rsplit(".", 1)[-1].lower()
-    return os.path.join("benefits", "attachments", str(instance.benefit.id), f"{uuid.uuid4().hex}.{ext}")
+    return os.path.join(
+        "benefits", "attachments", str(instance.benefit.id), f"{uuid.uuid4().hex}.{ext}"
+    )
 
 
 # ═══════════════════════════════════════════════════════════
@@ -33,37 +37,51 @@ def attachment_upload_path(instance, filename):
 # ═══════════════════════════════════════════════════════════
 class BenefitType(BaseModel):
     class Category(models.TextChoices):
-        MEDICAL   = "medical",   "Prise en charge médicale"
-        LOAN      = "loan",      "Prêt"
-        PURCHASE  = "purchase",  "Achat facilité"
-        BONUS     = "bonus",     "Prime"
-        AID       = "aid",       "Aide exceptionnelle"
-        OTHER     = "other",     "Autre"
+        MEDICAL = "medical", "Prise en charge médicale"
+        LOAN = "loan", "Prêt"
+        PURCHASE = "purchase", "Achat facilité"
+        BONUS = "bonus", "Prime"
+        AID = "aid", "Aide exceptionnelle"
+        OTHER = "other", "Autre"
 
-    code        = models.CharField(max_length=30, unique=True, verbose_name="Code")
-    name        = models.CharField(max_length=150, verbose_name="Libellé")
-    category    = models.CharField(max_length=20, choices=Category.choices, verbose_name="Catégorie")
+    code = models.CharField(max_length=30, unique=True, verbose_name="Code")
+    name = models.CharField(max_length=150, verbose_name="Libellé")
+    category = models.CharField(max_length=20, choices=Category.choices, verbose_name="Catégorie")
     description = models.TextField(blank=True)
-    is_active   = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
 
     # Plafonds et règles d'éligibilité
-    max_amount           = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Montant plafond (DZD)")
-    min_seniority_years  = models.FloatField(null=True, blank=True, verbose_name="Ancienneté minimale (années)")
-    max_per_year         = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Nb max par an et par employé")
-    requires_attachments = models.BooleanField(default=False, verbose_name="Pièces justificatives obligatoires")
-    required_attachments_description = models.TextField(blank=True, verbose_name="Description des pièces requises")
+    max_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Montant plafond (DZD)"
+    )
+    min_seniority_years = models.FloatField(
+        null=True, blank=True, verbose_name="Ancienneté minimale (années)"
+    )
+    max_per_year = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name="Nb max par an et par employé"
+    )
+    requires_attachments = models.BooleanField(
+        default=False, verbose_name="Pièces justificatives obligatoires"
+    )
+    required_attachments_description = models.TextField(
+        blank=True, verbose_name="Description des pièces requises"
+    )
 
     # Délai de traitement cible (pour analytics/SLA)
-    target_processing_days = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Délai cible (jours)")
+    target_processing_days = models.PositiveSmallIntegerField(
+        null=True, blank=True, verbose_name="Délai cible (jours)"
+    )
 
     # AI
-    ai_processing_hints = models.JSONField(default=dict, blank=True, verbose_name="Hints pour le moteur AI futur")
+    ai_processing_hints = models.JSONField(
+        default=dict, blank=True, verbose_name="Hints pour le moteur AI futur"
+    )
 
     class Meta:
-        verbose_name        = "Type de prestation"
+        verbose_name = "Type de prestation"
         verbose_name_plural = "Types de prestations"
-        ordering            = ["category", "name"]
-        indexes             = [models.Index(fields=["code"]), models.Index(fields=["category","is_active"])]
+        ordering = ["category", "name"]
+        indexes = [models.Index(fields=["code"]), models.Index(fields=["category", "is_active"])]
 
     def __str__(self):
         return f"[{self.code}] {self.name}"
@@ -81,24 +99,53 @@ class Benefit(WorkflowMixin, BaseModel):
     workflow_definition = benefit_workflow
 
     # ── Référence ─────────────────────────────────────────
-    reference = models.CharField(max_length=30, unique=True, editable=False, verbose_name="Référence")
+    reference = models.CharField(
+        max_length=30, unique=True, editable=False, verbose_name="Référence"
+    )
 
     # ── Acteurs ───────────────────────────────────────────
-    employee     = models.ForeignKey("employees.Employee", on_delete=models.PROTECT, related_name="benefits", verbose_name="Employé")
-    benefit_type = models.ForeignKey(BenefitType, on_delete=models.PROTECT, related_name="benefits", verbose_name="Type de prestation")
-    beneficiary  = models.ForeignKey("beneficiaries.Beneficiary", on_delete=models.SET_NULL, null=True, blank=True, related_name="benefits", verbose_name="Ayant droit concerné")
+    employee = models.ForeignKey(
+        "employees.Employee",
+        on_delete=models.PROTECT,
+        related_name="benefits",
+        verbose_name="Employé",
+    )
+    benefit_type = models.ForeignKey(
+        BenefitType,
+        on_delete=models.PROTECT,
+        related_name="benefits",
+        verbose_name="Type de prestation",
+    )
+    beneficiary = models.ForeignKey(
+        "beneficiaries.Beneficiary",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="benefits",
+        verbose_name="Ayant droit concerné",
+    )
 
     # ── Montants ──────────────────────────────────────────
-    requested_amount = models.DecimalField(max_digits=14, decimal_places=2, verbose_name="Montant demandé (DZD)")
-    approved_amount  = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Montant approuvé (DZD)")
-    paid_amount      = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Montant payé (DZD)")
+    requested_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, verbose_name="Montant demandé (DZD)"
+    )
+    approved_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Montant approuvé (DZD)",
+    )
+    paid_amount = models.DecimalField(
+        max_digits=14, decimal_places=2, null=True, blank=True, verbose_name="Montant payé (DZD)"
+    )
 
     # ── Description ───────────────────────────────────────
-    title       = models.CharField(max_length=200, verbose_name="Objet de la demande")
+    title = models.CharField(max_length=200, verbose_name="Objet de la demande")
     description = models.TextField(blank=True, verbose_name="Description / Justification")
-    priority    = models.CharField(
+    priority = models.CharField(
         max_length=10,
-        choices=[("low","Basse"),("normal","Normale"),("high","Haute"),("urgent","Urgente")],
+        choices=[("low", "Basse"), ("normal", "Normale"), ("high", "Haute"), ("urgent", "Urgente")],
         default="normal",
         verbose_name="Priorité",
     )
@@ -106,40 +153,85 @@ class Benefit(WorkflowMixin, BaseModel):
     # ── Dates workflow ────────────────────────────────────
     submitted_at = models.DateTimeField(null=True, blank=True, verbose_name="Date de soumission")
     validated_at = models.DateTimeField(null=True, blank=True, verbose_name="Date de validation")
-    paid_at      = models.DateTimeField(null=True, blank=True, verbose_name="Date de paiement")
-    rejected_at  = models.DateTimeField(null=True, blank=True, verbose_name="Date de rejet")
-    due_date     = models.DateField(null=True, blank=True, verbose_name="Date d'échéance souhaitée")
+    paid_at = models.DateTimeField(null=True, blank=True, verbose_name="Date de paiement")
+    rejected_at = models.DateTimeField(null=True, blank=True, verbose_name="Date de rejet")
+    due_date = models.DateField(null=True, blank=True, verbose_name="Date d'échéance souhaitée")
 
     # ── Acteurs workflow ──────────────────────────────────
-    validated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="validated_benefits", verbose_name="Validé par")
-    paid_by      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="paid_benefits",      verbose_name="Payé par")
+    validated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="validated_benefits",
+        verbose_name="Validé par",
+    )
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="paid_benefits",
+        verbose_name="Payé par",
+    )
 
     # ── Données de rejet ──────────────────────────────────
     rejection_reason = models.TextField(blank=True, verbose_name="Motif de rejet")
 
     # ── Paiement ──────────────────────────────────────────
-    payment_reference = models.CharField(max_length=100, blank=True, verbose_name="Référence de paiement")
-    payment_method    = models.CharField(
+    payment_reference = models.CharField(
+        max_length=100, blank=True, verbose_name="Référence de paiement"
+    )
+    payment_method = models.CharField(
         max_length=20,
-        choices=[("virement","Virement bancaire"),("cheque","Chèque"),("caisse","Caisse"),("ccp","CCP")],
+        choices=[
+            ("virement", "Virement bancaire"),
+            ("cheque", "Chèque"),
+            ("caisse", "Caisse"),
+            ("ccp", "CCP"),
+        ],
         blank=True,
         verbose_name="Mode de paiement",
     )
 
     # ── Analytics & AI (préparation) ──────────────────────
-    analytics_data  = models.JSONField(default=dict,  blank=True, verbose_name="Données analytiques",   help_text="Timestamps et durées par état — dataset ML")
-    ai_score        = models.FloatField(null=True,    blank=True, verbose_name="Score AI",              help_text="Score de la demande calculé par le moteur AI")
-    ai_anomaly_flag = models.BooleanField(default=False,           verbose_name="Anomalie détectée AI", help_text="True si le moteur AI a détecté une anomalie")
-    risk_score      = models.FloatField(null=True,    blank=True, verbose_name="Score de risque",       help_text="Score de risque calculé (0-100)")
-    ai_metadata     = models.JSONField(default=dict,  blank=True, verbose_name="Métadonnées AI",        help_text="Résultats et recommandations du moteur AI")
+    analytics_data = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Données analytiques",
+        help_text="Timestamps et durées par état — dataset ML",
+    )
+    ai_score = models.FloatField(
+        null=True,
+        blank=True,
+        verbose_name="Score AI",
+        help_text="Score de la demande calculé par le moteur AI",
+    )
+    ai_anomaly_flag = models.BooleanField(
+        default=False,
+        verbose_name="Anomalie détectée AI",
+        help_text="True si le moteur AI a détecté une anomalie",
+    )
+    risk_score = models.FloatField(
+        null=True,
+        blank=True,
+        verbose_name="Score de risque",
+        help_text="Score de risque calculé (0-100)",
+    )
+    ai_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Métadonnées AI",
+        help_text="Résultats et recommandations du moteur AI",
+    )
 
     # Notes internes
     internal_notes = models.TextField(blank=True, verbose_name="Notes internes")
 
     class Meta:
-        verbose_name        = "Prestation"
+        verbose_name = "Prestation"
         verbose_name_plural = "Prestations"
-        ordering            = ["-created_at"]
+        ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["reference"]),
             models.Index(fields=["workflow_state"]),
@@ -163,10 +255,11 @@ class Benefit(WorkflowMixin, BaseModel):
     @classmethod
     def _generate_reference(cls):
         from django.utils import timezone as tz
-        year   = tz.now().year
+
+        year = tz.now().year
         prefix = f"PREST-{year}-"
-        last   = cls.all_objects.filter(reference__startswith=prefix).order_by("-reference").first()
-        num    = 1
+        last = cls.all_objects.filter(reference__startswith=prefix).order_by("-reference").first()
+        num = 1
         if last:
             try:
                 num = int(last.reference.rsplit("-", 1)[-1]) + 1
@@ -180,7 +273,12 @@ class Benefit(WorkflowMixin, BaseModel):
         if not self.due_date:
             return False
         from datetime import date
-        return date.today() > self.due_date and self.workflow_state not in ("paid","rejected","cancelled")
+
+        return date.today() > self.due_date and self.workflow_state not in (
+            "paid",
+            "rejected",
+            "cancelled",
+        )
 
     @property
     def processing_days(self) -> int | None:
@@ -205,27 +303,37 @@ class Benefit(WorkflowMixin, BaseModel):
 # ═══════════════════════════════════════════════════════════
 class BenefitAttachment(BaseModel):
     class DocType(models.TextChoices):
-        PRESCRIPTION   = "prescription",   "Ordonnance médicale"
-        INVOICE        = "invoice",        "Facture"
-        CERTIFICATE    = "certificate",    "Certificat"
-        IDENTITY       = "identity",       "Pièce d'identité"
-        SALARY_SLIP    = "salary_slip",    "Bulletin de salaire"
-        BANK_DETAILS   = "bank_details",   "RIB bancaire"
-        OTHER          = "other",          "Autre document"
+        PRESCRIPTION = "prescription", "Ordonnance médicale"
+        INVOICE = "invoice", "Facture"
+        CERTIFICATE = "certificate", "Certificat"
+        IDENTITY = "identity", "Pièce d'identité"
+        SALARY_SLIP = "salary_slip", "Bulletin de salaire"
+        BANK_DETAILS = "bank_details", "RIB bancaire"
+        OTHER = "other", "Autre document"
 
-    benefit      = models.ForeignKey(Benefit, on_delete=models.CASCADE, related_name="attachments")
-    file         = models.FileField(upload_to=attachment_upload_path, verbose_name="Fichier")
-    original_name= models.CharField(max_length=255, verbose_name="Nom original du fichier")
-    doc_type     = models.CharField(max_length=20, choices=DocType.choices, default=DocType.OTHER, verbose_name="Type de document")
-    description  = models.CharField(max_length=300, blank=True, verbose_name="Description")
-    file_size    = models.PositiveIntegerField(default=0, verbose_name="Taille (octets)")
-    mime_type    = models.CharField(max_length=100, blank=True)
-    uploaded_by  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="uploaded_attachments")
+    benefit = models.ForeignKey(Benefit, on_delete=models.CASCADE, related_name="attachments")
+    file = models.FileField(upload_to=attachment_upload_path, verbose_name="Fichier")
+    original_name = models.CharField(max_length=255, verbose_name="Nom original du fichier")
+    doc_type = models.CharField(
+        max_length=20,
+        choices=DocType.choices,
+        default=DocType.OTHER,
+        verbose_name="Type de document",
+    )
+    description = models.CharField(max_length=300, blank=True, verbose_name="Description")
+    file_size = models.PositiveIntegerField(default=0, verbose_name="Taille (octets)")
+    mime_type = models.CharField(max_length=100, blank=True)
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="uploaded_attachments",
+    )
 
     class Meta:
-        verbose_name        = "Pièce jointe"
+        verbose_name = "Pièce jointe"
         verbose_name_plural = "Pièces jointes"
-        ordering            = ["created_at"]
+        ordering = ["created_at"]
 
     def __str__(self):
         return f"{self.original_name} → {self.benefit.reference}"
@@ -233,7 +341,7 @@ class BenefitAttachment(BaseModel):
     @property
     def file_size_display(self) -> str:
         s = self.file_size
-        for unit in ("o","Ko","Mo","Go"):
+        for unit in ("o", "Ko", "Mo", "Go"):
             if s < 1024:
                 return f"{s:.1f} {unit}"
             s /= 1024
@@ -253,21 +361,28 @@ class BenefitAttachment(BaseModel):
 # ═══════════════════════════════════════════════════════════
 class BenefitComment(BaseModel):
     class CommentType(models.TextChoices):
-        INTERNAL  = "internal",  "Note interne"
+        INTERNAL = "internal", "Note interne"
         REQUESTER = "requester", "Message au demandeur"
-        SYSTEM    = "system",    "Message système"
+        SYSTEM = "system", "Message système"
 
-    benefit      = models.ForeignKey(Benefit, on_delete=models.CASCADE, related_name="comments")
-    author       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="benefit_comments")
-    comment_type = models.CharField(max_length=15, choices=CommentType.choices, default=CommentType.INTERNAL)
-    content      = models.TextField(verbose_name="Contenu")
+    benefit = models.ForeignKey(Benefit, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="benefit_comments",
+    )
+    comment_type = models.CharField(
+        max_length=15, choices=CommentType.choices, default=CommentType.INTERNAL
+    )
+    content = models.TextField(verbose_name="Contenu")
     # Lié à une transition spécifique (optionnel)
     workflow_state_at_time = models.CharField(max_length=50, blank=True)
 
     class Meta:
-        verbose_name        = "Commentaire"
+        verbose_name = "Commentaire"
         verbose_name_plural = "Commentaires"
-        ordering            = ["created_at"]
+        ordering = ["created_at"]
 
     def __str__(self):
         return f"[{self.comment_type}] {self.benefit.reference} — {self.author}"

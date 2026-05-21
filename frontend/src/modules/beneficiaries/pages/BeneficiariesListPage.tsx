@@ -2,12 +2,12 @@ import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users, Search, RefreshCw, UserCheck, UserX, GraduationCap,
-  HeartHandicap, CalendarDays, ChevronLeft, ChevronRight,
+  Heart, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useBeneficiaries } from "../api/index";
 import { Badge, Spinner, EmptyState } from "@shared/components/ui/index";
-import { fmtDate, fmtNumber } from "@modules/analytics/utils/formatters";
+import { fmtNumber } from "@modules/analytics/utils/formatters";
 
 const RELATIONSHIPS = [
   { value: "", label: "Tous" },
@@ -138,7 +138,7 @@ export function BeneficiariesListPage() {
                     <td className="px-4 py-3 text-center">
                       {b.is_eligible
                         ? <UserCheck className="w-4 h-4 text-green-500 mx-auto" />
-                        : <UserX className="w-4 h-4 text-red-400 mx-auto" title={b.ineligibility_reason} />
+                        : <UserX className="w-4 h-4 text-red-400 mx-auto" aria-label={b.ineligibility_reason} />
                       }
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -149,7 +149,7 @@ export function BeneficiariesListPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       {b.is_handicapped
-                        ? <HeartHandicap className="w-4 h-4 text-amber-500 mx-auto" />
+                        ? <Heart className="w-4 h-4 text-amber-500 mx-auto" />
                         : <span className="text-gray-300">—</span>
                       }
                     </td>

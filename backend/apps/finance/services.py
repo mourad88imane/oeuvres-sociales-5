@@ -10,36 +10,40 @@ RÈGLES COMPTABLES FONDAMENTALES :
   4. Validation montants : Decimal obligatoire, jamais float
   5. Alertes automatiques sur seuils budgétaires
 """
+
 import logging
-from decimal import Decimal, InvalidOperation
-from typing import Optional
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models import Count, Sum, Avg, Q, F
+from django.db.models import Count, Q, Sum
 from django.utils import timezone
-
 from shared.audit.services import AuditService
+
 from .models import (
-    Budget, FinancialAlert, FinancialEntry,
-    FiscalYear, Payment, PaymentBatch,
+    Budget,
+    FinancialAlert,
+    FinancialEntry,
+    FiscalYear,
+    Payment,
+    PaymentBatch,
 )
 
 logger = logging.getLogger("apps.finance")
-audit  = AuditService()
+audit = AuditService()
 
 
 class FinanceValidationError(Exception):
     def __init__(self, message: str, code: str = "FINANCE_ERROR"):
         self.message = message
-        self.code    = code
+        self.code = code
         super().__init__(message)
 
 
 class FiscalYearService:
     """Gestion des exercices fiscaux."""
 
-    def get_active_year(self) -> Optional[FiscalYear]:
+    def get_active_year(self) -> FiscalYear | None:
         today = timezone.now().date()
         return FiscalYear.objects.filter(
             status=FiscalYear.Status.OPEN,
@@ -63,8 +67,9 @@ class FiscalYearService:
             raise FinanceValidationError("Seul un exercice en brouillon peut être ouvert.")
         fy.status = FiscalYear.Status.OPEN
         fy.save(update_fields=["status", "updated_at"])
-        audit.log_action(action="UPDATE", user=user, obj=fy,
-                         extra_data={"action": "open"}, severity="HIGH")
+        audit.log_action(
+            action="UPDATE", user=user, obj=fy, extra_data={"action": "open"}, severity="HIGH"
+        )
         logger.info(f"Fiscal year {fy.year} opened by {user}")
         return fy
 
@@ -80,15 +85,15 @@ class FiscalYearService:
         ).count()
         if pending:
             raise FinanceValidationError(
-                f"Impossible de clôturer : {pending} paiement(s) en attente.",
-                "PENDING_PAYMENTS"
+                f"Impossible de clôturer : {pending} paiement(s) en attente.", "PENDING_PAYMENTS"
             )
-        fy.status     = FiscalYear.Status.CLOSED
-        fy.closed_at  = timezone.now()
-        fy.closed_by  = user
+        fy.status = FiscalYear.Status.CLOSED
+        fy.closed_at = timezone.now()
+        fy.closed_by = user
         fy.save(update_fields=["status", "closed_at", "closed_by", "updated_at"])
-        audit.log_action(action="UPDATE", user=user, obj=fy,
-                         extra_data={"action": "close"}, severity="CRITICAL")
+        audit.log_action(
+            action="UPDATE", user=user, obj=fy, extra_data={"action": "close"}, severity="CRITICAL"
+        )
         return fy
 
 
@@ -123,7 +128,7 @@ class BudgetService:
     def approve(self, budget: Budget, user=None) -> Budget:
         if budget.status not in (Budget.Status.DRAFT,):
             raise FinanceValidationError("Seul un budget en brouillon peut être approuvé.")
-        budget.status      = Budget.Status.APPROVED
+        budget.status = Budget.Status.APPROVED
         budget.approved_by = user
         budget.approved_at = timezone.now()
         budget.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
@@ -135,6 +140,7 @@ class BudgetService:
         if budget.status == Budget.Status.CLOSED:
             raise FinanceValidationError("Un budget clôturé ne peut pas être modifié.")
         from django.forms.models import model_to_dict
+
         before = model_to_dict(budget)
         for k, v in data.items():
             setattr(budget, k, v)
@@ -151,19 +157,19 @@ class BudgetService:
         ).select_related("benefit_type", "department")
         return [
             {
-                "id":               str(b.id),
-                "code":             b.code,
-                "label":            b.label,
-                "benefit_type":     b.benefit_type.name if b.benefit_type else None,
-                "department":       b.department.name   if b.department   else None,
-                "allocated":        float(b.allocated_amount),
-                "paid":             float(b.paid_amount),
-                "committed":        float(b.committed_amount),
-                "available":        float(b.available_amount),
+                "id": str(b.id),
+                "code": b.code,
+                "label": b.label,
+                "benefit_type": b.benefit_type.name if b.benefit_type else None,
+                "department": b.department.name if b.department else None,
+                "allocated": float(b.allocated_amount),
+                "paid": float(b.paid_amount),
+                "committed": float(b.committed_amount),
+                "available": float(b.available_amount),
                 "consumption_rate": float(b.consumption_rate),
-                "is_alert":         b.is_alert_triggered,
-                "is_overrun":       b.is_overrun,
-                "status":           b.status,
+                "is_alert": b.is_alert_triggered,
+                "is_overrun": b.is_overrun,
+                "status": b.status,
             }
             for b in budgets
         ]
@@ -185,41 +191,78 @@ class PaymentService:
 
     def get_queryset(self):
         return Payment.objects.select_related(
-            "benefit", "benefit__benefit_type",
-            "employee", "employee__department",
-            "budget", "fiscal_year", "batch",
+            "benefit",
+            "benefit__benefit_type",
+            "employee",
+            "employee__department",
+            "budget",
+            "fiscal_year",
+            "batch",
             "approved_by",
         ).filter(is_deleted=False)
 
-    def search(self, queryset, search="", status="", fiscal_year_id="",
-               budget_id="", employee_id="", department_id="",
-               date_from="", date_to="", anomaly_only=False, ordering="-created_at"):
+    def search(
+        self,
+        queryset,
+        search="",
+        status="",
+        fiscal_year_id="",
+        budget_id="",
+        employee_id="",
+        department_id="",
+        date_from="",
+        date_to="",
+        anomaly_only=False,
+        ordering="-created_at",
+    ):
         if search:
             queryset = queryset.filter(
-                Q(reference__icontains=search) |
-                Q(employee__first_name__icontains=search) |
-                Q(employee__last_name__icontains=search) |
-                Q(employee__matricule__icontains=search) |
-                Q(bank_reference__icontains=search)
+                Q(reference__icontains=search)
+                | Q(employee__first_name__icontains=search)
+                | Q(employee__last_name__icontains=search)
+                | Q(employee__matricule__icontains=search)
+                | Q(bank_reference__icontains=search)
             )
-        if status:          queryset = queryset.filter(status=status)
-        if fiscal_year_id:  queryset = queryset.filter(fiscal_year_id=fiscal_year_id)
-        if budget_id:       queryset = queryset.filter(budget_id=budget_id)
-        if employee_id:     queryset = queryset.filter(employee_id=employee_id)
-        if department_id:   queryset = queryset.filter(employee__department_id=department_id)
-        if date_from:       queryset = queryset.filter(created_at__date__gte=date_from)
-        if date_to:         queryset = queryset.filter(created_at__date__lte=date_to)
-        if anomaly_only:    queryset = queryset.filter(anomaly_flag=True)
-        allowed = {"-created_at","created_at","-amount","amount",
-                   "-executed_date","executed_date","status","-status","reference"}
+        if status:
+            queryset = queryset.filter(status=status)
+        if fiscal_year_id:
+            queryset = queryset.filter(fiscal_year_id=fiscal_year_id)
+        if budget_id:
+            queryset = queryset.filter(budget_id=budget_id)
+        if employee_id:
+            queryset = queryset.filter(employee_id=employee_id)
+        if department_id:
+            queryset = queryset.filter(employee__department_id=department_id)
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+        if anomaly_only:
+            queryset = queryset.filter(anomaly_flag=True)
+        allowed = {
+            "-created_at",
+            "created_at",
+            "-amount",
+            "amount",
+            "-executed_date",
+            "executed_date",
+            "status",
+            "-status",
+            "reference",
+        }
         if ordering in allowed:
             queryset = queryset.order_by(ordering)
         return queryset
 
     @transaction.atomic
-    def create_from_benefit(self, benefit, budget: Budget = None,
-                            fiscal_year: FiscalYear = None,
-                            user=None, request=None) -> Payment:
+    def create_from_benefit(
+        self,
+        benefit,
+        budget: Budget = None,
+        fiscal_year: FiscalYear = None,
+        user=None,
+        request=None,
+    ) -> Payment:
         """
         Crée un paiement depuis une prestation validée.
         Vérifie la disponibilité budgétaire avant création.
@@ -250,9 +293,12 @@ class PaymentService:
                 raise FinanceValidationError("Aucun exercice fiscal actif.", "NO_FISCAL_YEAR")
 
         payment = Payment(
-            benefit=benefit, budget=budget, fiscal_year=fiscal_year,
+            benefit=benefit,
+            budget=budget,
+            fiscal_year=fiscal_year,
             employee=benefit.employee,
-            amount=amount, status=Payment.Status.PENDING,
+            amount=amount,
+            status=Payment.Status.PENDING,
             payment_method=benefit.payment_method or "virement",
             bank_account=benefit.employee.bank_account or "",
         )
@@ -271,7 +317,8 @@ class PaymentService:
             payment=payment,
             entry_type=FinancialEntry.EntryType.DEBIT,
             label=f"Engagement prestation {benefit.reference} — {benefit.employee.get_full_name()}",
-            amount=amount, user=user,
+            amount=amount,
+            user=user,
         )
 
         audit.log_create(user=user, obj=payment, request=request)
@@ -282,21 +329,26 @@ class PaymentService:
     def approve(self, payment: Payment, user=None, request=None) -> Payment:
         if payment.status != Payment.Status.PENDING:
             raise FinanceValidationError("Seul un paiement en attente peut être approuvé.")
-        payment.status      = Payment.Status.APPROVED
+        payment.status = Payment.Status.APPROVED
         payment.approved_by = user
         payment.approved_at = timezone.now()
         payment.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
         fy = payment.fiscal_year
         fy.total_committed += payment.amount
         fy.save(update_fields=["total_committed", "updated_at"])
-        audit.log_action(action="APPROVE", user=user, obj=payment,
-                         request=request, severity="HIGH")
+        audit.log_action(action="APPROVE", user=user, obj=payment, request=request, severity="HIGH")
         return payment
 
     @transaction.atomic
-    def mark_paid(self, payment: Payment, bank_reference: str,
-                  executed_date=None, paid_amount: Decimal = None,
-                  user=None, request=None) -> Payment:
+    def mark_paid(
+        self,
+        payment: Payment,
+        bank_reference: str,
+        executed_date=None,
+        paid_amount: Decimal = None,
+        user=None,
+        request=None,
+    ) -> Payment:
         """Marque le paiement comme effectué et génère l'écriture de règlement."""
         if payment.status != Payment.Status.APPROVED:
             raise FinanceValidationError(
@@ -306,16 +358,23 @@ class PaymentService:
         if not bank_reference.strip():
             raise FinanceValidationError("La référence bancaire est obligatoire.", "REF_REQUIRED")
 
-        final_amount   = paid_amount or payment.amount
+        final_amount = paid_amount or payment.amount
         payment.status = Payment.Status.PAID
-        payment.bank_reference  = bank_reference
-        payment.executed_date   = executed_date or timezone.now().date()
-        payment.value_date      = timezone.now().date()
+        payment.bank_reference = bank_reference
+        payment.executed_date = executed_date or timezone.now().date()
+        payment.value_date = timezone.now().date()
         if user:
             payment.updated_by = user
-        payment.save(update_fields=[
-            "status","bank_reference","executed_date","value_date","updated_at","updated_by"
-        ])
+        payment.save(
+            update_fields=[
+                "status",
+                "bank_reference",
+                "executed_date",
+                "value_date",
+                "updated_at",
+                "updated_by",
+            ]
+        )
 
         # Libérer la réservation budgétaire
         if payment.budget:
@@ -328,17 +387,21 @@ class PaymentService:
         fy = payment.fiscal_year
         fy.total_paid += final_amount
         fy.total_committed = max(Decimal("0"), fy.total_committed - payment.amount)
-        fy.save(update_fields=["total_paid","total_committed","updated_at"])
+        fy.save(update_fields=["total_paid", "total_committed", "updated_at"])
 
         # Écriture de règlement
         self._create_entry(
             payment=payment,
             entry_type=FinancialEntry.EntryType.CREDIT,
             label=f"Règlement {payment.reference} — Réf: {bank_reference}",
-            amount=final_amount, user=user,
+            amount=final_amount,
+            user=user,
         )
         audit.log_action(
-            action="PAY", user=user, obj=payment, request=request,
+            action="PAY",
+            user=user,
+            obj=payment,
+            request=request,
             extra_data={"bank_reference": bank_reference, "amount": str(final_amount)},
             severity="CRITICAL",
         )
@@ -361,23 +424,29 @@ class PaymentService:
             payment.updated_by = user
         suffix = f"[Annulé le {timezone.now():%Y-%m-%d} par {user}] {reason}"
         payment.notes = f"{payment.notes}\n{suffix}" if payment.notes else suffix
-        payment.save(update_fields=["status","notes","updated_at","updated_by"])
+        payment.save(update_fields=["status", "notes", "updated_at", "updated_by"])
 
         # Libérer la réservation
         if payment.budget:
             budget = payment.budget
             budget.reserved_amount = max(Decimal("0"), budget.reserved_amount - payment.amount)
-            budget.save(update_fields=["reserved_amount","updated_at"])
+            budget.save(update_fields=["reserved_amount", "updated_at"])
 
         audit.log_action(
-            action="UPDATE", user=user, obj=payment, request=request,
-            before_data={"status": old_status}, after_data={"status": "cancelled"},
-            extra_data={"reason": reason}, severity="HIGH",
+            action="UPDATE",
+            user=user,
+            obj=payment,
+            request=request,
+            before_data={"status": old_status},
+            after_data={"status": "cancelled"},
+            extra_data={"reason": reason},
+            severity="HIGH",
         )
         return payment
 
-    def _create_entry(self, payment: Payment, entry_type: str,
-                      label: str, amount: Decimal, user=None):
+    def _create_entry(
+        self, payment: Payment, entry_type: str, label: str, amount: Decimal, user=None
+    ):
         """Crée une écriture comptable liée au paiement."""
         try:
             FinancialEntry.objects.create(
@@ -459,10 +528,10 @@ class PaymentBatchService:
     def approve(self, batch: PaymentBatch, user=None) -> PaymentBatch:
         if batch.status != PaymentBatch.Status.SUBMITTED:
             raise FinanceValidationError("Seul un lot soumis peut être approuvé.")
-        batch.status      = PaymentBatch.Status.APPROVED
+        batch.status = PaymentBatch.Status.APPROVED
         batch.approved_by = user
         batch.approved_at = timezone.now()
-        batch.save(update_fields=["status","approved_by","approved_at","updated_at"])
+        batch.save(update_fields=["status", "approved_by", "approved_at", "updated_at"])
         batch.payments.filter(is_deleted=False).update(status=Payment.Status.PROCESSING)
         audit.log_action(action="APPROVE", user=user, obj=batch, severity="CRITICAL")
         return batch
@@ -485,13 +554,12 @@ class FinancialReportService:
 
         by_status = {
             row["status"]: row
-            for row in pay_qs.values("status").annotate(
-                count=Count("id"), total=Sum("amount")
-            )
+            for row in pay_qs.values("status").annotate(count=Count("id"), total=Sum("amount"))
         }
 
         # Tendance mensuelle
         from django.db.models.functions import TruncMonth
+
         monthly = list(
             pay_qs.filter(status=Payment.Status.PAID, executed_date__isnull=False)
             .annotate(month=TruncMonth("executed_date"))
@@ -510,44 +578,59 @@ class FinancialReportService:
 
         # Alertes non résolues
         alerts = list(
-            FinancialAlert.objects.filter(
-                fiscal_year=fy, is_resolved=False
-            ).values("alert_type", "severity", "title", "created_at").order_by("-created_at")[:10]
+            FinancialAlert.objects.filter(fiscal_year=fy, is_resolved=False)
+            .values("alert_type", "severity", "title", "created_at")
+            .order_by("-created_at")[:10]
         )
 
         return {
             "fiscal_year": {
-                "id": str(fy.id), "year": fy.year, "label": fy.label,
-                "status": fy.status, "consumption_rate": float(fy.consumption_rate),
-                "total_budget": float(fy.total_budget), "total_paid": float(fy.total_paid),
-                "total_committed": float(fy.total_committed), "available": float(fy.available_budget),
+                "id": str(fy.id),
+                "year": fy.year,
+                "label": fy.label,
+                "status": fy.status,
+                "consumption_rate": float(fy.consumption_rate),
+                "total_budget": float(fy.total_budget),
+                "total_paid": float(fy.total_paid),
+                "total_committed": float(fy.total_committed),
+                "available": float(fy.available_budget),
             },
             "payments": {
-                "total_count":   pay_qs.count(),
-                "paid_count":    by_status.get("paid",    {}).get("count",  0),
-                "pending_count": (by_status.get("pending",{}).get("count",  0) +
-                                  by_status.get("approved",{}).get("count", 0)),
-                "total_paid":    float(by_status.get("paid",{}).get("total", 0) or 0),
+                "total_count": pay_qs.count(),
+                "paid_count": by_status.get("paid", {}).get("count", 0),
+                "pending_count": (
+                    by_status.get("pending", {}).get("count", 0)
+                    + by_status.get("approved", {}).get("count", 0)
+                ),
+                "total_paid": float(by_status.get("paid", {}).get("total", 0) or 0),
                 "anomaly_count": pay_qs.filter(anomaly_flag=True).count(),
-                "by_status":     [
+                "by_status": [
                     {"status": s, "count": d["count"], "total": float(d["total"] or 0)}
                     for s, d in by_status.items()
                 ],
             },
             "budgets": {
-                "total_count":   bud_qs.count(),
+                "total_count": bud_qs.count(),
                 "overrun_count": sum(1 for b in bud_qs if b.is_overrun),
-                "alert_count":   sum(1 for b in bud_qs if b.is_alert_triggered),
+                "alert_count": sum(1 for b in bud_qs if b.is_alert_triggered),
                 "total_allocated": float(bud_qs.aggregate(s=Sum("allocated_amount"))["s"] or 0),
-                "total_paid":      float(bud_qs.aggregate(s=Sum("paid_amount"))["s"] or 0),
+                "total_paid": float(bud_qs.aggregate(s=Sum("paid_amount"))["s"] or 0),
             },
             "monthly_trend": [
-                {"month": str(m["month"])[:7], "count": m["count"], "amount": float(m["amount"] or 0)}
+                {
+                    "month": str(m["month"])[:7],
+                    "count": m["count"],
+                    "amount": float(m["amount"] or 0),
+                }
                 for m in monthly
             ],
             "top_benefit_types": [
-                {"code": t["benefit__benefit_type__code"], "name": t["benefit__benefit_type__name"],
-                 "count": t["count"], "total": float(t["total"] or 0)}
+                {
+                    "code": t["benefit__benefit_type__code"],
+                    "name": t["benefit__benefit_type__name"],
+                    "count": t["count"],
+                    "total": float(t["total"] or 0),
+                }
                 for t in top_types
             ],
             "alerts": alerts,
@@ -556,25 +639,25 @@ class FinancialReportService:
     def get_payment_export_data(self, filters: dict) -> list:
         """Données pour l'export Excel des paiements."""
         svc = PaymentService()
-        qs  = svc.search(svc.get_queryset(), **filters)
+        qs = svc.search(svc.get_queryset(), **filters)
         return [
             {
-                "Référence":           p.reference,
-                "Employé":             p.employee.get_full_name(),
-                "Matricule":           p.employee.matricule,
-                "Département":         p.employee.department.name if p.employee.department else "",
-                "Prestation":          p.benefit.benefit_type.name,
-                "Type prestation":     p.benefit.benefit_type.category,
-                "Montant (DZD)":       float(p.amount),
-                "Frais (DZD)":         float(p.fees),
-                "Montant net (DZD)":   float(p.net_amount),
-                "Statut":              p.get_status_display(),
-                "Mode de paiement":    p.get_payment_method_display(),
-                "Réf. bancaire":       p.bank_reference,
-                "Date d'exécution":    p.executed_date.strftime("%d/%m/%Y") if p.executed_date else "",
-                "Budget":              p.budget.code if p.budget else "",
-                "Exercice":            p.fiscal_year.year,
-                "Anomalie IA":         "Oui" if p.anomaly_flag else "Non",
+                "Référence": p.reference,
+                "Employé": p.employee.get_full_name(),
+                "Matricule": p.employee.matricule,
+                "Département": p.employee.department.name if p.employee.department else "",
+                "Prestation": p.benefit.benefit_type.name,
+                "Type prestation": p.benefit.benefit_type.category,
+                "Montant (DZD)": float(p.amount),
+                "Frais (DZD)": float(p.fees),
+                "Montant net (DZD)": float(p.net_amount),
+                "Statut": p.get_status_display(),
+                "Mode de paiement": p.get_payment_method_display(),
+                "Réf. bancaire": p.bank_reference,
+                "Date d'exécution": p.executed_date.strftime("%d/%m/%Y") if p.executed_date else "",
+                "Budget": p.budget.code if p.budget else "",
+                "Exercice": p.fiscal_year.year,
+                "Anomalie IA": "Oui" if p.anomaly_flag else "Non",
             }
             for p in qs.iterator()
         ]
@@ -583,22 +666,22 @@ class FinancialReportService:
         """Données pour l'export Excel des budgets."""
         budgets = Budget.objects.filter(
             fiscal_year_id=fiscal_year_id, is_deleted=False
-        ).select_related("benefit_type","department","fiscal_year")
+        ).select_related("benefit_type", "department", "fiscal_year")
         return [
             {
-                "Code":                b.code,
-                "Libellé":             b.label,
-                "Type prestation":     b.benefit_type.name if b.benefit_type else "",
-                "Département":         b.department.name   if b.department   else "",
-                "Statut":              b.get_status_display(),
-                "Alloué (DZD)":        float(b.allocated_amount),
-                "Payé (DZD)":          float(b.paid_amount),
-                "Engagé (DZD)":        float(b.committed_amount),
-                "Réservé (DZD)":       float(b.reserved_amount),
-                "Disponible (DZD)":    float(b.available_amount),
-                "Consommation (%)":    float(b.consumption_rate),
-                "Alerte":              "Oui" if b.is_alert_triggered else "Non",
-                "Dépassement":         "Oui" if b.is_overrun else "Non",
+                "Code": b.code,
+                "Libellé": b.label,
+                "Type prestation": b.benefit_type.name if b.benefit_type else "",
+                "Département": b.department.name if b.department else "",
+                "Statut": b.get_status_display(),
+                "Alloué (DZD)": float(b.allocated_amount),
+                "Payé (DZD)": float(b.paid_amount),
+                "Engagé (DZD)": float(b.committed_amount),
+                "Réservé (DZD)": float(b.reserved_amount),
+                "Disponible (DZD)": float(b.available_amount),
+                "Consommation (%)": float(b.consumption_rate),
+                "Alerte": "Oui" if b.is_alert_triggered else "Non",
+                "Dépassement": "Oui" if b.is_overrun else "Non",
             }
             for b in budgets
         ]

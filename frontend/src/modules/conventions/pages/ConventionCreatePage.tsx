@@ -29,7 +29,7 @@ export function ConventionCreatePage() {
   const createMut = useCreateConvention();
   const { data: partnersData } = usePartners({ is_active: "true", page_size: "200" });
 
-  const { register, handleSubmit, formState: { errors }, watch } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { renewal_mode: "manual", renewal_notice_days: 30, auto_renewal_days: 0, requires_attachments: false },
   });

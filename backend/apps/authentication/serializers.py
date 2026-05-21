@@ -3,10 +3,12 @@
 AUTHENTICATION SERIALIZERS
 ============================================================
 """
-from django.contrib.auth import get_user_model
+
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -55,12 +57,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class TokenRefreshResponseSerializer(serializers.Serializer):
     """Format de réponse du refresh token."""
+
     access = serializers.CharField()
     user = serializers.DictField()
 
 
 class LoginResponseSerializer(serializers.Serializer):
     """Format de réponse du login."""
+
     access = serializers.CharField()
     refresh = serializers.CharField()
     user = serializers.DictField()
@@ -68,6 +72,7 @@ class LoginResponseSerializer(serializers.Serializer):
 
 class LogoutSerializer(serializers.Serializer):
     """Blacklist du refresh token à la déconnexion."""
+
     refresh = serializers.CharField(required=True)
 
     def validate_refresh(self, value):
@@ -83,6 +88,7 @@ class LogoutSerializer(serializers.Serializer):
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     """Demande de reset de mot de passe."""
+
     email = serializers.EmailField()
 
     def validate_email(self, value):
@@ -92,6 +98,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     """Confirmation du reset avec token."""
+
     token = serializers.CharField()
     uid = serializers.CharField()
     new_password = serializers.CharField(min_length=10)
@@ -99,7 +106,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["new_password"] != attrs["confirm_password"]:
-            raise serializers.ValidationError({
-                "confirm_password": "Les mots de passe ne correspondent pas."
-            })
+            raise serializers.ValidationError(
+                {"confirm_password": "Les mots de passe ne correspondent pas."}
+            )
         return attrs

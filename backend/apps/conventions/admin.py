@@ -1,6 +1,8 @@
-from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
-from .models import Partner, Convention, ConventionDocument, ConventionAlert
+
+from django.contrib import admin
+
+from .models import Convention, ConventionAlert, ConventionDocument, Partner
 
 
 class ConventionDocumentInline(admin.TabularInline):
@@ -24,13 +26,26 @@ class ConventionAlertInline(admin.TabularInline):
 
 @admin.register(Partner)
 class PartnerAdmin(SimpleHistoryAdmin):
-    list_display = ["code", "name", "type", "is_active", "city", "wilaya", "email", "phone", "contact_name"]
+    list_display = [
+        "code",
+        "name",
+        "type",
+        "is_active",
+        "city",
+        "wilaya",
+        "email",
+        "phone",
+        "contact_name",
+    ]
     list_filter = ["type", "is_active", "wilaya"]
     search_fields = ["code", "name", "email", "contact_name"]
     ordering = ["name"]
     fieldsets = [
         ("Identification", {"fields": ["code", "name", "type", "is_active"]}),
-        ("Informations légales", {"fields": ["legal_form", "registration_number", "tax_id", "rc_number"]}),
+        (
+            "Informations légales",
+            {"fields": ["legal_form", "registration_number", "tax_id", "rc_number"]},
+        ),
         ("Contact", {"fields": ["email", "phone", "website"]}),
         ("Adresse", {"fields": ["address", "city", "wilaya", "postal_code"]}),
         ("Personne de contact", {"fields": ["contact_name", "contact_phone", "contact_email"]}),
@@ -41,8 +56,15 @@ class PartnerAdmin(SimpleHistoryAdmin):
 @admin.register(Convention)
 class ConventionAdmin(SimpleHistoryAdmin):
     list_display = [
-        "reference", "title", "partner", "status", "start_date", "end_date",
-        "amount", "days_until_expiry", "renewal_mode",
+        "reference",
+        "title",
+        "partner",
+        "status",
+        "start_date",
+        "end_date",
+        "amount",
+        "days_until_expiry",
+        "renewal_mode",
     ]
     list_filter = ["status", "renewal_mode", "start_date", "end_date"]
     search_fields = ["reference", "title", "partner__name", "partner__code"]
@@ -51,7 +73,10 @@ class ConventionAdmin(SimpleHistoryAdmin):
     inlines = [ConventionDocumentInline, ConventionAlertInline]
     fieldsets = [
         ("Identification", {"fields": ["reference", "partner", "title", "description", "status"]}),
-        ("Dates", {"fields": ["start_date", "end_date", "signed_date", "terminated_date", "renewed_at"]}),
+        (
+            "Dates",
+            {"fields": ["start_date", "end_date", "signed_date", "terminated_date", "renewed_at"]},
+        ),
         ("Reconduction", {"fields": ["renewal_mode", "renewal_notice_days", "auto_renewal_days"]}),
         ("Financier", {"fields": ["amount"]}),
         ("Options", {"fields": ["requires_attachments", "ai_metadata", "analytics_data"]}),
@@ -60,16 +85,26 @@ class ConventionAdmin(SimpleHistoryAdmin):
 
     def days_until_expiry(self, obj):
         return obj.days_until_expiry
+
     days_until_expiry.short_description = "Jours restants"
 
     def duration(self, obj):
         return obj.duration_display
+
     duration.short_description = "Durée"
 
 
 @admin.register(ConventionAlert)
 class ConventionAlertAdmin(SimpleHistoryAdmin):
-    list_display = ["title", "convention", "alert_type", "severity", "is_read", "is_resolved", "created_at"]
+    list_display = [
+        "title",
+        "convention",
+        "alert_type",
+        "severity",
+        "is_read",
+        "is_resolved",
+        "created_at",
+    ]
     list_filter = ["alert_type", "severity", "is_read", "is_resolved"]
     search_fields = ["title", "message", "convention__reference"]
     ordering = ["-created_at"]

@@ -4,12 +4,12 @@ SETTINGS PRODUCTION — Durci pour environnement de prod
 ============================================================
 Activer avec : DJANGO_SETTINGS_MODULE=config.settings.production
 """
+
 import sentry_sdk
+from decouple import config
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
-
-from decouple import config
 
 from .base import *  # noqa: F401, F403
 
@@ -157,8 +157,10 @@ REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] = [  # noqa: F405
 # ── Password validators (renforcé) ────────────────────────
 AUTH_PASSWORD_VALIDATORS = [  # noqa: F405
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 12}},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]

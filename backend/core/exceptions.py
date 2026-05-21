@@ -4,10 +4,9 @@ EXCEPTIONS — Gestion centralisée des erreurs API
 ============================================================
 Format de réponse unifié pour toutes les erreurs.
 """
+
 import logging
 
-from rest_framework import status
-from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
 logger = logging.getLogger("apps")
@@ -49,14 +48,15 @@ def custom_exception_handler(exc, context):
                 extra={
                     "status_code": response.status_code,
                     "exception": str(exc),
-                    "path": context.get("request", {}).path if hasattr(context.get("request", {}), "path") else "",
-                }
+                    "path": (
+                        context.get("request", {}).path
+                        if hasattr(context.get("request", {}), "path")
+                        else ""
+                    ),
+                },
             )
         elif response.status_code == 401:
-            logger.warning(
-                "Unauthorized access attempt",
-                extra={"exception": str(exc)}
-            )
+            logger.warning("Unauthorized access attempt", extra={"exception": str(exc)})
 
         response.data = error_payload
 
@@ -102,6 +102,7 @@ def _get_error_message(exc, response) -> str:
 # ── Exceptions métier personnalisées ─────────────────────
 class BusinessLogicError(Exception):
     """Exception pour les erreurs de logique métier."""
+
     def __init__(self, message: str, code: str = "BUSINESS_ERROR"):
         self.message = message
         self.code = code
@@ -110,17 +111,18 @@ class BusinessLogicError(Exception):
 
 class WorkflowTransitionError(BusinessLogicError):
     """Transition de workflow invalide."""
+
     def __init__(self, from_state: str, to_state: str):
         super().__init__(
-            f"Transition invalide : {from_state} → {to_state}",
-            code="INVALID_WORKFLOW_TRANSITION"
+            f"Transition invalide : {from_state} → {to_state}", code="INVALID_WORKFLOW_TRANSITION"
         )
 
 
 class InsufficientBudgetError(BusinessLogicError):
     """Budget insuffisant pour une prestation."""
+
     def __init__(self, required: float, available: float):
         super().__init__(
             f"Budget insuffisant. Requis: {required}, Disponible: {available}",
-            code="INSUFFICIENT_BUDGET"
+            code="INSUFFICIENT_BUDGET",
         )

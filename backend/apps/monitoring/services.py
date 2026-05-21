@@ -1,9 +1,10 @@
 import logging
-from django.db.models import Count, Avg, Sum, Q
-from django.utils import timezone
 from datetime import timedelta
 
-from .models import APIRequestLog, SecurityEvent, BusinessMetric, APIEndpointStatus
+from django.db.models import Avg, Count, Q
+from django.utils import timezone
+
+from .models import APIEndpointStatus, APIRequestLog, BusinessMetric, SecurityEvent
 
 logger = logging.getLogger("apps.monitoring")
 
@@ -19,7 +20,11 @@ class MonitoringService:
 
         top_endpoints = list(
             recent.values("endpoint", "method")
-            .annotate(count=Count("id"), avg_dur=Avg("duration_ms"), err_count=Count("id", filter=Q(is_error=True)))
+            .annotate(
+                count=Count("id"),
+                avg_dur=Avg("duration_ms"),
+                err_count=Count("id", filter=Q(is_error=True)),
+            )
             .order_by("-count")[:10]
         )
 
@@ -31,7 +36,8 @@ class MonitoringService:
         )
 
         security_alerts = SecurityEvent.objects.filter(
-            timestamp__gte=since, severity__in=["HIGH", "CRITICAL"],
+            timestamp__gte=since,
+            severity__in=["HIGH", "CRITICAL"],
         ).count()
 
         degraded_endpoints = APIEndpointStatus.objects.filter(is_degraded=True).count()
@@ -79,16 +85,13 @@ class MonitoringService:
 
     def get_audit_summary(self, days=30):
         from shared.audit.models import AuditLog
+
         since = timezone.now() - timedelta(days=days)
         qs = AuditLog.objects.filter(timestamp__gte=since)
 
         total = qs.count()
-        by_action = list(
-            qs.values("action").annotate(count=Count("id")).order_by("-count")
-        )
-        by_severity = list(
-            qs.values("severity").annotate(count=Count("id")).order_by("severity")
-        )
+        by_action = list(qs.values("action").annotate(count=Count("id")).order_by("-count"))
+        by_severity = list(qs.values("severity").annotate(count=Count("id")).order_by("severity"))
         top_users = list(
             qs.values("user_email").annotate(count=Count("id")).order_by("-count")[:10]
         )

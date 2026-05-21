@@ -3,16 +3,18 @@
 USERS VIEWS — Gestion des utilisateurs
 ============================================================
 """
+
 import logging
 
-from django.contrib.auth import get_user_model
-from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from core.permissions import IsAdmin, IsAdminOrGestionnaire
+from django.contrib.auth import get_user_model
+from django.db import models
+
 from .serializers import (
     ChangePasswordSerializer,
     UserAdminUpdateSerializer,
@@ -34,6 +36,7 @@ class UserViewSet(ModelViewSet):
     - create/update/delete : admin uniquement
     - me : tout utilisateur authentifié (son propre profil)
     """
+
     queryset = User.objects.all()
     permission_classes = [IsAuthenticated, IsAdmin]
 
@@ -73,17 +76,16 @@ class UserViewSet(ModelViewSet):
             queryset = queryset.filter(is_active=is_active.lower() == "true")
         if search:
             queryset = queryset.filter(
-                models.Q(first_name__icontains=search) |
-                models.Q(last_name__icontains=search) |
-                models.Q(email__icontains=search)
+                models.Q(first_name__icontains=search)
+                | models.Q(last_name__icontains=search)
+                | models.Q(email__icontains=search)
             )
         return queryset
 
     def perform_create(self, serializer):
         user = serializer.save()
         logger.info(
-            "User created",
-            extra={"created_user": str(user.id), "by": str(self.request.user.id)}
+            "User created", extra={"created_user": str(user.id), "by": str(self.request.user.id)}
         )
 
     def perform_destroy(self, instance):
@@ -91,8 +93,7 @@ class UserViewSet(ModelViewSet):
         instance.is_active = False
         instance.save(update_fields=["is_active", "updated_at"])
         logger.warning(
-            "User deactivated",
-            extra={"user_id": str(instance.id), "by": str(self.request.user.id)}
+            "User deactivated", extra={"user_id": str(instance.id), "by": str(self.request.user.id)}
         )
 
     @action(detail=False, methods=["get", "patch"], url_path="me")
@@ -136,11 +137,12 @@ class UserViewSet(ModelViewSet):
         user.save(update_fields=["is_active", "updated_at"])
         status_label = "activé" if user.is_active else "désactivé"
         logger.warning(
-            f"User {status_label}",
-            extra={"user_id": str(user.id), "by": str(request.user.id)}
+            f"User {status_label}", extra={"user_id": str(user.id), "by": str(request.user.id)}
         )
-        return Response({
-            "status": "success",
-            "message": f"Utilisateur {status_label}.",
-            "data": {"is_active": user.is_active},
-        })
+        return Response(
+            {
+                "status": "success",
+                "message": f"Utilisateur {status_label}.",
+                "data": {"is_active": user.is_active},
+            }
+        )

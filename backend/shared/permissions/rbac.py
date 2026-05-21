@@ -6,15 +6,17 @@ Architecture gouvernementale : rôle granulaire + attributs.
 
 RBAC (Role-Based Access Control) :
     Roles définis → permissions par action → combinaisons OR
-  
+
 ABAC (Attribute-Based Access Control) :
     Règles basées sur attributs de l'objet, de l'utilisateur, du contexte
 """
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
 
 class Role:
     """Roles par défaut — chaque projet peut étendre via ENGINE_ROLES."""
+
     ADMIN = "admin"
     GESTIONNAIRE = "gestionnaire"
     COMPTABLE = "comptable"
@@ -26,6 +28,7 @@ def get_configured_roles():
     """Return roles from engine registry."""
     try:
         from shared.registry import registry
+
         roles = registry.get_roles()
         if roles:
             return roles
@@ -38,15 +41,14 @@ def get_configured_roles():
 # P ERMISSIONS DE BASE (RBAC)
 # ═══════════════════════════════════════════════════════════
 
+
 class HasRole(BasePermission):
     """Vérifie si l'utilisateur a un rôle spécifique."""
+
     allowed_roles = []
 
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.role in self.allowed_roles
-        )
+        return request.user.is_authenticated and request.user.role in self.allowed_roles
 
 
 class IsAdmin(HasRole):
@@ -73,15 +75,14 @@ class IsConsultant(HasRole):
 # P ERMISSIONS COMBINÉES (OR)
 # ═══════════════════════════════════════════════════════════
 
+
 class HasAnyRole(BasePermission):
     """L'utilisateur doit avoir au moins un des rôles listés."""
+
     allowed_roles = []
 
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.role in self.allowed_roles
-        )
+        return request.user.is_authenticated and request.user.role in self.allowed_roles
 
 
 class IsStaff(HasAnyRole):
@@ -103,6 +104,7 @@ class IsAdminOrComptable(HasAnyRole):
 # P ERMISSIONS MIXTES (RBAC + HTTP METHOD)
 # ═══════════════════════════════════════════════════════════
 
+
 class IsAdminOrReadOnly(BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
@@ -115,6 +117,7 @@ class IsAdminOrReadOnly(BasePermission):
 # ═══════════════════════════════════════════════════════════
 # P ERMISSIONS SUR OBJET (ABAC)
 # ═══════════════════════════════════════════════════════════
+
 
 class IsOwnerOrAdmin(BasePermission):
     message = "Vous ne pouvez accéder qu'à vos propres données."
@@ -129,14 +132,15 @@ class IsOwnerOrAdmin(BasePermission):
 class HasObjectAttribute(BasePermission):
     """
     Permission ABAC : vérifie un attribut de l'objet.
-    
+
     Usage:
         class CanAccessDepartment(HasObjectAttribute):
             attribute = "department_id"
             allowed_values = lambda user: [user.department_id]
-    
+
     À surcharger dans les sous-classes.
     """
+
     attribute = ""
     allowed_values = None
 
@@ -147,7 +151,11 @@ class HasObjectAttribute(BasePermission):
             return True
         val = getattr(obj, self.attribute, None)
         if self.allowed_values:
-            allowed = self.allowed_values(request.user) if callable(self.allowed_values) else self.allowed_values
+            allowed = (
+                self.allowed_values(request.user)
+                if callable(self.allowed_values)
+                else self.allowed_values
+            )
             return val in allowed
         return True
 
@@ -156,8 +164,10 @@ class HasObjectAttribute(BasePermission):
 # F ACTORY — créer une permission depuis une config
 # ═══════════════════════════════════════════════════════════
 
+
 class DynamicRolePermission(BasePermission):
     """Permission basée sur des rôles définis dynamiquement."""
+
     allowed_roles = []
 
     def __init__(self, roles=None):
@@ -166,10 +176,7 @@ class DynamicRolePermission(BasePermission):
         super().__init__()
 
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.role in self.allowed_roles
-        )
+        return request.user.is_authenticated and request.user.role in self.allowed_roles
 
 
 def role_required(*roles):

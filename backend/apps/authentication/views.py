@@ -3,10 +3,9 @@
 AUTHENTICATION VIEWS — Login, Logout, Refresh, Me
 ============================================================
 """
+
 import logging
 
-from django.contrib.auth import get_user_model
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -16,8 +15,10 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from apps.users.serializers import UserSerializer
-from shared.audit.services import AuditService
+from django.contrib.auth import get_user_model
 from shared.ai.models import AIEvent
+from shared.audit.services import AuditService
+
 from .serializers import CustomTokenObtainPairSerializer, LogoutSerializer
 
 User = get_user_model()
@@ -27,6 +28,7 @@ audit = AuditService()
 
 class LoginThrottle(AnonRateThrottle):
     """Throttle spécifique pour le login : 10 tentatives/minute."""
+
     rate = "10/minute"
     scope = "login"
 
@@ -37,6 +39,7 @@ class LoginView(TokenObtainPairView):
     Corps : { "email": "...", "password": "..." }
     Réponse : { access, refresh, user }
     """
+
     serializer_class = CustomTokenObtainPairSerializer
     throttle_classes = [LoginThrottle]
     permission_classes = [AllowAny]
@@ -78,11 +81,14 @@ class LoginView(TokenObtainPairView):
 
         logger.info("User logged in", extra={"user_id": str(user.id), "ip": ip})
 
-        return Response({
-            "status": "success",
-            "message": "Connexion réussie.",
-            **serializer.validated_data,
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "status": "success",
+                "message": "Connexion réussie.",
+                **serializer.validated_data,
+            },
+            status=status.HTTP_200_OK,
+        )
 
     def _get_client_ip(self, request) -> str:
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
@@ -97,6 +103,7 @@ class LogoutView(APIView):
     Corps : { "refresh": "..." }
     Blacklist le refresh token → déconnexion complète.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -121,10 +128,13 @@ class LogoutView(APIView):
 
         logger.info("User logged out", extra={"user_id": str(request.user.id)})
 
-        return Response({
-            "status": "success",
-            "message": "Déconnexion réussie.",
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "status": "success",
+                "message": "Déconnexion réussie.",
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class TokenRefreshView(TokenRefreshView):
@@ -133,6 +143,7 @@ class TokenRefreshView(TokenRefreshView):
     Corps : { "refresh": "..." }
     Retourne un nouveau access token + nouveau refresh token.
     """
+
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
@@ -149,14 +160,17 @@ class MeView(APIView):
     Retourne le profil complet de l'utilisateur connecté.
     Utile pour recharger les données après navigation.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         serializer = UserSerializer(request.user, context={"request": request})
-        return Response({
-            "status": "success",
-            "data": serializer.data,
-        })
+        return Response(
+            {
+                "status": "success",
+                "data": serializer.data,
+            }
+        )
 
 
 class VerifyTokenView(APIView):
@@ -164,16 +178,19 @@ class VerifyTokenView(APIView):
     GET /api/v1/auth/verify/
     Vérifie si le token est valide. Utilisé par le frontend au démarrage.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        return Response({
-            "status": "success",
-            "valid": True,
-            "user": {
-                "id": str(request.user.id),
-                "email": request.user.email,
-                "role": request.user.role,
-                "must_change_password": request.user.must_change_password,
-            },
-        })
+        return Response(
+            {
+                "status": "success",
+                "valid": True,
+                "user": {
+                    "id": str(request.user.id),
+                    "email": request.user.email,
+                    "role": request.user.role,
+                    "must_change_password": request.user.must_change_password,
+                },
+            }
+        )

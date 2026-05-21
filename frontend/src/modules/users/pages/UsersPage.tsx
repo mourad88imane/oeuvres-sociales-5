@@ -2,7 +2,7 @@
  * USERS PAGE — Gestion des utilisateurs (admin seulement)
  */
 import { useState } from "react";
-import { Shield, Plus, Search, UserX, UserCheck, Edit2 } from "lucide-react";
+import { Plus, Search, UserX, UserCheck, Edit2 } from "lucide-react";
 
 interface UserItem {
   id: string;

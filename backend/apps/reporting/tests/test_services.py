@@ -1,43 +1,80 @@
 """Tests for reporting AggregationService."""
+
+from datetime import date
+
 import pytest
-from datetime import date, timedelta
+
+from apps.reporting.services import AggregationService
 from django.test import TestCase
 from django.utils import timezone
 
 pytestmark = [pytest.mark.django_db, pytest.mark.unit]
-
-from apps.reporting.services import AggregationService
 
 
 class TestAggregationService(TestCase):
     def setUp(self):
         self.svc = AggregationService()
         # Create test data across apps
-        from apps.employees.models import Employee, Department
         from apps.beneficiaries.models import Beneficiary
-        from apps.finance.models import Budget, Payment, FiscalYear
+        from apps.departments.models import Department
+        from apps.employees.models import Employee
+        from apps.finance.models import Budget, FiscalYear, Payment
+        from apps.benefits.models import Benefit, BenefitType
 
         dept = Department.objects.create(code="DEPT01", name="Test Dept")
         emp = Employee.objects.create(
-            matricule="EMP001", full_name="Test User",
-            email="test@test.com", department=dept,
-            status="active", gender="M",
+            matricule="EMP001",
+            first_name="Test",
+            last_name="User",
+            email_professional="test@test.com",
+            department=dept,
+            status="active",
+            gender="M",
+            date_of_birth=date(1990, 1, 1),
+            date_hired=date(2020, 1, 1),
+            job_title="Engineer",
         )
         # Beneficiary
         Beneficiary.objects.create(
-            employee=emp, first_name="Child", last_name="Test",
-            gender="M", date_of_birth=date(2010, 1, 1),
+            employee=emp,
+            first_name="Child",
+            last_name="Test",
+            gender="M",
+            date_of_birth=date(2010, 1, 1),
             relationship="child",
         )
         # Fiscal year + budget + payment
-        fy = FiscalYear.objects.create(year=timezone.now().year, is_active=True)
+        fy = FiscalYear.objects.create(
+            year=timezone.now().year,
+            label=f"FY {timezone.now().year}",
+            start_date=date(timezone.now().year, 1, 1),
+            end_date=date(timezone.now().year, 12, 31),
+            status="open",
+        )
         budget = Budget.objects.create(
-            fiscal_year=fy, code="BGT001", label="Test Budget",
-            amount=1_000_000, allocated_amount=1_000_000,
+            fiscal_year=fy,
+            code="BGT001",
+            label="Test Budget",
+            allocated_amount=1_000_000,
+        )
+        bt = BenefitType.objects.create(
+            code="MED",
+            name="Medical",
+            category="medical",
+        )
+        benefit = Benefit.objects.create(
+            employee=emp,
+            benefit_type=bt,
+            requested_amount=100_000,
+            title="Test Benefit",
         )
         Payment.objects.create(
-            employee=emp, budget=budget,
-            amount=100_000, status="paid",
+            employee=emp,
+            budget=budget,
+            benefit=benefit,
+            fiscal_year=fy,
+            amount=100_000,
+            status="paid",
             executed_date=timezone.now().date(),
         )
         self.emp = emp
@@ -70,10 +107,9 @@ class TestAggregationService(TestCase):
 
     def test_compute_and_snapshot_kpis_creates_snapshots(self):
         from apps.reporting.models import KpiSnapshot
+
         data = self.svc.compute_and_snapshot_kpis()
         self.assertIsInstance(data, list)
         self.assertTrue(len(data) > 0)
-        snapshots = KpiSnapshot.objects.filter(
-            date=timezone.localdate()
-        )
+        snapshots = KpiSnapshot.objects.filter(date=timezone.localdate())
         self.assertEqual(snapshots.count(), len(data))

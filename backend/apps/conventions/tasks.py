@@ -1,10 +1,12 @@
 import logging
-from datetime import timedelta
+
 from celery import shared_task
+
 from django.utils import timezone
-from .models import Convention, ConventionAlert
 from shared.notifications.models import Notification
 from shared.notifications.services import notification_service
+
+from .models import Convention, ConventionAlert
 
 logger = logging.getLogger("apps.conventions.tasks")
 
@@ -109,7 +111,9 @@ def check_convention_expirations():
 
     logger.info(
         "check_convention_expirations terminé: %d expirées, %d alertes, %d rappels",
-        len(expirations), len(warnings), len(reminders),
+        len(expirations),
+        len(warnings),
+        len(reminders),
     )
     return {
         "expired": len(expirations),

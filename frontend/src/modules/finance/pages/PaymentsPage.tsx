@@ -16,7 +16,7 @@ export function PaymentsPage() {
   const [selected,  setSelected]  = useState<Payment | null>(null);
 
   const { data, isLoading, refetch, isFetching } = usePayments(filters);
-  const { data: activeFY } = useActiveFiscalYear();
+  useActiveFiscalYear();
   const exportMut = useExportPayments();
 
   const payments   = data?.results   ?? [];
@@ -25,9 +25,6 @@ export function PaymentsPage() {
   const upd = useCallback((key: keyof PaymentFilters, val: unknown) => {
     setFilters(p => ({ ...p, [key]: val, page: key !== "page" ? 1 : val as number }));
   }, []);
-
-  // Auto-set fiscal year filter
-  const fyId = activeFY?.id ?? "";
 
   return (
     <div className="space-y-5 animate-fade-in">

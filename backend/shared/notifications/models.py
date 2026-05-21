@@ -1,6 +1,6 @@
+from core.models import BaseModel
 from django.conf import settings
 from django.db import models
-from core.models import BaseModel
 
 
 class Notification(BaseModel):
@@ -25,12 +25,16 @@ class Notification(BaseModel):
     title = models.CharField(max_length=200, verbose_name="Titre")
     body = models.TextField(blank=True, verbose_name="Message")
     channel = models.CharField(
-        max_length=10, choices=Channel.choices,
-        default=Channel.IN_APP, verbose_name="Canal",
+        max_length=10,
+        choices=Channel.choices,
+        default=Channel.IN_APP,
+        verbose_name="Canal",
     )
     priority = models.CharField(
-        max_length=10, choices=Priority.choices,
-        default=Priority.MEDIUM, verbose_name="Priorité",
+        max_length=10,
+        choices=Priority.choices,
+        default=Priority.MEDIUM,
+        verbose_name="Priorité",
     )
     is_read = models.BooleanField(default=False, verbose_name="Lue")
     read_at = models.DateTimeField(null=True, blank=True, verbose_name="Lue le")
@@ -38,8 +42,11 @@ class Notification(BaseModel):
     icon = models.CharField(max_length=50, blank=True, verbose_name="Icône")
 
     content_type = models.ForeignKey(
-        "contenttypes.ContentType", on_delete=models.SET_NULL,
-        null=True, blank=True, verbose_name="Type de contenu",
+        "contenttypes.ContentType",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Type de contenu",
     )
     object_id = models.PositiveIntegerField(null=True, blank=True, verbose_name="ID objet")
     metadata = models.JSONField(default=dict, blank=True, verbose_name="Métadonnées")
@@ -59,6 +66,7 @@ class Notification(BaseModel):
 
     def mark_as_read(self):
         from django.utils import timezone
+
         self.is_read = True
         self.read_at = timezone.now()
         self.save(update_fields=["is_read", "read_at", "updated_at"])

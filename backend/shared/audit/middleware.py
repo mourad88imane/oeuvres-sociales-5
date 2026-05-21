@@ -6,8 +6,9 @@ Injecte un request_id unique dans chaque requête HTTP.
 Ce request_id permet de corréler tous les logs d'une même
 requête dans les systèmes d'analyse (ELK, Grafana Loki, etc.)
 """
-import uuid
+
 import logging
+import uuid
 
 logger = logging.getLogger("audit")
 
@@ -39,7 +40,7 @@ class AuditMiddleware:
                     "path": request.path,
                     "user": str(request.user) if hasattr(request, "user") else "anonymous",
                     "ip": self._get_ip(request),
-                }
+                },
             )
 
         response = self.get_response(request)

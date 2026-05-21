@@ -1,9 +1,11 @@
 import logging
-from datetime import date, timedelta
+from datetime import timedelta
+
 from django.db import models, transaction
 from django.utils import timezone
 from shared.audit.services import AuditService
-from .models import Partner, Convention, ConventionAlert, ConventionDocument
+
+from .models import Convention, ConventionAlert, Partner
 
 logger = logging.getLogger("apps.conventions")
 audit = AuditService()
@@ -24,10 +26,10 @@ class PartnerService:
         qs = queryset or self.get_queryset()
         if search:
             qs = qs.filter(
-                models.Q(code__icontains=search) |
-                models.Q(name__icontains=search) |
-                models.Q(email__icontains=search) |
-                models.Q(contact_name__icontains=search)
+                models.Q(code__icontains=search)
+                | models.Q(name__icontains=search)
+                | models.Q(email__icontains=search)
+                | models.Q(contact_name__icontains=search)
             )
         if type:
             qs = qs.filter(type=type)
@@ -59,15 +61,24 @@ class ConventionService:
     def get_queryset(self):
         return Convention.objects.filter(is_deleted=False).select_related("partner")
 
-    def search(self, queryset=None, search="", status="", partner_id="",
-               date_from="", date_to="", expiring_soon=False, expired=False,
-               ordering="-start_date"):
+    def search(
+        self,
+        queryset=None,
+        search="",
+        status="",
+        partner_id="",
+        date_from="",
+        date_to="",
+        expiring_soon=False,
+        expired=False,
+        ordering="-start_date",
+    ):
         qs = queryset or self.get_queryset()
         if search:
             qs = qs.filter(
-                models.Q(reference__icontains=search) |
-                models.Q(title__icontains=search) |
-                models.Q(partner__name__icontains=search)
+                models.Q(reference__icontains=search)
+                | models.Q(title__icontains=search)
+                | models.Q(partner__name__icontains=search)
             )
         if status:
             qs = qs.filter(status=status)
@@ -78,7 +89,10 @@ class ConventionService:
         if date_to:
             qs = qs.filter(end_date__lte=date_to)
         if expiring_soon:
-            qs = qs.filter(end_date__lte=timezone.localdate() + timedelta(days=30), end_date__gte=timezone.localdate())
+            qs = qs.filter(
+                end_date__lte=timezone.localdate() + timedelta(days=30),
+                end_date__gte=timezone.localdate(),
+            )
         if expired:
             qs = qs.filter(end_date__lt=timezone.localdate())
         return qs.order_by(ordering)
@@ -104,13 +118,21 @@ class ConventionService:
 
     @transaction.atomic
     def renew(self, instance, new_end_date, new_amount=None, notes="", user=None, request=None):
-        if instance.status not in (Convention.Status.ACTIVE, Convention.Status.EXPIRING_SOON, Convention.Status.EXPIRED):
-            raise ConventionValidationError("Seules les conventions actives ou expirées peuvent être renouvelées.", "INVALID_STATUS")
+        if instance.status not in (
+            Convention.Status.ACTIVE,
+            Convention.Status.EXPIRING_SOON,
+            Convention.Status.EXPIRED,
+        ):
+            raise ConventionValidationError(
+                "Seules les conventions actives ou expirées peuvent être renouvelées.",
+                "INVALID_STATUS",
+            )
         if new_end_date <= instance.end_date:
-            raise ConventionValidationError("La nouvelle date d'échéance doit être après l'ancienne.", "INVALID_END_DATE")
+            raise ConventionValidationError(
+                "La nouvelle date d'échéance doit être après l'ancienne.", "INVALID_END_DATE"
+            )
 
         old_end_date = instance.end_date
-        old_amount = instance.amount
 
         instance.end_date = new_end_date
         if new_amount is not None:
@@ -127,7 +149,6 @@ class ConventionService:
             message=f"Convention {instance.reference} renouvelée jusqu'au {new_end_date}.{(' Notes: ' + notes) if notes else ''}",
         )
 
-        from .models import Convention
         new_conv = Convention.objects.create(
             partner=instance.partner,
             title=instance.title,
@@ -143,10 +164,16 @@ class ConventionService:
         )
 
         audit.log_action(
-            action="RENEW", instance=new_conv,
-            extra={"old_end_date": str(old_end_date), "new_end_date": str(new_end_date),
-                   "notes": notes, "previous_id": str(instance.id)},
-            user=user, request=request,
+            action="RENEW",
+            instance=new_conv,
+            extra={
+                "old_end_date": str(old_end_date),
+                "new_end_date": str(new_end_date),
+                "notes": notes,
+                "previous_id": str(instance.id),
+            },
+            user=user,
+            request=request,
         )
         logger.info("Convention renouvelée: %s -> %s", instance.reference, new_conv.reference)
         return new_conv
@@ -154,12 +181,19 @@ class ConventionService:
     @transaction.atomic
     def terminate(self, instance, terminated_date=None, reason="", user=None, request=None):
         if instance.status in (Convention.Status.TERMINATED, Convention.Status.EXPIRED):
-            raise ConventionValidationError("La convention est déjà terminée ou expirée.", "ALREADY_TERMINATED")
+            raise ConventionValidationError(
+                "La convention est déjà terminée ou expirée.", "ALREADY_TERMINATED"
+            )
         instance.status = Convention.Status.TERMINATED
         instance.terminated_date = terminated_date or timezone.localdate()
         instance.save()
-        audit.log_action(action="TERMINATE", instance=instance, extra={"reason": reason},
-                         user=user, request=request)
+        audit.log_action(
+            action="TERMINATE",
+            instance=instance,
+            extra={"reason": reason},
+            user=user,
+            request=request,
+        )
         logger.info("Convention résiliée: %s", instance.reference)
         return instance
 
@@ -169,37 +203,48 @@ class ConventionService:
         if convention.end_date:
             delta = (convention.end_date - today).days
             if delta <= 7 and delta >= 0:
-                alerts.append(ConventionAlert(
-                    convention=convention,
-                    alert_type=ConventionAlert.AlertType.EXPIRY_CRITICAL,
-                    severity=ConventionAlert.Severity.CRITICAL,
-                    title="Expiration imminente",
-                    message=f"La convention {convention.reference} expire dans {delta} jour(s) ({convention.end_date}).",
-                ))
+                alerts.append(
+                    ConventionAlert(
+                        convention=convention,
+                        alert_type=ConventionAlert.AlertType.EXPIRY_CRITICAL,
+                        severity=ConventionAlert.Severity.CRITICAL,
+                        title="Expiration imminente",
+                        message=f"La convention {convention.reference} expire dans {delta} jour(s) ({convention.end_date}).",
+                    )
+                )
             elif delta <= 30 and delta > 7:
-                alerts.append(ConventionAlert(
-                    convention=convention,
-                    alert_type=ConventionAlert.AlertType.EXPIRY_WARNING,
-                    severity=ConventionAlert.Severity.HIGH,
-                    title="Expiration prochaine",
-                    message=f"La convention {convention.reference} expire dans {delta} jour(s) ({convention.end_date}).",
-                ))
+                alerts.append(
+                    ConventionAlert(
+                        convention=convention,
+                        alert_type=ConventionAlert.AlertType.EXPIRY_WARNING,
+                        severity=ConventionAlert.Severity.HIGH,
+                        title="Expiration prochaine",
+                        message=f"La convention {convention.reference} expire dans {delta} jour(s) ({convention.end_date}).",
+                    )
+                )
             elif delta <= 60 and delta > 30:
-                alerts.append(ConventionAlert(
-                    convention=convention,
-                    alert_type=ConventionAlert.AlertType.EXPIRY_WARNING,
-                    severity=ConventionAlert.Severity.MEDIUM,
-                    title="Expiration dans moins de 2 mois",
-                    message=f"La convention {convention.reference} expire le {convention.end_date}.",
-                ))
-            if delta <= convention.renewal_notice_days and convention.renewal_mode != Convention.Renewal.NONE:
-                alerts.append(ConventionAlert(
-                    convention=convention,
-                    alert_type=ConventionAlert.AlertType.RENEWAL_REMINDER,
-                    severity=ConventionAlert.Severity.MEDIUM,
-                    title="Rappel reconduction",
-                    message=f"Préavis de reconduction pour la convention {convention.reference} avant le {convention.end_date}.",
-                ))
+                alerts.append(
+                    ConventionAlert(
+                        convention=convention,
+                        alert_type=ConventionAlert.AlertType.EXPIRY_WARNING,
+                        severity=ConventionAlert.Severity.MEDIUM,
+                        title="Expiration dans moins de 2 mois",
+                        message=f"La convention {convention.reference} expire le {convention.end_date}.",
+                    )
+                )
+            if (
+                delta <= convention.renewal_notice_days
+                and convention.renewal_mode != Convention.Renewal.NONE
+            ):
+                alerts.append(
+                    ConventionAlert(
+                        convention=convention,
+                        alert_type=ConventionAlert.AlertType.RENEWAL_REMINDER,
+                        severity=ConventionAlert.Severity.MEDIUM,
+                        title="Rappel reconduction",
+                        message=f"Préavis de reconduction pour la convention {convention.reference} avant le {convention.end_date}.",
+                    )
+                )
         if alerts:
             ConventionAlert.objects.bulk_create(alerts)
 
@@ -218,6 +263,3 @@ class ConventionAlertService:
 
     def mark_all_read(self):
         ConventionAlert.objects.filter(is_deleted=False, is_read=False).update(is_read=True)
-
-
-

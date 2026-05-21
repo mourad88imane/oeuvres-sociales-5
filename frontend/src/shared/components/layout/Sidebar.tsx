@@ -2,7 +2,7 @@
  * SIDEBAR — Navigation principale
  * S'adapte aux rôles : affiche uniquement les sections autorisées.
  */
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Users, UserCheck, Gift, Wallet,
   FileText, BarChart3, Settings, LogOut, ChevronLeft,
@@ -11,7 +11,6 @@ import {
 import { clsx } from "clsx";
 import { useAuth } from "@modules/auth/hooks/useAuth";
 import { useAuthStore } from "@modules/auth/store/authStore";
-import { RoleGuard } from "./ProtectedRoute";
 
 interface NavItem {
   label: string;

@@ -1,4 +1,5 @@
 """Engine Registry — plugin system for registering business models with shared engines."""
+
 import logging
 from collections import defaultdict
 
@@ -8,12 +9,12 @@ logger = logging.getLogger("shared.registry")
 class EngineRegistry:
     """
     Central registry for connecting generic engines to business models.
-    
+
     Usage in apps.ready():
         from shared.registry import registry
         registry.register_audit_models("myapp.MyModel")
         registry.register_workflow_models("myapp.MyModel", workflow_definition=MyWorkflow)
-        
+
     Then engines look up:
         registry.get_audit_models() -> ["myapp.MyModel", ...]
     """

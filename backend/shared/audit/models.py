@@ -11,6 +11,7 @@ PRÉPARATION AI : Ce modèle est la source de vérité pour :
 Chaque action CREATE/UPDATE/DELETE sur un objet métier
 génère une entrée dans ce journal immuable.
 """
+
 import uuid
 
 from django.conf import settings
@@ -62,97 +63,59 @@ class AuditLog(models.Model):
         null=True,
         blank=True,
         related_name="audit_logs",
-        help_text="Utilisateur ayant effectué l'action"
+        help_text="Utilisateur ayant effectué l'action",
     )
     user_email = models.EmailField(
-        blank=True,
-        help_text="Email dupliqué pour conservation après suppression user"
+        blank=True, help_text="Email dupliqué pour conservation après suppression user"
     )
-    user_role = models.CharField(
-        max_length=20,
-        blank=True,
-        help_text="Rôle au moment de l'action"
-    )
+    user_role = models.CharField(max_length=20, blank=True, help_text="Rôle au moment de l'action")
     ip_address = models.GenericIPAddressField(
-        null=True,
-        blank=True,
-        help_text="Adresse IP de l'utilisateur"
+        null=True, blank=True, help_text="Adresse IP de l'utilisateur"
     )
-    user_agent = models.TextField(
-        blank=True,
-        help_text="User-Agent du navigateur"
-    )
+    user_agent = models.TextField(blank=True, help_text="User-Agent du navigateur")
 
     # ── Quoi ─────────────────────────────────────────────
     action = models.CharField(
-        max_length=30,
-        choices=Action.choices,
-        help_text="Type d'action effectuée"
+        max_length=30, choices=Action.choices, help_text="Type d'action effectuée"
     )
     severity = models.CharField(
         max_length=10,
         choices=Severity.choices,
         default=Severity.LOW,
-        help_text="Niveau de criticité"
+        help_text="Niveau de criticité",
     )
 
     # ── Sur quoi ─────────────────────────────────────────
     content_type_name = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="Nom du modèle concerné (ex: benefits.Benefit)"
+        max_length=100, blank=True, help_text="Nom du modèle concerné (ex: benefits.Benefit)"
     )
-    object_id = models.CharField(
-        max_length=255,
-        blank=True,
-        help_text="ID de l'objet concerné"
-    )
+    object_id = models.CharField(max_length=255, blank=True, help_text="ID de l'objet concerné")
     object_repr = models.CharField(
-        max_length=500,
-        blank=True,
-        help_text="Représentation textuelle de l'objet"
+        max_length=500, blank=True, help_text="Représentation textuelle de l'objet"
     )
 
     # ── Données pour AI ──────────────────────────────────
     before_data = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="État avant modification (pour diff et ML)"
+        null=True, blank=True, help_text="État avant modification (pour diff et ML)"
     )
     after_data = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="État après modification (pour diff et ML)"
+        null=True, blank=True, help_text="État après modification (pour diff et ML)"
     )
-    changed_fields = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="Liste des champs modifiés"
-    )
+    changed_fields = models.JSONField(null=True, blank=True, help_text="Liste des champs modifiés")
     extra_data = models.JSONField(
-        default=dict,
-        blank=True,
-        help_text="Données contextuelles supplémentaires"
+        default=dict, blank=True, help_text="Données contextuelles supplémentaires"
     )
 
     # ── Contexte technique ───────────────────────────────
     request_id = models.CharField(
-        max_length=100,
-        blank=True,
-        help_text="ID unique de la requête HTTP (pour corrélation logs)"
+        max_length=100, blank=True, help_text="ID unique de la requête HTTP (pour corrélation logs)"
     )
-    endpoint = models.CharField(
-        max_length=500,
-        blank=True,
-        help_text="Endpoint API appelé"
-    )
+    endpoint = models.CharField(max_length=500, blank=True, help_text="Endpoint API appelé")
     http_method = models.CharField(max_length=10, blank=True)
 
     # ── Timestamp ────────────────────────────────────────
     timestamp = models.DateTimeField(
-        auto_now_add=True,
-        db_index=True,
-        help_text="Horodatage exact de l'action"
+        auto_now_add=True, db_index=True, help_text="Horodatage exact de l'action"
     )
 
     class Meta:

@@ -11,12 +11,12 @@ Fonctionnement :
 Pas de LLM externe — règles et templates pour MVP.
 Architecture prête pour RAG (Retrieval Augmented Generation).
 """
+
 import logging
 import re
-from datetime import date, timedelta
-from typing import Optional
+from datetime import timedelta
 
-from django.db.models import Count, Sum, Avg, Q
+from django.db.models import Count, Sum
 from django.utils import timezone
 
 logger = logging.getLogger("shared.ai.assistant")
@@ -24,6 +24,7 @@ logger = logging.getLogger("shared.ai.assistant")
 
 class Intent:
     """Intentions reconnues par l'assistant."""
+
     DASHBOARD_SUMMARY = "dashboard_summary"
     KPI_QUERY = "kpi_query"
     BUDGET_STATUS = "budget_status"
@@ -43,11 +44,17 @@ class AIAssistant:
     # Patterns d'intention (regex simples)
     INTENT_PATTERNS: list[tuple[str, str]] = [
         (r"(bonjour|salut|coucou|hello|hi)", "greeting"),
-        (r"(récapitulatif|synthèse|dashboard|tableau de bord|vue d.ensemble|summary)", Intent.DASHBOARD_SUMMARY),
+        (
+            r"(récapitulatif|synthèse|dashboard|tableau de bord|vue d.ensemble|summary)",
+            Intent.DASHBOARD_SUMMARY,
+        ),
         (r"(kpi|indicateur|performance|métrique)", Intent.KPI_QUERY),
         (r"(budget|dépense|consommation budgétaire|finance)", Intent.BUDGET_STATUS),
         (r"(prestation|demande|bénéfice|prestation sociale|dossier)", Intent.BENEFITS_STATUS),
-        (r"(convention|expir|renouvellement|partenaire|convention arriv)", Intent.CONVENTION_EXPIRY),
+        (
+            r"(convention|expir|renouvellement|partenaire|convention arriv)",
+            Intent.CONVENTION_EXPIRY,
+        ),
         (r"(anomalie|détection|alerte|suspect|anormal)", Intent.ANOMALIES),
         (r"(recommendation|recommandation|conseil|suggestion|proposition)", Intent.RECOMMENDATIONS),
         (r"(employé|salarié|effectif|combien.*employé)", Intent.EMPLOYEE_COUNT),
@@ -119,9 +126,9 @@ class AIAssistant:
         name = user.get_full_name() if user and hasattr(user, "get_full_name") else "Utilisateur"
         return {
             "text": f"Bonjour {name} ! Je suis l'assistant IA des Œuvres Sociales. "
-                    "Je peux vous aider avec le tableau de bord, les KPI, le budget, "
-                    "les prestations, les conventions, et plus encore. Tapez « aide » "
-                    "pour voir ce que je sais faire.",
+            "Je peux vous aider avec le tableau de bord, les KPI, le budget, "
+            "les prestations, les conventions, et plus encore. Tapez « aide » "
+            "pour voir ce que je sais faire.",
             "type": "text",
             "suggestions": [
                 "Récapitulatif du tableau de bord",
@@ -133,6 +140,7 @@ class AIAssistant:
 
     def _dashboard_summary(self, entities: dict, user=None) -> dict:
         from django.apps import apps
+
         try:
             Employee = apps.get_model("employees", "Employee")
             Benefit = apps.get_model("benefits", "Benefit")
@@ -142,8 +150,14 @@ class AIAssistant:
 
         today = timezone.localdate()
         employees = Employee.objects.alive().count()
-        pending = Benefit.objects.alive().filter(workflow_state__in=["submitted", "under_review"]).count()
-        expiring = Convention.objects.alive().filter(end_date__gte=today, end_date__lte=today + timedelta(days=30)).count()
+        pending = (
+            Benefit.objects.alive().filter(workflow_state__in=["submitted", "under_review"]).count()
+        )
+        expiring = (
+            Convention.objects.alive()
+            .filter(end_date__gte=today, end_date__lte=today + timedelta(days=30))
+            .count()
+        )
 
         return {
             "text": (
@@ -162,10 +176,14 @@ class AIAssistant:
         }
 
     def _kpi_query(self, entities: dict, user=None) -> dict:
-        return {"text": "Je peux vous montrer les indicateurs KPI. Pour le moment, consultez l'onglet Analytics.", "type": "text"}
+        return {
+            "text": "Je peux vous montrer les indicateurs KPI. Pour le moment, consultez l'onglet Analytics.",
+            "type": "text",
+        }
 
     def _budget_status(self, entities: dict, user=None) -> dict:
         from django.apps import apps
+
         try:
             Budget = apps.get_model("finance", "Budget")
             Payment = apps.get_model("finance", "Payment")
@@ -173,8 +191,18 @@ class AIAssistant:
             return {"text": "Module finance non disponible.", "type": "text"}
 
         year = timezone.localdate().year
-        total = Budget.objects.filter(fiscal_year__year=year, is_deleted=False).aggregate(s=Sum("amount"))["s"] or 0
-        paid = Payment.objects.filter(is_deleted=False, executed_date__year=year, status="paid").aggregate(s=Sum("amount"))["s"] or 0
+        total = (
+            Budget.objects.filter(fiscal_year__year=year, is_deleted=False).aggregate(
+                s=Sum("allocated_amount")
+            )["s"]
+            or 0
+        )
+        paid = (
+            Payment.objects.filter(
+                is_deleted=False, executed_date__year=year, status="paid"
+            ).aggregate(s=Sum("amount"))["s"]
+            or 0
+        )
         pct = (paid / total * 100) if total else 0
 
         return {
@@ -191,15 +219,21 @@ class AIAssistant:
 
     def _benefits_status(self, entities: dict, user=None) -> dict:
         from django.apps import apps
+
         try:
             Benefit = apps.get_model("benefits", "Benefit")
         except LookupError:
             return {"text": "Module prestations non disponible.", "type": "text"}
 
         total = Benefit.objects.alive().count()
-        pending = Benefit.objects.alive().filter(workflow_state__in=["submitted", "under_review"]).count()
+        pending = (
+            Benefit.objects.alive().filter(workflow_state__in=["submitted", "under_review"]).count()
+        )
         by_status = list(
-            Benefit.objects.alive().values("workflow_state").annotate(count=Count("id")).order_by("-count")
+            Benefit.objects.alive()
+            .values("workflow_state")
+            .annotate(count=Count("id"))
+            .order_by("-count")
         )
 
         return {
@@ -207,7 +241,8 @@ class AIAssistant:
                 f"📋 **Prestations**\n\n"
                 f"Total : {total}\n"
                 f"En attente : {pending}\n\n"
-                f"Répartition :\n" + "\n".join(f"  • {s['workflow_state']}: {s['count']}" for s in by_status[:5])
+                f"Répartition :\n"
+                + "\n".join(f"  • {s['workflow_state']}: {s['count']}" for s in by_status[:5])
             ),
             "type": "rich",
             "data": {"total": total, "pending": pending, "by_status": by_status},
@@ -215,6 +250,7 @@ class AIAssistant:
 
     def _convention_expiry(self, entities: dict, user=None) -> dict:
         from django.apps import apps
+
         try:
             Convention = apps.get_model("conventions", "Convention")
         except LookupError:
@@ -222,11 +258,15 @@ class AIAssistant:
 
         today = timezone.localdate()
         expiring = Convention.objects.alive().filter(
-            end_date__gte=today, end_date__lte=today + timedelta(days=30),
+            end_date__gte=today,
+            end_date__lte=today + timedelta(days=30),
         )
         count = expiring.count()
         if count == 0:
-            return {"text": "✅ Aucune convention n'arrive à expiration dans les 30 prochains jours.", "type": "text"}
+            return {
+                "text": "✅ Aucune convention n'arrive à expiration dans les 30 prochains jours.",
+                "type": "text",
+            }
 
         details = "\n".join(f"  • {c} — expire le {c.end_date}" for c in expiring[:5])
         return {
@@ -236,15 +276,21 @@ class AIAssistant:
 
     def _anomalies(self, entities: dict, user=None) -> dict:
         from .models import AIAnomaly
+
         recent = AIAnomaly.objects.filter(status="new").order_by("-severity", "-created_at")[:5]
         if not recent.exists():
             return {"text": "✅ Aucune anomalie détectée récemment.", "type": "text"}
-        details = "\n".join(f"  • [{a.get_severity_display()}] {a.explanation or a.metric_name}" for a in recent)
+        details = "\n".join(
+            f"  • [{a.get_severity_display()}] {a.explanation or a.metric_name}" for a in recent
+        )
         return {"text": f"🔍 **{recent.count()} anomalies en cours**\n\n{details}", "type": "rich"}
 
     def _recommendations(self, entities: dict, user=None) -> dict:
         from .models import AIRecommendation
-        recs = AIRecommendation.objects.filter(is_active=True, feedback="pending").order_by("priority", "-created_at")[:5]
+
+        recs = AIRecommendation.objects.filter(is_active=True, feedback="pending").order_by(
+            "priority", "-created_at"
+        )[:5]
         if not recs.exists():
             return {"text": "Aucune recommandation active pour le moment.", "type": "text"}
         details = "\n".join(f"  • [{r.get_priority_display()}] {r.title}" for r in recs)
@@ -252,6 +298,7 @@ class AIAssistant:
 
     def _employee_count(self, entities: dict, user=None) -> dict:
         from django.apps import apps
+
         try:
             Employee = apps.get_model("employees", "Employee")
         except LookupError:
@@ -259,7 +306,8 @@ class AIAssistant:
         total = Employee.objects.alive().count()
         active = Employee.objects.alive().filter(status="active").count()
         by_dept = list(
-            Employee.objects.alive().values("department__name")
+            Employee.objects.alive()
+            .values("department__name")
             .annotate(count=Count("id"))
             .order_by("-count")[:5]
         )
@@ -268,7 +316,11 @@ class AIAssistant:
                 f"👥 **Effectifs**\n\n"
                 f"Total : {total}\n"
                 f"Actifs : {active}\n\n"
-                f"Top départements :\n" + "\n".join(f"  • {d['department__name'] or 'Sans département'}: {d['count']}" for d in by_dept)
+                f"Top départements :\n"
+                + "\n".join(
+                    f"  • {d['department__name'] or 'Sans département'}: {d['count']}"
+                    for d in by_dept
+                )
             ),
             "type": "rich",
         }

@@ -4,6 +4,7 @@ SETTINGS DÉVELOPPEMENT
 ============================================================
 Activer avec : DJANGO_SETTINGS_MODULE=config.settings.development
 """
+
 from .base import *  # noqa: F401, F403
 
 # ── Debug activé ──────────────────────────────────────────
@@ -38,6 +39,7 @@ EMAIL_PORT = 1025
 
 # ── JWT plus long en dev pour le confort ─────────────────
 from datetime import timedelta  # noqa: E402
+
 SIMPLE_JWT = {
     **SIMPLE_JWT,  # noqa: F405
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
@@ -46,8 +48,8 @@ SIMPLE_JWT = {
 
 # ── Logging plus verbeux en dev ───────────────────────────
 LOGGING["handlers"]["console"]["level"] = "DEBUG"  # noqa: F405
-LOGGING["loggers"]["apps"]["level"] = "DEBUG"      # noqa: F405
-LOGGING["loggers"]["django"]["level"] = "DEBUG"    # noqa: F405
+LOGGING["loggers"]["apps"]["level"] = "DEBUG"  # noqa: F405
+LOGGING["loggers"]["django"]["level"] = "DEBUG"  # noqa: F405
 
 # ── Debug toolbar config ──────────────────────────────────
 DEBUG_TOOLBAR_CONFIG = {

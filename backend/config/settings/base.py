@@ -5,7 +5,7 @@ SETTINGS BASE — Communs à tous les environnements
 Principe : Ce fichier ne contient AUCUNE valeur sensible.
 Tout secret passe par python-decouple (variables d'env).
 """
-import os
+
 from datetime import timedelta
 from pathlib import Path
 
@@ -71,7 +71,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # ── Middleware ─────────────────────────────────────────────
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",        # CORS avant CommonMiddleware
+    "corsheaders.middleware.CorsMiddleware",  # CORS avant CommonMiddleware
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     # API uses JWT (no session auth), so skip CSRF for /api/ routes
@@ -81,9 +81,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "axes.middleware.AxesMiddleware",               # Brute force protection
+    "axes.middleware.AxesMiddleware",  # Brute force protection
     "simple_history.middleware.HistoryRequestMiddleware",  # Historique modèles
-    "shared.audit.middleware.AuditMiddleware",           # Audit trail custom
+    "shared.audit.middleware.AuditMiddleware",  # Audit trail custom
     "apps.monitoring.middleware.APIMonitoringMiddleware",  # API monitoring & métriques
 ]
 
@@ -130,8 +130,10 @@ AUTH_USER_MODEL = "users.User"
 # ── Validation mots de passe ──────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-     "OPTIONS": {"min_length": 10}},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
@@ -185,17 +187,21 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
         "user": "1000/hour",
-        "login": "10/minute",   # Throttle spécial pour login
+        "login": "10/minute",  # Throttle spécial pour login
     },
 }
 
 # ── JWT Configuration ─────────────────────────────────────
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=config("JWT_ACCESS_LIFETIME_MINUTES", default=30, cast=int)),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=config("JWT_REFRESH_LIFETIME_DAYS", default=7, cast=int)),
-    "ROTATE_REFRESH_TOKENS": True,       # Nouveau refresh token à chaque refresh
-    "BLACKLIST_AFTER_ROTATION": True,    # Ancien token mis en blacklist
-    "UPDATE_LAST_LOGIN": True,           # Met à jour last_login de l'user
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=config("JWT_ACCESS_LIFETIME_MINUTES", default=30, cast=int)
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=config("JWT_REFRESH_LIFETIME_DAYS", default=7, cast=int)
+    ),
+    "ROTATE_REFRESH_TOKENS": True,  # Nouveau refresh token à chaque refresh
+    "BLACKLIST_AFTER_ROTATION": True,  # Ancien token mis en blacklist
+    "UPDATE_LAST_LOGIN": True,  # Met à jour last_login de l'user
     "ALGORITHM": "HS256",
     "SIGNING_KEY": config("SECRET_KEY"),
     "AUTH_HEADER_TYPES": ("Bearer",),
@@ -228,7 +234,7 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
-    "x-request-id",       # Pour le tracing
+    "x-request-id",  # Pour le tracing
 ]
 
 # ── DRF Spectacular (OpenAPI) ─────────────────────────────
@@ -298,7 +304,7 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@oeuvres-socia
 SITE_URL = config("SITE_URL", default="http://localhost:5173")
 
 # ── Axes (protection brute force) ────────────────────────
-AXES_FAILURE_LIMIT = 5           # Blocage après 5 tentatives échouées
+AXES_FAILURE_LIMIT = 5  # Blocage après 5 tentatives échouées
 AXES_COOLOFF_TIME = timedelta(minutes=30)
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_CALLABLE = "apps.authentication.utils.axes_lockout_response"

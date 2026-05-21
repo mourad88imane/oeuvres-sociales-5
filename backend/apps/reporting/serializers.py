@@ -1,11 +1,16 @@
 import logging
-from django.db import transaction
-from django.utils import timezone
+
 from rest_framework import serializers
+
 from core.serializers import BaseModelSerializer
+
 from .models import (
-    KpiDefinition, KpiSnapshot, DashboardWidget,
-    ReportDefinition, ReportSchedule, DataExport,
+    DashboardWidget,
+    DataExport,
+    KpiDefinition,
+    KpiSnapshot,
+    ReportDefinition,
+    ReportSchedule,
 )
 
 logger = logging.getLogger("apps.reporting")
@@ -18,11 +23,21 @@ class KpiDefinitionSerializer(BaseModelSerializer):
     class Meta:
         model = KpiDefinition
         fields = [
-            "id", "code", "name", "description", "category",
-            "unit", "target_value", "formula", "is_active",
-            "display_order", "metadata",
-            "latest_value", "trend",
-            "created_at", "updated_at",
+            "id",
+            "code",
+            "name",
+            "description",
+            "category",
+            "unit",
+            "target_value",
+            "formula",
+            "is_active",
+            "display_order",
+            "metadata",
+            "latest_value",
+            "trend",
+            "created_at",
+            "updated_at",
         ]
 
     def get_latest_value(self, obj):
@@ -55,8 +70,16 @@ class KpiSnapshotSerializer(BaseModelSerializer):
     class Meta:
         model = KpiSnapshot
         fields = [
-            "id", "kpi", "kpi_code", "kpi_name", "kpi_unit",
-            "value", "date", "previous_value", "variation", "metadata",
+            "id",
+            "kpi",
+            "kpi_code",
+            "kpi_name",
+            "kpi_unit",
+            "value",
+            "date",
+            "previous_value",
+            "variation",
+            "metadata",
             "created_at",
         ]
 
@@ -68,10 +91,19 @@ class DashboardWidgetSerializer(BaseModelSerializer):
     class Meta:
         model = DashboardWidget
         fields = [
-            "id", "user", "title", "widget_type", "widget_type_display",
-            "size", "size_display", "config", "is_global",
-            "display_order", "is_active",
-            "created_at", "updated_at",
+            "id",
+            "user",
+            "title",
+            "widget_type",
+            "widget_type_display",
+            "size",
+            "size_display",
+            "config",
+            "is_global",
+            "display_order",
+            "is_active",
+            "created_at",
+            "updated_at",
         ]
         read_only_fields = ["user"]
 
@@ -82,10 +114,21 @@ class ReportDefinitionSerializer(BaseModelSerializer):
     class Meta:
         model = ReportDefinition
         fields = [
-            "id", "code", "title", "description", "category", "category_display",
-            "default_format", "filters_config", "columns_config", "chart_config",
-            "is_system", "is_active", "ai_insights_enabled",
-            "created_at", "updated_at",
+            "id",
+            "code",
+            "title",
+            "description",
+            "category",
+            "category_display",
+            "default_format",
+            "filters_config",
+            "columns_config",
+            "chart_config",
+            "is_system",
+            "is_active",
+            "ai_insights_enabled",
+            "created_at",
+            "updated_at",
         ]
 
 
@@ -96,10 +139,21 @@ class ReportScheduleSerializer(BaseModelSerializer):
     class Meta:
         model = ReportSchedule
         fields = [
-            "id", "report", "report_title", "frequency", "frequency_display",
-            "cron_expression", "recipients", "format", "export_format",
-            "is_active", "last_run", "next_run", "filters_override",
-            "created_at", "updated_at",
+            "id",
+            "report",
+            "report_title",
+            "frequency",
+            "frequency_display",
+            "cron_expression",
+            "recipients",
+            "format",
+            "export_format",
+            "is_active",
+            "last_run",
+            "next_run",
+            "filters_override",
+            "created_at",
+            "updated_at",
         ]
 
 
@@ -112,10 +166,22 @@ class DataExportSerializer(BaseModelSerializer):
     class Meta:
         model = DataExport
         fields = [
-            "id", "report", "report_title", "export_format", "status", "status_display",
-            "file", "download_url", "file_size", "filters_used",
-            "row_count", "error_message", "completed_at", "duration_ms",
-            "created_at", "created_by_name",
+            "id",
+            "report",
+            "report_title",
+            "export_format",
+            "status",
+            "status_display",
+            "file",
+            "download_url",
+            "file_size",
+            "filters_used",
+            "row_count",
+            "error_message",
+            "completed_at",
+            "duration_ms",
+            "created_at",
+            "created_by_name",
         ]
 
     def get_download_url(self, obj):
@@ -127,7 +193,7 @@ class DataExportSerializer(BaseModelSerializer):
 
     def get_created_by_name(self, obj):
         if obj.created_by:
-            return obj.created_by.get_full_name() or obj.created_by.username
+            return obj.created_by.get_full_name() or obj.created_by.email
         return None
 
 
@@ -136,7 +202,7 @@ class KpiSnapshotCreateSerializer(serializers.Serializer):
 
 
 class ReportGenerateSerializer(serializers.Serializer):
-    format = serializers.ChoiceField(choices=ReportDefinition.FORMATS, default="excel")
+    format = serializers.CharField(default="excel")
     filters = serializers.JSONField(default=dict, required=False)
     date_from = serializers.DateField(required=False)
     date_to = serializers.DateField(required=False)
@@ -147,6 +213,7 @@ class AnalyticsFilterSerializer(serializers.Serializer):
     date_to = serializers.DateField(required=False)
     period = serializers.ChoiceField(
         choices=["7d", "30d", "90d", "6m", "1y", "all"],
-        default="30d", required=False,
+        default="30d",
+        required=False,
     )
     category = serializers.CharField(required=False)

@@ -1,16 +1,20 @@
 """Notification API views."""
+
 import logging
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from core.pagination import StandardResultsSetPagination
+from django.utils import timezone
+
 from .models import Notification, NotificationPreference
 from .serializers import (
-    NotificationSerializer,
-    NotificationPreferenceSerializer,
     MarkReadSerializer,
+    NotificationPreferenceSerializer,
+    NotificationSerializer,
 )
 
 logger = logging.getLogger("shared.notifications")
@@ -23,7 +27,8 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = Notification.objects.filter(
-            recipient=self.request.user, is_deleted=False,
+            recipient=self.request.user,
+            is_deleted=False,
         ).order_by("-created_at")
 
         # Filters
@@ -44,10 +49,14 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["get"])
     def unread_count(self, request):
         count = Notification.objects.filter(
-            recipient=request.user, is_read=False, is_deleted=False,
+            recipient=request.user,
+            is_read=False,
+            is_deleted=False,
         ).count()
         high = Notification.objects.filter(
-            recipient=request.user, is_read=False, is_deleted=False,
+            recipient=request.user,
+            is_read=False,
+            is_deleted=False,
             priority__in=[Notification.Priority.HIGH, Notification.Priority.CRITICAL],
         ).count()
         return Response({"status": "success", "data": {"count": count, "high_priority": high}})
@@ -59,7 +68,9 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
 
         if ser.validated_data.get("all"):
             qs = Notification.objects.filter(
-                recipient=request.user, is_read=False, is_deleted=False,
+                recipient=request.user,
+                is_read=False,
+                is_deleted=False,
             )
             count = qs.count()
             qs.update(is_read=True, read_at=timezone.now())
@@ -69,7 +80,9 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         ids = ser.validated_data.get("ids", [])
         if ids:
             qs = Notification.objects.filter(
-                id__in=ids, recipient=request.user, is_deleted=False,
+                id__in=ids,
+                recipient=request.user,
+                is_deleted=False,
             )
             count = qs.count()
             qs.update(is_read=True, read_at=timezone.now())

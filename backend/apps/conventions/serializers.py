@@ -1,6 +1,8 @@
 from rest_framework import serializers
+
 from core.serializers import BaseModelSerializer
-from .models import Partner, Convention, ConventionDocument, ConventionAlert
+
+from .models import Convention, ConventionAlert, ConventionDocument, Partner
 
 
 class PartnerListSerializer(serializers.ModelSerializer):
@@ -10,9 +12,18 @@ class PartnerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Partner
         fields = [
-            "id", "code", "name", "type", "type_display",
-            "is_active", "city", "wilaya", "wilaya_display",
-            "email", "phone", "contact_name",
+            "id",
+            "code",
+            "name",
+            "type",
+            "type_display",
+            "is_active",
+            "city",
+            "wilaya",
+            "wilaya_display",
+            "email",
+            "phone",
+            "contact_name",
             "created_at",
         ]
 
@@ -26,13 +37,31 @@ class PartnerSerializer(BaseModelSerializer):
     class Meta:
         model = Partner
         fields = [
-            "id", "code", "name", "type", "type_display", "is_active",
-            "legal_form", "registration_number", "tax_id", "rc_number",
-            "email", "phone", "website",
-            "address", "city", "wilaya", "postal_code",
-            "contact_name", "contact_phone", "contact_email",
-            "notes", "metadata",
-            "created_at", "updated_at", "created_by_name",
+            "id",
+            "code",
+            "name",
+            "type",
+            "type_display",
+            "is_active",
+            "legal_form",
+            "registration_number",
+            "tax_id",
+            "rc_number",
+            "email",
+            "phone",
+            "website",
+            "address",
+            "city",
+            "wilaya",
+            "postal_code",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "notes",
+            "metadata",
+            "created_at",
+            "updated_at",
+            "created_by_name",
         ]
 
 
@@ -40,12 +69,26 @@ class PartnerCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Partner
         fields = [
-            "code", "name", "type", "is_active",
-            "legal_form", "registration_number", "tax_id", "rc_number",
-            "email", "phone", "website",
-            "address", "city", "wilaya", "postal_code",
-            "contact_name", "contact_phone", "contact_email",
-            "notes", "metadata",
+            "code",
+            "name",
+            "type",
+            "is_active",
+            "legal_form",
+            "registration_number",
+            "tax_id",
+            "rc_number",
+            "email",
+            "phone",
+            "website",
+            "address",
+            "city",
+            "wilaya",
+            "postal_code",
+            "contact_name",
+            "contact_phone",
+            "contact_email",
+            "notes",
+            "metadata",
         ]
 
     def validate_code(self, value):
@@ -62,11 +105,21 @@ class ConventionListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Convention
         fields = [
-            "id", "reference", "partner", "partner_name", "partner_code",
-            "title", "status", "status_display",
-            "start_date", "end_date", "amount",
-            "days_until_expiry", "duration_display",
-            "renewal_mode", "created_at",
+            "id",
+            "reference",
+            "partner",
+            "partner_name",
+            "partner_code",
+            "title",
+            "status",
+            "status_display",
+            "start_date",
+            "end_date",
+            "amount",
+            "days_until_expiry",
+            "duration_display",
+            "renewal_mode",
+            "created_at",
         ]
 
 
@@ -84,17 +137,36 @@ class ConventionSerializer(BaseModelSerializer):
     class Meta:
         model = Convention
         fields = [
-            "id", "reference", "partner", "partner_name", "partner_code",
-            "title", "description",
-            "status", "status_display",
-            "renewal_mode", "renewal_mode_display", "renewal_notice_days",
-            "start_date", "end_date", "signed_date", "terminated_date", "renewed_at",
-            "amount", "auto_renewal_days",
+            "id",
+            "reference",
+            "partner",
+            "partner_name",
+            "partner_code",
+            "title",
+            "description",
+            "status",
+            "status_display",
+            "renewal_mode",
+            "renewal_mode_display",
+            "renewal_notice_days",
+            "start_date",
+            "end_date",
+            "signed_date",
+            "terminated_date",
+            "renewed_at",
+            "amount",
+            "auto_renewal_days",
             "requires_attachments",
-            "days_until_expiry", "duration_display",
-            "is_expired", "is_expiring_soon", "is_active",
-            "ai_metadata", "analytics_data",
-            "created_at", "updated_at", "created_by_name",
+            "days_until_expiry",
+            "duration_display",
+            "is_expired",
+            "is_expiring_soon",
+            "is_active",
+            "ai_metadata",
+            "analytics_data",
+            "created_at",
+            "updated_at",
+            "created_by_name",
         ]
 
 
@@ -102,22 +174,32 @@ class ConventionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Convention
         fields = [
-            "partner", "title", "description",
-            "renewal_mode", "renewal_notice_days",
-            "start_date", "end_date", "signed_date",
-            "amount", "auto_renewal_days",
+            "partner",
+            "title",
+            "description",
+            "renewal_mode",
+            "renewal_notice_days",
+            "start_date",
+            "end_date",
+            "signed_date",
+            "amount",
+            "auto_renewal_days",
             "requires_attachments",
         ]
 
     def validate(self, attrs):
         if attrs["start_date"] >= attrs["end_date"]:
-            raise serializers.ValidationError({"end_date": "La date d'échéance doit être après la date d'effet."})
+            raise serializers.ValidationError(
+                {"end_date": "La date d'échéance doit être après la date d'effet."}
+            )
         return attrs
 
 
 class ConventionRenewSerializer(serializers.Serializer):
     new_end_date = serializers.DateField()
-    new_amount = serializers.DecimalField(max_digits=14, decimal_places=2, required=False, allow_null=True)
+    new_amount = serializers.DecimalField(
+        max_digits=14, decimal_places=2, required=False, allow_null=True
+    )
     notes = serializers.CharField(required=False, allow_blank=True)
 
 
@@ -128,10 +210,19 @@ class ConventionDocumentSerializer(BaseModelSerializer):
     class Meta:
         model = ConventionDocument
         fields = [
-            "id", "convention", "doc_type", "doc_type_display",
-            "file", "file_url", "original_name", "description",
-            "file_size", "mime_type",
-            "created_at", "updated_at", "created_by_name",
+            "id",
+            "convention",
+            "doc_type",
+            "doc_type_display",
+            "file",
+            "file_url",
+            "original_name",
+            "description",
+            "file_size",
+            "mime_type",
+            "created_at",
+            "updated_at",
+            "created_by_name",
         ]
         read_only_fields = ["id", "file_size", "mime_type", "created_at", "updated_at"]
 
@@ -158,11 +249,21 @@ class ConventionAlertSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConventionAlert
         fields = [
-            "id", "convention", "convention_reference", "convention_title",
-            "alert_type", "alert_type_display",
-            "severity", "severity_display",
-            "title", "message",
-            "is_read", "is_resolved", "resolved_at",
-            "ai_generated", "ai_confidence", "metadata",
+            "id",
+            "convention",
+            "convention_reference",
+            "convention_title",
+            "alert_type",
+            "alert_type_display",
+            "severity",
+            "severity_display",
+            "title",
+            "message",
+            "is_read",
+            "is_resolved",
+            "resolved_at",
+            "ai_generated",
+            "ai_confidence",
+            "metadata",
             "created_at",
         ]

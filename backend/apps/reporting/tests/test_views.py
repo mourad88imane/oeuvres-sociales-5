@@ -1,21 +1,19 @@
 """Tests for reporting API viewsets."""
-import io
-import json
-import pytest
-from datetime import date
 
-pytestmark = [pytest.mark.django_db, pytest.mark.integration]
+import pytest
+from rest_framework.test import APIClient
 
 from django.test import TestCase
-from django.utils import timezone
-from rest_framework.test import APIClient
+
+pytestmark = [pytest.mark.django_db, pytest.mark.integration]
 
 
 class TestAnalyticsViewSet(TestCase):
     def setUp(self):
         self.client = APIClient()
-        from apps.users.models import CustomUser
-        self.user = CustomUser.objects.create_user(
+        from apps.users.models import User
+
+        self.user = User.objects.create_user(
             email="admin@test.com", password="test123", role="admin"
         )
         self.client.force_authenticate(self.user)
@@ -57,16 +55,20 @@ class TestAnalyticsViewSet(TestCase):
 class TestKpiViewSet(TestCase):
     def setUp(self):
         self.client = APIClient()
-        from apps.users.models import CustomUser
-        self.user = CustomUser.objects.create_user(
+        from apps.users.models import User
+
+        self.user = User.objects.create_user(
             email="admin@test.com", password="test123", role="admin"
         )
         self.client.force_authenticate(self.user)
 
         from apps.reporting.models import KpiDefinition
+
         self.kpi = KpiDefinition.objects.create(
-            code="test_kpi", name="Test KPI",
-            category="global", target_value=100.0,
+            code="test_kpi",
+            name="Test KPI",
+            category="global",
+            target_value=100.0,
         )
 
     def test_list_kpis(self):
@@ -87,29 +89,32 @@ class TestKpiViewSet(TestCase):
     def test_kpi_history_endpoint(self):
         # First create a snapshot
         self.client.post("/api/v1/reporting/kpis/snapshot/")
-        resp = self.client.get(
-            f"/api/v1/reporting/kpis/history/?code={self.kpi.code}"
-        )
+        resp = self.client.get(f"/api/v1/reporting/kpis/history/?code={self.kpi.code}")
         self.assertEqual(resp.status_code, 200)
 
 
 class TestReportViewSet(TestCase):
     def setUp(self):
         self.client = APIClient()
-        from apps.users.models import CustomUser
-        self.user = CustomUser.objects.create_user(
+        from apps.users.models import User
+
+        self.user = User.objects.create_user(
             email="admin@test.com", password="test123", role="admin"
         )
         self.client.force_authenticate(self.user)
 
         from apps.reporting.models import ReportDefinition
+
         self.report = ReportDefinition.objects.create(
-            code="test_report", title="Test Report",
-            category="employees", default_format="csv",
+            code="test_report",
+            title="Test Report",
+            category="employees",
+            default_format="csv",
             is_system=True,
         )
         self.employee_report = ReportDefinition.objects.create(
-            code="emp_report", title="Employee Report",
+            code="emp_report",
+            title="Employee Report",
             category="employees",
         )
 
@@ -158,8 +163,9 @@ class TestReportViewSet(TestCase):
 class TestExportViewSet(TestCase):
     def setUp(self):
         self.client = APIClient()
-        from apps.users.models import CustomUser
-        self.user = CustomUser.objects.create_user(
+        from apps.users.models import User
+
+        self.user = User.objects.create_user(
             email="admin@test.com", password="test123", role="admin"
         )
         self.client.force_authenticate(self.user)
@@ -173,8 +179,9 @@ class TestExportViewSet(TestCase):
 class TestDashboardEndpoint(TestCase):
     def setUp(self):
         self.client = APIClient()
-        from apps.users.models import CustomUser
-        self.user = CustomUser.objects.create_user(
+        from apps.users.models import User
+
+        self.user = User.objects.create_user(
             email="admin@test.com", password="test123", role="admin"
         )
         self.client.force_authenticate(self.user)

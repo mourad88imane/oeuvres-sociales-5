@@ -10,11 +10,10 @@ Provides the foundation for future BI capabilities:
 In production, these should use PostgreSQL materialized views
 and/or dedicated summary tables refreshed by Celery tasks.
 """
-import logging
-from datetime import date, timedelta
 
-from django.db import connection, models, transaction
-from django.utils import timezone
+import logging
+
+from django.db import connection
 
 logger = logging.getLogger("shared.warehouse")
 
@@ -117,9 +116,9 @@ class WarehouseService:
     ]
 
     FACT_TABLES = [
-        "benefits.Benefit",       # Fact: benefit requests
-        "finance.Payment",        # Fact: payments
-        "conventions.Convention", # Fact: conventions
+        "benefits.Benefit",  # Fact: benefit requests
+        "finance.Payment",  # Fact: payments
+        "conventions.Convention",  # Fact: conventions
         "reporting.KpiSnapshot",  # Fact: KPI measurements
     ]
 

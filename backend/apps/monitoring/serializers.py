@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import APIRequestLog, SecurityEvent, BusinessMetric, APIEndpointStatus
+
+from .models import APIEndpointStatus, APIRequestLog, BusinessMetric, SecurityEvent
 
 
 class APIRequestLogSerializer(serializers.ModelSerializer):
@@ -9,29 +10,54 @@ class APIRequestLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = APIRequestLog
         fields = [
-            "id", "method", "endpoint", "status_code", "duration_ms",
-            "is_error", "error_message", "user_email", "ip_address",
-            "request_id", "time_ago", "timestamp",
+            "id",
+            "method",
+            "endpoint",
+            "status_code",
+            "duration_ms",
+            "is_error",
+            "error_message",
+            "user_email",
+            "ip_address",
+            "request_id",
+            "time_ago",
+            "timestamp",
         ]
         read_only_fields = fields
 
     def get_time_ago(self, obj):
         from django.utils.timesince import timesince
+
         return timesince(obj.timestamp)
 
 
 class SecurityEventSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source="user.email", read_only=True, default="")
-    resolved_by_email = serializers.EmailField(source="resolved_by.email", read_only=True, default="")
+    resolved_by_email = serializers.EmailField(
+        source="resolved_by.email", read_only=True, default=""
+    )
     time_ago = serializers.SerializerMethodField()
 
     class Meta:
         model = SecurityEvent
         fields = [
-            "id", "event_type", "event_type_display", "severity", "severity_display",
-            "user_email", "user_role", "ip_address", "endpoint", "details",
-            "action_taken", "resolved", "resolved_at", "resolved_by_email",
-            "resolution_note", "time_ago", "timestamp",
+            "id",
+            "event_type",
+            "event_type_display",
+            "severity",
+            "severity_display",
+            "user_email",
+            "user_role",
+            "ip_address",
+            "endpoint",
+            "details",
+            "action_taken",
+            "resolved",
+            "resolved_at",
+            "resolved_by_email",
+            "resolution_note",
+            "time_ago",
+            "timestamp",
         ]
         read_only_fields = ["id", "timestamp", "resolved_at"]
 
@@ -40,6 +66,7 @@ class SecurityEventSerializer(serializers.ModelSerializer):
 
     def get_time_ago(self, obj):
         from django.utils.timesince import timesince
+
         return timesince(obj.timestamp)
 
 
@@ -54,9 +81,18 @@ class APIEndpointStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = APIEndpointStatus
         fields = [
-            "endpoint", "method", "total_calls", "error_count", "error_rate",
-            "avg_duration_ms", "max_duration_ms", "min_duration_ms",
-            "last_called", "last_status", "is_degraded", "degraded_since",
+            "endpoint",
+            "method",
+            "total_calls",
+            "error_count",
+            "error_rate",
+            "avg_duration_ms",
+            "max_duration_ms",
+            "min_duration_ms",
+            "last_called",
+            "last_status",
+            "is_degraded",
+            "degraded_since",
             "degraded_duration",
         ]
 
@@ -68,6 +104,7 @@ class APIEndpointStatusSerializer(serializers.ModelSerializer):
     def get_degraded_duration(self, obj):
         if obj.degraded_since:
             from django.utils.timesince import timesince
+
             return timesince(obj.degraded_since)
         return None
 

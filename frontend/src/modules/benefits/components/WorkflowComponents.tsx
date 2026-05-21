@@ -228,7 +228,7 @@ export function WorkflowActions({ benefit, onSuccess }: WorkflowActionsProps) {
     if (data.paid_amount)       payload.paid_amount       = parseFloat(data.paid_amount);
     if (data.comment)           payload.comment           = data.comment;
 
-    await transitionMutation.mutateAsync(payload as Parameters<typeof transitionMutation.mutateAsync>[0]);
+    await transitionMutation.mutateAsync(payload as unknown as Parameters<typeof transitionMutation.mutateAsync>[0]);
     setSelectedTransition(null);
     onSuccess?.();
   });
@@ -419,9 +419,7 @@ export function WorkflowLogTimeline({ logs }: WorkflowLogTimelineProps) {
       <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200" />
       <div className="space-y-4">
         {logs.map((log, i) => {
-          const FromIcon = STATE_ICONS[log.from_state as WorkflowState] ?? Clock;
           const ToIcon   = STATE_ICONS[log.to_state   as WorkflowState] ?? Clock;
-          const fromCfg  = STATE_UI[log.from_state as WorkflowState];
           const toCfg    = STATE_UI[log.to_state   as WorkflowState];
 
           return (

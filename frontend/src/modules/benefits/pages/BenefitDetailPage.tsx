@@ -17,7 +17,7 @@ import { BenefitForm }       from "../components/BenefitForm";
 import { Modal, ConfirmDialog, EmptyState, Spinner, Badge } from "@shared/components/ui/index";
 import { RoleGuard } from "@shared/components/layout/ProtectedRoute";
 import { PRIORITY_UI, CATEGORY_UI } from "../types";
-import type { WorkflowState, Benefit } from "../types";
+import type { WorkflowState } from "../types";
 
 type Tab = "overview" | "attachments" | "comments" | "history";
 
@@ -144,7 +144,7 @@ export function BenefitDetailPage() {
         </div>
 
         {/* Actions workflow */}
-        {!benefit.is_final && (
+        {(benefit.workflow_state !== "paid" && benefit.workflow_state !== "rejected") && (
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
               Actions disponibles
@@ -279,8 +279,8 @@ export function BenefitDetailPage() {
           <AttachmentManager
             benefitId={id!}
             attachments={benefit.attachments ?? []}
-            canUpload={!benefit.is_final}
-            canDelete={!benefit.is_final}
+            canUpload={benefit.workflow_state !== "paid" && benefit.workflow_state !== "rejected"}
+            canDelete={benefit.workflow_state !== "paid" && benefit.workflow_state !== "rejected"}
           />
         </div>
       )}
@@ -293,7 +293,7 @@ export function BenefitDetailPage() {
           <CommentsSection
             benefitId={id!}
             comments={benefit.comments ?? []}
-            canComment={!benefit.is_final}
+            canComment={benefit.workflow_state !== "paid" && benefit.workflow_state !== "rejected"}
           />
         </div>
       )}

@@ -5,14 +5,12 @@ SCORING ENGINE — Scoring de demandes avec explicabilité
 Calcule des scores 0-100 avec feature importance (SHAP-like)
 pour les demandes de prestations, profils de risque, etc.
 """
+
 import logging
-from datetime import date, timedelta
-from typing import Optional
 
 from django.utils import timezone
 
-from .models import AIScore, AIModelRegistry, AIFeature
-from .pipeline import feature_store
+from .models import AIModelRegistry, AIScore
 
 logger = logging.getLogger("shared.ai.scoring")
 
@@ -20,17 +18,22 @@ logger = logging.getLogger("shared.ai.scoring")
 class ScoringEngine:
     """
     Moteur de scoring ML-ready.
-    
+
     Chaque score est accompagné de :
       - feature_importance : contribution de chaque feature au score
       - explanation : texte lisible
       - decision_boundary : seuil de classification
     """
 
-    def score_benefit(self, benefit) -> dict:
+    def score_benefit(self, benefit_id, save=False) -> dict:
         """Calcule le score d'une demande de prestation."""
         from django.apps import apps
+
         Benefit = apps.get_model("benefits", "Benefit")
+        if isinstance(benefit_id, Benefit):
+            benefit = benefit_id
+        else:
+            benefit = Benefit.objects.get(pk=benefit_id)
 
         features = self._extract_benefit_features(benefit)
         score, importance = self._compute_score(features)
@@ -40,16 +43,32 @@ class ScoringEngine:
             direction = "augmente" if contrib > 0 else "diminue"
             explanation_parts.append(f"« {name} » {direction} le score de {abs(contrib):.1f} pts")
 
-        return {
+        result = {
             "score": round(score, 1),
             "confidence": round(min(abs(score - 50) / 50, 1.0), 2),
             "features": features,
             "feature_importance": importance,
-            "explanation": "; ".join(explanation_parts[:3]) or "Score basé sur les critères standards.",
+            "explanation": "; ".join(explanation_parts[:3])
+            or "Score basé sur les critères standards.",
             "decision_boundary": 50.0,
-            "risk_level": "low" if score < 30 else "medium" if score < 60 else "high" if score < 80 else "critical",
-            "recommendation": "À valider rapidement" if score < 30 else "Vérification standard" if score < 60 else "Inspection requise" if score < 80 else "Refus recommandé",
+            "risk_level": (
+                "low"
+                if score < 30
+                else "medium" if score < 60 else "high" if score < 80 else "critical"
+            ),
+            "recommendation": (
+                "À valider rapidement"
+                if score < 30
+                else (
+                    "Vérification standard"
+                    if score < 60
+                    else "Inspection requise" if score < 80 else "Refus recommandé"
+                )
+            ),
         }
+        if save:
+            self.save_score(result, "Benefit", str(benefit.pk), str(benefit))
+        return result
 
     def score_employee_risk(self, employee) -> dict:
         """Calcule le score de risque d'un employé."""
@@ -62,19 +81,27 @@ class ScoringEngine:
             "features": features,
             "feature_importance": importance,
             "risk_level": "low" if score < 30 else "medium" if score < 60 else "high",
-            "recommendation": "Aucune action" if score < 30 else "Surveillance" if score < 60 else "Vérification recommandée",
+            "recommendation": (
+                "Aucune action"
+                if score < 30
+                else "Surveillance" if score < 60 else "Vérification recommandée"
+            ),
         }
 
     def score_budget_risk(self, budget_line) -> dict:
         """Calcule le score de risque de dépassement budgétaire."""
         from django.apps import apps
+
         Payment = apps.get_model("finance", "Payment")
 
         total_budget = float(budget_line.amount or 0)
         paid = float(
             Payment.objects.filter(
-                budget_line=budget_line, status="paid", is_deleted=False,
-            ).aggregate(total=sum)["total"] or 0
+                budget_line=budget_line,
+                status="paid",
+                is_deleted=False,
+            ).aggregate(total=sum)["total"]
+            or 0
         )
 
         today = timezone.localdate()
@@ -98,15 +125,26 @@ class ScoringEngine:
         return {
             "score": round(score, 1),
             "confidence": 0.7,
-            "features": {"total_budget": total_budget, "paid": paid, "consumption_rate": consumption_rate, "expected_rate": expected_rate},
+            "features": {
+                "total_budget": total_budget,
+                "paid": paid,
+                "consumption_rate": consumption_rate,
+                "expected_rate": expected_rate,
+            },
             "feature_importance": importance,
-            "risk_level": "critical" if score > 80 else "high" if score > 60 else "medium" if score > 40 else "low",
-            "recommendation": "Freiner les dépenses" if score > 60 else "Surveiller" if score > 40 else "Normal",
+            "risk_level": (
+                "critical"
+                if score > 80
+                else "high" if score > 60 else "medium" if score > 40 else "low"
+            ),
+            "recommendation": (
+                "Freiner les dépenses" if score > 60 else "Surveiller" if score > 40 else "Normal"
+            ),
         }
 
     def _extract_benefit_features(self, benefit) -> dict[str, float]:
         features = {}
-        features["amount"] = float(benefit.amount or 0)
+        features["amount"] = float(benefit.requested_amount or 0)
 
         # Type-based risk
         if hasattr(benefit, "benefit_type") and benefit.benefit_type:
@@ -114,20 +152,24 @@ class ScoringEngine:
 
         # Employee tenure
         if benefit.employee and benefit.employee.date_of_birth:
-            features["employee_age"] = round((timezone.localdate() - benefit.employee.date_of_birth).days / 365.25, 1)
+            features["employee_age"] = round(
+                (timezone.localdate() - benefit.employee.date_of_birth).days / 365.25, 1
+            )
         else:
             features["employee_age"] = 35.0
 
         # Previous benefits count
         if benefit.employee and hasattr(benefit.employee, "benefits"):
-            prev_count = benefit.employee.benefits.alive().count()
+            prev_count = benefit.employee.benefits.filter(is_deleted=False).count()
             features["previous_benefits"] = prev_count
         else:
             features["previous_benefits"] = 0
 
         # Workflow history
         if hasattr(benefit, "analytics_data") and benefit.analytics_data:
-            total_hours = sum(v for v in benefit.analytics_data.values() if isinstance(v, (int, float)))
+            total_hours = sum(
+                v for v in benefit.analytics_data.values() if isinstance(v, int | float)
+            )
             features["processing_time_hours"] = total_hours
         else:
             features["processing_time_hours"] = 0
@@ -143,15 +185,19 @@ class ScoringEngine:
     def _extract_employee_risk_features(self, employee) -> dict[str, float]:
         features = {}
         if employee.date_of_birth:
-            features["age"] = round((timezone.localdate() - employee.date_of_birth).days / 365.25, 1)
-        features["status"] = 1.0 if employee.status == "suspended" else 0.5 if employee.status == "inactive" else 0.0
+            features["age"] = round(
+                (timezone.localdate() - employee.date_of_birth).days / 365.25, 1
+            )
+        features["status"] = (
+            1.0 if employee.status == "suspended" else 0.5 if employee.status == "inactive" else 0.0
+        )
         beneficiaries_count = 0
         if hasattr(employee, "beneficiaries"):
-            beneficiaries_count = employee.beneficiaries.alive().count()
+            beneficiaries_count = employee.beneficiaries.filter(is_deleted=False).count()
         features["beneficiaries_count"] = beneficiaries_count
         benefits_count = 0
         if hasattr(employee, "benefits"):
-            benefits_count = employee.benefits.alive().count()
+            benefits_count = employee.benefits.filter(is_deleted=False).count()
         features["benefits_history"] = benefits_count
         return features
 
@@ -161,8 +207,12 @@ class ScoringEngine:
         Importance = contribution de chaque feature normalisée.
         """
         weights = {
-            "amount": 0.30, "employee_age": 0.10, "previous_benefits": 0.20,
-            "processing_time_hours": 0.15, "has_attachments": 0.15, "type_id": 0.10,
+            "amount": 0.30,
+            "employee_age": 0.10,
+            "previous_benefits": 0.20,
+            "processing_time_hours": 0.15,
+            "has_attachments": 0.15,
+            "type_id": 0.10,
         }
         raw_score = 0.0
         contributions = {}
@@ -177,7 +227,12 @@ class ScoringEngine:
         return score, contributions
 
     def _compute_risk_score(self, features: dict[str, float]) -> tuple[float, dict[str, float]]:
-        weights = {"age": 0.15, "status": 0.40, "beneficiaries_count": 0.20, "benefits_history": 0.25}
+        weights = {
+            "age": 0.15,
+            "status": 0.40,
+            "beneficiaries_count": 0.20,
+            "benefits_history": 0.25,
+        }
         raw_score = 0.0
         contributions = {}
         for name, weight in weights.items():
@@ -204,15 +259,21 @@ class ScoringEngine:
         normalizer = norms.get(name, lambda v: min(v / 100, 1.0))
         return normalizer(value)
 
-    def save_score(self, score_data: dict, target_type: str, target_id: str, target_repr: str = "") -> AIScore:
+    def save_score(
+        self, score_data: dict, target_type: str, target_id: str, target_repr: str = ""
+    ) -> AIScore:
         model, _ = AIModelRegistry.objects.get_or_create(
             name="scoring_engine_v1",
             defaults={"version": "1.0.0", "task_type": "scoring", "status": "production"},
         )
         return AIScore.objects.create(
-            model=model, score_type="demand" if "Benefit" in target_type else "risk",
-            target_type=target_type, target_id=target_id, target_repr=target_repr,
-            score=score_data["score"], confidence=score_data.get("confidence"),
+            model=model,
+            score_type="demand" if "Benefit" in target_type else "risk",
+            target_type=target_type,
+            target_id=target_id,
+            target_repr=target_repr,
+            score=score_data["score"],
+            confidence=score_data.get("confidence"),
             features=score_data.get("features", {}),
             feature_importance=score_data.get("feature_importance", {}),
             explanation=score_data.get("explanation", ""),

@@ -1,10 +1,10 @@
 import logging
-from typing import Optional
+
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.db import transaction
 from django.template.loader import render_to_string
-from django.utils import timezone
+
 from .models import Notification, NotificationPreference
 
 logger = logging.getLogger("shared.notifications")
@@ -21,7 +21,7 @@ class NotificationService:
         action_url: str = "",
         icon: str = "",
         instance=None,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> Notification:
         kwargs = {
             "recipient": recipient,
@@ -44,7 +44,10 @@ class NotificationService:
 
         logger.info(
             "Notification %s envoyée à %s via %s: %s",
-            priority, recipient, channel, title,
+            priority,
+            recipient,
+            channel,
+            title,
         )
         return notif
 
@@ -82,22 +85,29 @@ class NotificationService:
         action_url: str = "",
         icon: str = "",
         instance=None,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ):
         from django.contrib.auth import get_user_model
+
         User = get_user_model()
         admins = User.objects.filter(
-            is_staff=True, is_active=True,
+            is_staff=True,
+            is_active=True,
             notification_preferences__email_alerts=True,
         )
         for admin in admins:
             prefs, _ = NotificationPreference.objects.get_or_create(user=admin)
             ch = Notification.Channel.EMAIL if prefs.email_alerts else Notification.Channel.IN_APP
             self.send_notification(
-                recipient=admin, title=title, body=body,
+                recipient=admin,
+                title=title,
+                body=body,
                 channel=ch,
-                priority=priority, action_url=action_url, icon=icon,
-                instance=instance, metadata=metadata,
+                priority=priority,
+                action_url=action_url,
+                icon=icon,
+                instance=instance,
+                metadata=metadata,
             )
 
     def notify_gestionnaires(
@@ -108,10 +118,10 @@ class NotificationService:
         action_url: str = "",
         icon: str = "",
         instance=None,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ):
         from django.contrib.auth import get_user_model
-        from django.contrib.auth.models import Group
+
         User = get_user_model()
         gestionnaires = User.objects.filter(
             is_active=True,
@@ -121,14 +131,19 @@ class NotificationService:
             prefs, _ = NotificationPreference.objects.get_or_create(user=user)
             ch = Notification.Channel.EMAIL if prefs.email_alerts else Notification.Channel.IN_APP
             self.send_notification(
-                recipient=user, title=title, body=body,
+                recipient=user,
+                title=title,
+                body=body,
                 channel=ch,
-                priority=priority, action_url=action_url, icon=icon,
-                instance=instance, metadata=metadata,
+                priority=priority,
+                action_url=action_url,
+                icon=icon,
+                instance=instance,
+                metadata=metadata,
             )
 
     @transaction.atomic
-    def mark_as_read(self, notification_id: int, user) -> Optional[Notification]:
+    def mark_as_read(self, notification_id: int, user) -> Notification | None:
         try:
             notif = Notification.objects.get(id=notification_id, recipient=user)
             notif.mark_as_read()
@@ -142,7 +157,8 @@ class NotificationService:
 
     def get_unread_high_priority(self, user):
         return Notification.objects.filter(
-            recipient=user, is_read=False,
+            recipient=user,
+            is_read=False,
             priority__in=[Notification.Priority.HIGH, Notification.Priority.CRITICAL],
         )
 

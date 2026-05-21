@@ -9,7 +9,7 @@ import { useEmployees, useCreateEmployee, useDeleteEmployee, useExportEmployees,
 import { EmployeeStatusBadge, Modal, ConfirmDialog, EmptyState, Spinner } from "@shared/components/ui/index";
 import { EmployeeForm } from "../components/EmployeeForm";
 import { RoleGuard } from "@shared/components/layout/ProtectedRoute";
-import type { EmployeeFilters, EmployeeCreatePayload } from "../types";
+import type { EmployeeFilters } from "../types";
 
 const PAGE_SIZES = [10, 25, 50, 100];
 
