@@ -219,7 +219,7 @@ class AIServiceViewSet(viewsets.GenericViewSet):
     def ask_assistant(self, request):
         serializer = AssistantQuerySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        result = ai_assistant.process_query(
+        result = ai_assistant.process(
             serializer.validated_data["query"],
             user=request.user,
         )
