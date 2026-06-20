@@ -16,6 +16,10 @@ export interface Partner {
   name:                string;
   type:                PartnerType;
   type_display:        string;
+  category:            PartnerCategory;
+  category_display:    string;
+  gps_coordinates:     string;
+  description:         string;
   is_active:           boolean;
   legal_form:          string;
   registration_number: string;
@@ -39,19 +43,21 @@ export interface Partner {
 }
 
 export interface PartnerListItem {
-  id:             string;
-  code:           string;
-  name:           string;
-  type:           PartnerType;
-  type_display:   string;
-  is_active:      boolean;
-  city:           string;
-  wilaya:         string;
-  wilaya_display: string;
-  email:          string;
-  phone:          string;
-  contact_name:   string;
-  created_at:     string;
+  id:               string;
+  code:             string;
+  name:             string;
+  type:             PartnerType;
+  type_display:     string;
+  category:         PartnerCategory;
+  category_display: string;
+  is_active:        boolean;
+  city:             string;
+  wilaya:           string;
+  wilaya_display:   string;
+  email:            string;
+  phone:            string;
+  contact_name:     string;
+  created_at:       string;
 }
 
 export interface Convention {
@@ -164,6 +170,15 @@ export const ALERT_SEVERITY_UI: Record<AlertSeverity, { badgeClass: string; icon
   medium:   { badgeClass: "bg-amber-100 text-amber-700", icon: "⚠️" },
   high:     { badgeClass: "bg-orange-100 text-orange-700", icon: "🔥" },
   critical: { badgeClass: "bg-red-100 text-red-700",     icon: "🚨" },
+};
+
+export type PartnerCategory =
+  | "medical_analysis_lab" | "medical_center" | "medical_imaging_center" | "";
+
+export const PARTNER_CATEGORY_UI: Record<string, string> = {
+  medical_analysis_lab:    "Laboratoire d'analyses médicales",
+  medical_center:          "Centre médical",
+  medical_imaging_center:  "Centre d'imagerie médicale",
 };
 
 export const PARTNER_TYPE_UI: Record<PartnerType, string> = {

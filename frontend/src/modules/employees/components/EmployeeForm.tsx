@@ -1,18 +1,15 @@
-/**
- * EMPLOYEE FORM — Formulaire création / modification
- * Validation Zod + React Hook Form
- * Tabs : Identité | Contact | Poste | Complément
- */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, User, Phone, Briefcase, GraduationCap } from "lucide-react";
+import { Loader2, User, Building2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
 import { Field, inputCls } from "@shared/components/ui/index";
 import { useDepartments } from "../hooks/useEmployees";
+import { fetchOrganizationLookup } from "@modules/organization/api";
 import type { Employee, EmployeeCreatePayload } from "../types";
+import type { OrganizationLookup } from "@modules/organization/api";
 
 function createEmployeeSchema(t: (key: string, opts?: Record<string, unknown>) => string) {
   return z.object({
@@ -30,6 +27,7 @@ function createEmployeeSchema(t: (key: string, opts?: Record<string, unknown>) =
     nationality:     z.string().max(50).optional(),
     national_id:     z.string().max(20).optional(),
     national_id_expiry: z.string().optional(),
+    social_security_number: z.string().max(20).optional(),
     phone:           z.string().max(20).optional(),
     phone_secondary: z.string().max(20).optional(),
     email_personal:  z.string().email(t("validation.email")).optional().or(z.literal("")),
@@ -37,13 +35,14 @@ function createEmployeeSchema(t: (key: string, opts?: Record<string, unknown>) =
     address: z.string().optional(),
     city:    z.string().max(100).optional(),
     wilaya:  z.string().max(100).optional(),
-    department:    z.string().uuid(t("employees.validationDepartmentRequired")),
-    job_title:     z.string().min(2, t("validation.required")).max(150),
+    department:    z.string().uuid().optional().or(z.literal("")),
+    job_title:     z.string().max(150).optional().or(z.literal("")),
     grade:         z.string().max(100).optional(),
     grade_level:   z.coerce.number().int().min(1).max(20).optional().or(z.literal("")),
     category:      z.string().max(50).optional(),
-    contract_type: z.enum(["cdi","cdd","stage","part_time","consultant"]),
-    date_hired:    z.string().min(1, t("validation.required")).refine((d) => {
+    contract_type: z.enum(["cdi","cdd","stage","part_time","consultant"]).optional().or(z.literal("")),
+    date_hired:    z.string().optional().or(z.literal("")).refine((d) => {
+      if (!d) return true;
       return new Date(d) <= new Date();
     }, t("employees.validationDateFuture")),
     date_end:      z.string().optional(),
@@ -53,6 +52,9 @@ function createEmployeeSchema(t: (key: string, opts?: Record<string, unknown>) =
     education_level: z.string().max(100).optional(),
     education_field: z.string().max(100).optional(),
     notes:           z.string().optional(),
+    bureau:          z.string().optional().or(z.literal("")),
+    function:        z.string().optional().or(z.literal("")),
+    grade_ref:       z.string().optional().or(z.literal("")),
   });
 }
 
@@ -66,27 +68,34 @@ interface EmployeeFormProps {
   mode?: "create" | "edit";
 }
 
-type TabId = "identity" | "contact" | "job" | "extra";
+type TabId = "identity" | "org";
 
 export function EmployeeForm({
   initialData, onSubmit, onCancel, isLoading, mode = "create",
 }: EmployeeFormProps) {
   const { t } = useTranslation();
   const TABS = [
-    { id: "identity" as TabId, label: t("employees.identity"),    icon: User },
-    { id: "contact"  as TabId, label: t("employees.contacts"),    icon: Phone },
-    { id: "job"      as TabId, label: t("employees.position"),    icon: Briefcase },
-    { id: "extra"    as TabId, label: t("employees.extra"),       icon: GraduationCap },
+    { id: "identity" as TabId, label: t("employees.identity"), icon: User },
+    { id: "org" as TabId, label: t("employees.assignment"), icon: Building2 },
   ];
   const [activeTab, setActiveTab] = useState<TabId>("identity");
   const { data: deptData } = useDepartments({ is_active: true });
   const departments = deptData?.results ?? [];
+
+  const [orgLookup, setOrgLookup] = useState<OrganizationLookup | null>(null);
+  const [orgLoading, setOrgLoading] = useState(true);
+  const [orgError, setOrgError] = useState<string | null>(null);
+  const [selectedDirection, setSelectedDirection] = useState<string | "">("");
+  const [selectedSubDirection, setSelectedSubDirection] = useState<string | "">("");
+  const [selectedService, setSelectedService] = useState<string | "">("");
+
   const employeeSchema = createEmployeeSchema(t);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isDirty },
+    setValue,
   } = useForm<FormData>({
     resolver: zodResolver(employeeSchema),
     defaultValues: initialData
@@ -102,6 +111,7 @@ export function EmployeeForm({
           nationality:    initialData.nationality,
           national_id:    initialData.national_id,
           national_id_expiry: initialData.national_id_expiry ?? "",
+          social_security_number: initialData.social_security_number ?? "",
           phone:           initialData.phone,
           phone_secondary: initialData.phone_secondary,
           email_personal:  initialData.email_personal,
@@ -123,9 +133,35 @@ export function EmployeeForm({
           education_level: initialData.education_level,
           education_field: initialData.education_field,
           notes:           initialData.notes,
+          bureau:          initialData.bureau ?? "",
+          function:        initialData.function ?? "",
+          grade_ref:       initialData.grade_ref ?? "",
         }
-      : { contract_type: "cdi", status: "active", nationality: "Algérienne", marital_status: "single" },
+      : { contract_type: "cdi", status: "active", nationality: t("employees.nationalityDefault"), marital_status: "single" },
   });
+
+  useEffect(() => {
+    setOrgLoading(true);
+    setOrgError(null);
+    fetchOrganizationLookup()
+      .then(setOrgLookup)
+      .catch(() => setOrgError(t("employees.loadOrgError")))
+      .finally(() => setOrgLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!initialData || !orgLookup) return;
+    const bureau = orgLookup.bureaux.find(b => b.id === initialData.bureau);
+    if (bureau) {
+      setSelectedService(bureau.service);
+      const service = orgLookup.services.find(s => s.id === bureau.service);
+      if (service) {
+        setSelectedSubDirection(service.sub_direction);
+        const sd = orgLookup.sub_directions.find(s => s.id === service.sub_direction);
+        if (sd) setSelectedDirection(sd.direction);
+      }
+    }
+  }, [initialData, orgLookup]);
 
   const handleFormSubmit = handleSubmit(async (data) => {
     const cleaned = Object.fromEntries(
@@ -134,17 +170,20 @@ export function EmployeeForm({
     await onSubmit(cleaned);
   });
 
-  // Compte les erreurs par onglet pour l'indicateur
   const tabErrors: Record<TabId, number> = {
-    identity: ["first_name","last_name","gender","date_of_birth","national_id"].filter(f => errors[f as keyof FormData]).length,
-    contact:  ["phone","email_personal","email_professional","address"].filter(f => errors[f as keyof FormData]).length,
-    job:      ["department","job_title","contract_type","date_hired"].filter(f => errors[f as keyof FormData]).length,
-    extra:    ["education_level","notes"].filter(f => errors[f as keyof FormData]).length,
+    identity: ["first_name","last_name","gender","date_of_birth","phone","email_professional"].filter(f => errors[f as keyof FormData]).length,
+    org:      0,
   };
+
+  const directions = orgLookup?.directions ?? [];
+  const subDirections = (orgLookup?.sub_directions ?? []).filter(sd => sd.direction === selectedDirection);
+  const services = (orgLookup?.services ?? []).filter(s => s.sub_direction === selectedSubDirection);
+  const bureaux = (orgLookup?.bureaux ?? []).filter(b => b.service === selectedService);
+  const functions = orgLookup?.functions ?? [];
+  const grades = orgLookup?.grades ?? [];
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-0">
-      {/* ── Onglets ──────────────────────────────────── */}
       <div className="flex gap-1 border-b border-gray-200 mb-5">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
@@ -167,9 +206,6 @@ export function EmployeeForm({
         ))}
       </div>
 
-      {/* ════════════════════════════════════════════════
-          TAB : IDENTITÉ
-      ════════════════════════════════════════════════ */}
       {activeTab === "identity" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label={t("employees.firstName")} error={errors.first_name?.message} required>
@@ -179,10 +215,10 @@ export function EmployeeForm({
             <input {...register("last_name")} className={inputCls(errors.last_name?.message)} placeholder={t("employees.placeholderLastName")} />
           </Field>
           <Field label={t("employees.firstNameArabic")} error={errors.first_name_ar?.message}>
-            <input {...register("first_name_ar")} className={inputCls()} dir="rtl" placeholder="الاسم الأول" />
+            <input {...register("first_name_ar")} className={inputCls()} dir="rtl" placeholder={t("employees.firstNameArPlaceholder")} />
           </Field>
           <Field label={t("employees.lastNameArabic")} error={errors.last_name_ar?.message}>
-            <input {...register("last_name_ar")} className={inputCls()} dir="rtl" placeholder="اللقب" />
+            <input {...register("last_name_ar")} className={inputCls()} dir="rtl" placeholder={t("employees.lastNameArPlaceholder")} />
           </Field>
           <Field label={t("employees.gender")} error={errors.gender?.message} required>
             <select {...register("gender")} className={inputCls(errors.gender?.message)}>
@@ -212,19 +248,12 @@ export function EmployeeForm({
             <input type="date" {...register("national_id_expiry")} className={inputCls()} />
           </Field>
           <Field label={t("employees.socialSecurityNumber")}>
-            <input {...register("social_security_number" as keyof FormData)} className={inputCls()} />
+            <input {...register("social_security_number")} className={inputCls()} />
           </Field>
           <Field label={t("employees.nationalityLabel")}>
-            <input {...register("nationality")} className={inputCls()} defaultValue="Algérienne" />
+            <input {...register("nationality")} className={inputCls()} defaultValue={t("employees.nationalityDefault")} />
           </Field>
-        </div>
-      )}
-
-      {/* ════════════════════════════════════════════════
-          TAB : CONTACT
-      ════════════════════════════════════════════════ */}
-      {activeTab === "contact" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2 border-t border-gray-100 my-2" />
           <Field label={t("employees.phone")} error={errors.phone?.message}>
             <input {...register("phone")} className={inputCls()} placeholder={t("employees.placeholderPhone")} />
           </Field>
@@ -249,12 +278,19 @@ export function EmployeeForm({
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════
-          TAB : POSTE
-      ════════════════════════════════════════════════ */}
-      {activeTab === "job" && (
+      {activeTab === "org" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label={t("employees.department")} error={errors.department?.message} required>
+          {orgLoading ? (
+            <div className="md:col-span-2 flex items-center justify-center py-12 text-gray-400">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              {t("common.loading")}
+            </div>
+          ) : orgError ? (
+            <div className="md:col-span-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 text-sm">
+              {orgError}
+            </div>
+          ) : (<>
+          <Field label={t("employees.department")} error={errors.department?.message}>
             <select {...register("department")} className={inputCls(errors.department?.message)}>
               <option value="">{t("employees.selectDepartment")}</option>
               {departments.map((d: any) => (
@@ -262,9 +298,96 @@ export function EmployeeForm({
               ))}
             </select>
           </Field>
-          <Field label={t("employees.jobTitle")} error={errors.job_title?.message} required>
+          <Field label={t("employees.jobTitle")} error={errors.job_title?.message}>
             <input {...register("job_title")} className={inputCls(errors.job_title?.message)} placeholder={t("employees.placeholderJobTitle")} />
           </Field>
+
+          <div className="md:col-span-2 border-t border-gray-100 my-2" />
+
+          <Field label={t("employees.direction")}>
+            <select
+              className={inputCls()}
+              value={selectedDirection}
+              onChange={(e) => {
+                setSelectedDirection(e.target.value);
+                setSelectedSubDirection("");
+                setSelectedService("");
+                setValue("bureau", "");
+              }}
+            >
+              <option value="">{t("employees.selectDirection")}</option>
+              {directions.map((d) => (
+                <option key={d.id} value={d.id}>{d.code} — {d.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employees.subDirection")}>
+            <select
+              className={inputCls()}
+              value={selectedSubDirection}
+              onChange={(e) => {
+                setSelectedSubDirection(e.target.value);
+                setSelectedService("");
+                setValue("bureau", "");
+              }}
+              disabled={!selectedDirection}
+            >
+              <option value="">{t("employees.selectSubDirection")}</option>
+              {subDirections.map((sd) => (
+                <option key={sd.id} value={sd.id}>{sd.code} — {sd.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employees.service")}>
+            <select
+              className={inputCls()}
+              value={selectedService}
+              onChange={(e) => {
+                setSelectedService(e.target.value);
+                setValue("bureau", "");
+              }}
+              disabled={!selectedSubDirection}
+            >
+              <option value="">{t("employees.selectService")}</option>
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employees.bureau")} error={errors.bureau?.message}>
+            <select
+              {...register("bureau")}
+              className={inputCls(errors.bureau?.message)}
+              disabled={!selectedService}
+            >
+              <option value="">{t("employees.selectBureau")}</option>
+              {bureaux.map((b) => (
+                <option key={b.id} value={b.id}>{b.code} — {b.name}</option>
+              ))}
+            </select>
+          </Field>
+
+          <div className="md:col-span-2 border-t border-gray-100 my-2" />
+
+          <Field label={t("employees.function")}>
+            <select {...register("function")} className={inputCls()}>
+              <option value="">{t("employees.selectFunction")}</option>
+              {functions.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label={t("employees.gradeRef")}>
+            <select {...register("grade_ref")} className={inputCls()}>
+              <option value="">{t("employees.selectGrade")}</option>
+              {grades.map((g) => (
+                <option key={g.id} value={g.id}>{g.name} (Niv. {g.level})</option>
+              ))}
+            </select>
+          </Field>
+
+          <div className="md:col-span-2 border-t border-gray-100 my-2" />
+
           <Field label={t("employees.grade")}>
             <input {...register("grade")} className={inputCls()} placeholder={t("employees.placeholderGrade")} />
           </Field>
@@ -274,7 +397,7 @@ export function EmployeeForm({
           <Field label={t("employees.category")}>
             <input {...register("category")} className={inputCls()} placeholder={t("employees.placeholderCategory")} />
           </Field>
-          <Field label={t("employees.contractType")} error={errors.contract_type?.message} required>
+          <Field label={t("employees.contractType")} error={errors.contract_type?.message}>
             <select {...register("contract_type")} className={inputCls(errors.contract_type?.message)}>
               <option value="cdi">{t("employees.cdi")}</option>
               <option value="cdd">{t("employees.cdd")}</option>
@@ -283,7 +406,7 @@ export function EmployeeForm({
               <option value="consultant">{t("employees.consultant")}</option>
             </select>
           </Field>
-          <Field label={t("employees.dateHired")} error={errors.date_hired?.message} required>
+          <Field label={t("employees.dateHired")} error={errors.date_hired?.message}>
             <input type="date" {...register("date_hired")} className={inputCls(errors.date_hired?.message)} />
           </Field>
           <Field label={t("employees.contractEnd")} hint={t("employees.contractEndHint")}>
@@ -303,14 +426,9 @@ export function EmployeeForm({
           <Field label={t("common.bankAccount")}>
             <input {...register("bank_account")} className={inputCls()} placeholder={t("employees.placeholderBankAccount")} />
           </Field>
-        </div>
-      )}
 
-      {/* ════════════════════════════════════════════════
-          TAB : COMPLÉMENT
-      ════════════════════════════════════════════════ */}
-      {activeTab === "extra" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2 border-t border-gray-100 my-2" />
+
           <Field label={t("employees.educationLevel")}>
             <input {...register("education_level")} className={inputCls()} placeholder={t("employees.placeholderEducationLevel")} />
           </Field>
@@ -320,6 +438,7 @@ export function EmployeeForm({
           <Field label={t("employees.internalNotes")} className="md:col-span-2">
             <textarea {...register("notes")} rows={4} className={inputCls()} placeholder={t("employees.placeholderNotes")} />
           </Field>
+            </>)}
         </div>
       )}
 

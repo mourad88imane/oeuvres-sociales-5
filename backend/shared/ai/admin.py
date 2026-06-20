@@ -9,6 +9,7 @@ from .models import (
     AIPrediction,
     AIRecommendation,
     AIScore,
+    MedicalDocumentAnalysis,
 )
 
 
@@ -80,6 +81,13 @@ class AIEventAdmin(admin.ModelAdmin):
     list_display = ["event_name", "event_category", "user_email", "user_role", "timestamp"]
     list_filter = ["event_category", "event_name"]
     search_fields = ["user_email", "event_name"]
+
+
+@admin.register(MedicalDocumentAnalysis)
+class MedicalDocumentAnalysisAdmin(admin.ModelAdmin):
+    list_display = ["title", "category", "language", "file_type", "file_name", "status", "created_at"]
+    list_filter = ["category", "language", "status"]
+    search_fields = ["title", "file_name", "summary", "extracted_text"]
 
 
 @admin.register(AIFeedback)

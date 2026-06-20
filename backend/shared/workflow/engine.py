@@ -101,8 +101,12 @@ class WorkflowDefinition:
     Classe de base pour définir un workflow.
     Hériter et déclarer STATES et TRANSITIONS.
 
+    db_enabled = True → utilise la base de données pour les transitions
+    (WorkflowState, WorkflowTransition, WorkflowTransitionRole).
+
     Exemple :
         class MonWorkflow(WorkflowDefinition):
+            db_enabled = False  # Python-only (default)
             STATES = {
                 "draft":  {"label": "Brouillon", "is_initial": True},
                 "done":   {"label": "Terminé",   "is_final":   True},
@@ -113,6 +117,7 @@ class WorkflowDefinition:
             ]
     """
 
+    db_enabled: bool = False
     STATES: dict[str, dict] = {}
     TRANSITIONS: list[TransitionDef] = []
 
@@ -166,10 +171,101 @@ class WorkflowEngine:
       5. Persister le changement d'état
       6. Logguer la transition (pour AI analytics)
       7. Exécuter les hooks after (notifications, etc.)
+
+    Mode DB : si definition.db_enabled = True, les transitions sont
+    résolues depuis les tables WorkflowState / WorkflowTransition /
+    WorkflowTransitionRole. Les guards et hooks restent Python (TransitionDef).
     """
 
     def __init__(self, definition: WorkflowDefinition):
         self.definition = definition
+
+    def _db_resolve_transition(self, app_label, model_name, from_state, to_state):
+        """
+        Récupère une transition depuis la base de données.
+        Retourne un TransitionDef compatible avec les guards/hooks du workflow Python.
+        """
+        try:
+            from .models import WorkflowTransition, WorkflowTransitionRole
+
+            db_trans = WorkflowTransition.objects.select_related(
+                "from_state", "to_state"
+            ).get(
+                app_label=app_label, model_name=model_name,
+                from_state__state_id=from_state,
+                to_state__state_id=to_state,
+                is_active=True,
+            )
+            # Build a TransitionDef from DB data
+            allowed_slugs = list(
+                WorkflowTransitionRole.objects.filter(transition=db_trans)
+                .values_list("role__slug", flat=True)
+            )
+
+            return TransitionDef(
+                from_state=from_state,
+                to_state=to_state,
+                name=db_trans.label_fr,
+                allowed_roles=allowed_slugs,
+                requires_reason=db_trans.requires_reason,
+                is_reversal=db_trans.is_reversal,
+                severity=db_trans.severity,
+                # Guards and hooks still come from the Python definition
+                guards=self.definition.get_transition(from_state, to_state).guards if self.definition.get_transition(from_state, to_state) else [],
+                before_hooks=self.definition.get_transition(from_state, to_state).before_hooks if self.definition.get_transition(from_state, to_state) else [],
+                after_hooks=self.definition.get_transition(from_state, to_state).after_hooks if self.definition.get_transition(from_state, to_state) else [],
+                description=db_trans.label_fr,
+            )
+        except Exception:
+            return None
+
+    def _db_get_available(self, app_label, model_name, from_state, role):
+        """Get available transitions from DB."""
+        from .models import WorkflowTransition, WorkflowTransitionRole
+
+        qs = WorkflowTransition.objects.filter(
+            app_label=app_label, model_name=model_name,
+            from_state__state_id=from_state,
+            is_active=True,
+        ).select_related("from_state", "to_state").order_by("display_order")
+
+        if role:
+            qs = qs.filter(allowed_roles__role__slug=role).distinct()
+
+        result = []
+        for db_t in qs:
+            allowed_slugs = list(
+                WorkflowTransitionRole.objects.filter(transition=db_t)
+                .values_list("role__slug", flat=True)
+            )
+            t = TransitionDef(
+                from_state=from_state,
+                to_state=db_t.to_state.state_id,
+                name=db_t.label_fr,
+                allowed_roles=allowed_slugs,
+                requires_reason=db_t.requires_reason,
+                is_reversal=db_t.is_reversal,
+                severity=db_t.severity,
+            )
+            result.append(t)
+        return result
+
+    def _resolve_transition(self, instance, to_state, from_state=None):
+        """
+        Resolve transition: DB first if db_enabled, then Python definition.
+        """
+        from_state = from_state or instance.workflow_state
+        transition = None
+
+        if self.definition.db_enabled:
+            app_label = instance._meta.app_label
+            model_name = instance._meta.model_name
+            transition = self._db_resolve_transition(app_label, model_name, from_state, to_state)
+
+        if not transition:
+            transition = self.definition.get_transition(from_state, to_state)
+
+        return transition
 
     def can_transition(
         self,
@@ -184,7 +280,7 @@ class WorkflowEngine:
         Utilisé par l'API pour afficher les actions disponibles dans l'UI.
         """
         from_state = instance.workflow_state
-        transition = self.definition.get_transition(from_state, to_state)
+        transition = self._resolve_transition(instance, to_state, from_state)
 
         if not transition:
             return False, f"Transition {from_state} → {to_state} non définie."
@@ -232,7 +328,7 @@ class WorkflowEngine:
         role = getattr(actor, "role", "") if actor else ""
 
         # ── 1. Validation ──────────────────────────────────
-        transition = self.definition.get_transition(from_state, to_state)
+        transition = self._resolve_transition(instance, to_state, from_state)
         if not transition:
             raise WorkflowError(
                 f"Transition '{from_state}' → '{to_state}' non autorisée.",
@@ -319,6 +415,35 @@ class WorkflowEngine:
             transition=transition,
             log_entry=log_entry,
         )
+
+    def get_available_transitions(self, instance, actor=None) -> list:
+        """
+        Retourne la liste des transitions disponibles depuis l'état courant.
+        Utilise la DB si db_enabled, sinon la définition Python.
+        """
+        from_state = instance.workflow_state
+        role = getattr(actor, "role", "") if actor else ""
+
+        if self.definition.db_enabled:
+            app_label = instance._meta.app_label
+            model_name = instance._meta.model_name
+            raw = self._db_get_available(app_label, model_name, from_state, role)
+        else:
+            raw = self.definition.get_available_transitions(from_state, role)
+
+        results = []
+        for t in raw:
+            can, reason = self.can_transition(instance, t.to_state, actor=actor)
+            results.append({
+                "to_state": t.to_state,
+                "label": t.name,
+                "can_execute": can,
+                "blocked_reason": reason if not can else "",
+                "requires_reason": t.requires_reason,
+                "severity": t.severity,
+                "is_reversal": t.is_reversal,
+            })
+        return results
 
     def _compute_state_duration(self, instance, state: str) -> float | None:
         """Calcule le temps passé dans l'état courant (en secondes)."""

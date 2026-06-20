@@ -1,5 +1,5 @@
 /* ============================================================
-   STYLES GLOBAUX — Tailwind + variables CSS
+   STYLES GLOBAUX — Thème premium clair / jaune
    ============================================================ */
 @tailwind base;
 @tailwind components;
@@ -7,8 +7,33 @@
 
 @layer base {
   :root {
-    --color-brand: #1A3C6E;
-    --color-brand-light: #2E75B6;
+    --color-brand: #ffda2d;
+    --color-brand-light: #ffe44d;
+    --color-brand-dark: #e6c420;
+
+    --color-primary-50: #fffbeb;
+    --color-primary-100: #fef3c7;
+    --color-primary-200: #fde68a;
+    --color-primary-300: #fcd34d;
+    --color-primary-400: #fbbf24;
+    --color-primary-500: #f59e0b;
+    --color-primary-600: #d97706;
+    --color-primary-700: #b45309;
+    --color-primary-800: #92400e;
+    --color-primary-900: #78350f;
+    --color-primary-950: #451a03;
+
+    --color-gray-50: #f8f7f4;
+    --color-gray-100: #f3f2ee;
+    --color-gray-200: #e8e6e0;
+    --color-gray-300: #d4d0c8;
+    --color-gray-400: #a8a49a;
+    --color-gray-500: #8a8882;
+    --color-gray-600: #6b6963;
+    --color-gray-700: #4d4b46;
+    --color-gray-800: #2f2e2a;
+    --color-gray-900: #1a1917;
+    --color-gray-950: #0d0d0b;
   }
 
   * {
@@ -16,41 +41,220 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 font-sans antialiased;
+    background-color: #f3f2ee;
+    color: #1a1917;
+    @apply font-sans antialiased;
   }
 
-  /* Scrollbar personnalisée */
-  ::-webkit-scrollbar {
-    @apply w-1.5;
+  input, select, textarea {
+    @apply rounded-xl border;
+    background-color: #f3f2ee !important;
+    border-color: rgba(0, 0, 0, 0.05) !important;
+    color: #1a1917 !important;
   }
-  ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+  input:focus, select:focus, textarea:focus {
+    border-color: #ffda2d !important;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255, 218, 45, 0.15) !important;
   }
-  ::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
+  input::placeholder, textarea::placeholder {
+    color: #8a8882 !important;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
+
+  table thead {
+    color: #8a8882;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
   }
+  table tbody tr {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  }
+
+  label {
+    @apply text-sm font-medium;
+    color: #4d4b46 !important;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.2); }
 }
 
 @layer components {
-  /* Cartes standard */
-  .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
   }
 
-  /* Bouton primaire */
+  .card {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 32px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03);
+  }
+
   .btn-primary {
-    @apply bg-brand hover:bg-brand-light text-white font-medium
-           px-4 py-2 rounded-lg transition-colors
+    background: #ffda2d;
+    color: #1a1917;
+    @apply font-bold px-4 py-2 rounded-2xl transition-all
            disabled:opacity-60 disabled:cursor-not-allowed;
   }
+  .btn-primary:hover {
+    box-shadow: 0 8px 24px rgba(255, 218, 45, 0.3);
+  }
 
-  /* Statut workflow */
-  .badge-draft { @apply bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-submitted { @apply bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-validated { @apply bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-paid { @apply bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full; }
-  .badge-rejected { @apply bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full; }
+  .badge-draft { background: rgba(138, 136, 130, 0.1); color: #8a8882; @apply text-xs font-bold px-2 py-0.5 rounded-full; }
+  .badge-submitted { background: rgba(59, 130, 246, 0.1); color: #3b82f6; @apply text-xs font-bold px-2 py-0.5 rounded-full; }
+  .badge-validated { background: rgba(34, 197, 94, 0.1); color: #16a34a; @apply text-xs font-bold px-2 py-0.5 rounded-full; }
+  .badge-paid { background: rgba(34, 197, 94, 0.1); color: #16a34a; @apply text-xs font-bold px-2 py-0.5 rounded-full; }
+  .badge-rejected { background: rgba(239, 68, 68, 0.1); color: #dc2626; @apply text-xs font-bold px-2 py-0.5 rounded-full; }
 }
+
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+  .no-print { display: none !important; }
+}
+
+/* ============================================================
+   RTL — Support de la langue arabe
+   ============================================================ */
+[dir="rtl"] body {
+  font-family: "Noto Sans Arabic", "Tajawal", "Inter", system-ui, sans-serif;
+}
+
+/* Icônes avec espacement — inverser mr/ml */
+[dir="rtl"] .inline-icon { margin-right: 0; margin-left: 0.5rem; }
+[dir="rtl"] .inline-icon-left { margin-left: 0; margin-right: 0.5rem; }
+
+/* Positionnement absolu gauche/droite pour les icônes d'input */
+[dir="rtl"] input + .input-icon,
+[dir="rtl"] .input-icon {
+  right: auto !important;
+  left: 0.75rem !important;
+}
+[dir="rtl"] .input-icon-left {
+  left: auto !important;
+  right: 0.75rem !important;
+}
+
+[dir="rtl"] input.pl-9 { padding-left: 0.75rem; padding-right: 2.25rem; }
+[dir="rtl"] input.pr-4 { padding-right: 0.75rem; padding-left: 1rem; }
+
+/* Forcer les chiffres occidentaux dans les champs de montant en mode RTL */
+[dir="rtl"] .loan-amount-field .ant-input-number,
+[dir="rtl"] .loan-amount-field .ant-input-number-input {
+  direction: ltr;
+  text-align: right;
+}
+
+/* ============================================================
+   ANT DESIGN v6 — Select visibility fixes
+   antd v6 uses @rc-component/select internally.
+   The selected value renders as a React node inside
+   .ant-select-content (NOT .ant-select-selection-item).
+   ============================================================ */
+
+/* Root CSS variable — ensures black text regardless of theme */
+.ant-select {
+  --ant-select-color: #000000 !important;
+}
+
+/* The Selector area (clickable box) */
+.ant-select-selector {
+  background-color: #ffffff !important;
+}
+
+/* The content element that wraps the selected label text */
+.ant-select-content {
+  color: #000000 !important;
+}
+
+/* Selected value rendered by labelRender or raw string */
+.ant-select-content > span,
+.ant-select-selection-item-content,
+.ant-select-selection-item {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+/* Placeholder text */
+.ant-select-selection-placeholder {
+  color: #9CA3AF !important;
+  opacity: 1 !important;
+}
+
+/* Dropdown container */
+.ant-select-dropdown {
+  background-color: #ffffff !important;
+}
+.ant-select-dropdown .ant-select-item-option-content {
+  color: #000000 !important;
+}
+
+/* Hovered option */
+.ant-select-item-option-active {
+  background-color: #f5f5f5 !important;
+}
+
+/* Selected option in dropdown */
+.ant-select-item-option-selected {
+  background-color: #fff3cd !important;
+  font-weight: 600 !important;
+}
+
+/* Focus outline */
+.ant-select-focused .ant-select-selector,
+.ant-select-selector:focus,
+.ant-select-selector:active {
+  box-shadow: 0 0 0 2px rgba(255, 218, 45, 0.2) !important;
+}
+
+/* ============================================================
+   RTL — Ant Design et composants (appliqué via dir="rtl")
+   ============================================================ */
+[dir="rtl"] .ant-select,
+[dir="rtl"] .ant-select-selection-item,
+[dir="rtl"] .ant-select-selection-overflow-item,
+[dir="rtl"] .ant-select-selection-item-content,
+[dir="rtl"] .ant-select-dropdown .ant-select-item-option-content {
+  color: #000000 !important;
+}
+[dir="rtl"] .ant-select-selection-placeholder {
+  color: #8a8882 !important;
+}
+
+/* Forcer les boutons d'icône à suivre la direction */
+[dir="rtl"] .ant-modal-confirm-btns {
+  text-align: left !important;
+}
+[dir="rtl"] .ant-modal-confirm-btns .ant-btn + .ant-btn {
+  margin-left: 0;
+  margin-right: 8px;
+}
+[dir="rtl"] .ant-steps-item-icon {
+  margin-right: 0;
+  margin-left: 8px;
+}
+[dir="rtl"] .ant-steps-item-title::after {
+  left: auto;
+  right: 100%;
+}
+[dir="rtl"] .ant-table-wrapper .ant-table-thead > tr > th,
+[dir="rtl"] .ant-table-wrapper .ant-table-tbody > tr > td {
+  text-align: right;
+}
+[dir="rtl"] .ant-form-item-label {
+  text-align: right !important;
+}
+[dir="rtl"] .ant-collapse-header {
+  flex-direction: row-reverse;
+}
+
+/* Inverser la direction du tableau pour les en-têtes */

@@ -173,6 +173,39 @@ class MeView(APIView):
         )
 
 
+class UpdatePreferencesView(APIView):
+    """
+    PATCH /api/v1/auth/preferences/
+    Corps : { "language": "fr"|"ar", "theme": "light"|"dark", "layout_direction": "ltr"|"rtl" }
+    Met à jour les préférences utilisateur dans le champ JSON.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        allowed_keys = {"language", "theme", "layout_direction"}
+        data = {k: v for k, v in request.data.items() if k in allowed_keys}
+
+        if "language" in data and data["language"] not in ("fr", "ar"):
+            return Response({"status": "error", "message": "Langue non supportée."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        preferences = user.preferences or {}
+        preferences.update(data)
+        user.preferences = preferences
+        user.save(update_fields=["preferences"])
+
+        return Response({
+            "status": "success",
+            "preferences": {
+                "language": preferences.get("language", "fr"),
+                "theme": preferences.get("theme", "light"),
+                "layout_direction": preferences.get("layout_direction", "ltr"),
+            },
+        })
+
+
 class VerifyTokenView(APIView):
     """
     GET /api/v1/auth/verify/

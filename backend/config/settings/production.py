@@ -19,14 +19,21 @@ SECRET_KEY = config("SECRET_KEY")
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())  # noqa: F405
 SITE_URL = config("SITE_URL")
 
-# ── HTTPS obligatoire ─────────────────────────────────────
-SECURE_SSL_REDIRECT = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+# ── HTTPS obligatoire (désactiver en HTTP pur) ────────────
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", cast=bool, default=True)
+if not SECURE_SSL_REDIRECT:
+    SECURE_HSTS_SECONDS = 0
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+else:
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Strict"
@@ -48,6 +55,7 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
     "x-request-id",
+    "x-correlation-id",
 ]
 
 # ── Session ────────────────────────────────────────────────
@@ -129,12 +137,14 @@ LOGGING["handlers"]["console"] = {  # noqa: F405
     "level": "INFO",
     "class": "logging.StreamHandler",
     "formatter": "json",
+    "filters": ["request_context"],
     "stream": "ext://sys.stdout",
 }
 LOGGING["handlers"]["console_json"] = {  # noqa: F405
     "level": "INFO",
     "class": "logging.StreamHandler",
     "formatter": "json",
+    "filters": ["request_context"],
     "stream": "ext://sys.stdout",
 }
 LOGGING["loggers"]["django"]["handlers"] = ["console_json"]  # noqa: F405
@@ -167,12 +177,15 @@ AUTH_PASSWORD_VALIDATORS = [  # noqa: F405
 
 # ── Security middleware ordering (production) ─────────────
 MIDDLEWARE = [  # noqa: F405
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "core.middleware.CorrelationIDMiddleware",
     "core.middleware.CsrfExemptApiMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "csp.middleware.CSPMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -180,7 +193,24 @@ MIDDLEWARE = [  # noqa: F405
     "simple_history.middleware.HistoryRequestMiddleware",
     "shared.audit.middleware.AuditMiddleware",
     "apps.monitoring.middleware.APIMonitoringMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
+
+# ── Content Security Policy (production, enforce mode) ────
+CONTENT_SECURITY_POLICY = {
+    "DIRECTIVES": {
+        "default-src": ["'self'"],
+        "script-src": ["'self'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:", "blob:"],
+        "font-src": ["'self'", "data:"],
+        "connect-src": ["'self'"],
+        "frame-src": ["'none'"],
+        "object-src": ["'none'"],
+        "base-uri": ["'self'"],
+        "form-action": ["'self'"],
+    },
+}
 
 # ── Performances ──────────────────────────────────────────
 CONN_MAX_AGE = 60

@@ -4,6 +4,7 @@ from core.models import BaseModel
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 def document_upload_path(instance, filename):
@@ -51,7 +52,29 @@ class Partner(BaseModel):
     contact_phone = models.CharField(max_length=20, blank=True, verbose_name="Téléphone du contact")
     contact_email = models.EmailField(blank=True, verbose_name="Email du contact")
 
+    category = models.CharField(
+        max_length=30, blank=True,
+        choices=[
+            ("medical_analysis_lab", "Medical Analysis Laboratory"),
+            ("medical_center", "Medical Center"),
+            ("medical_imaging_center", "Medical Imaging Center"),
+        ],
+        verbose_name="Catégorie partenaire",
+    )
+    gps_coordinates = models.CharField(max_length=100, blank=True, verbose_name="Coordonnées GPS")
+    description = models.TextField(blank=True, verbose_name="Description")
     notes = models.TextField(blank=True, verbose_name="Notes internes")
+    pdf_template = models.CharField(
+        max_length=50, blank=True, default="default",
+        choices=[
+            ("default", _("Template par défaut")),
+            ("imaging_center", _("Centre d'imagerie médicale")),
+            ("analysis_lab", _("Laboratoire d'analyses médicales")),
+            ("medical_center", _("Centre médical")),
+        ],
+        verbose_name="Template PDF",
+        help_text="Template de prise en charge PDF spécifique au partenaire",
+    )
     metadata = models.JSONField(default=dict, blank=True, verbose_name="Métadonnées")
 
     class Meta:

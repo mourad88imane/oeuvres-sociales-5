@@ -60,7 +60,10 @@ class BenefitTypeViewSet(ModelViewSet):
 # ═══════════════════════════════════════════════════════════
 # BENEFIT VIEWSET
 # ═══════════════════════════════════════════════════════════
-class BenefitViewSet(ModelViewSet):
+from shared.tenant.mixins import TenantViewSetMixin
+
+
+class BenefitViewSet(TenantViewSetMixin, ModelViewSet):
     pagination_class = StandardResultsSetPagination
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 

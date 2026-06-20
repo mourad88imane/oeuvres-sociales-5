@@ -20,6 +20,9 @@ class EmployeeListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     gender_display = serializers.CharField(source="get_gender_display", read_only=True)
     contract_display = serializers.CharField(source="get_contract_type_display", read_only=True)
+    bureau_name = serializers.CharField(source="bureau.name", read_only=True, default=None)
+    function_name = serializers.CharField(source="function.name", read_only=True, default=None)
+    grade_ref_name = serializers.CharField(source="grade_ref.name", read_only=True, default=None)
 
     class Meta:
         model = Employee
@@ -39,6 +42,12 @@ class EmployeeListSerializer(serializers.ModelSerializer):
             "department",
             "department_name",
             "department_code",
+            "bureau",
+            "bureau_name",
+            "function",
+            "function_name",
+            "grade_ref",
+            "grade_ref_name",
             "status",
             "status_display",
             "contract_type",
@@ -102,6 +111,14 @@ class EmployeeDetailSerializer(BaseModelSerializer):
     marital_display = serializers.CharField(source="get_marital_status_display", read_only=True)
     beneficiaries = serializers.SerializerMethodField()
     cin_expired = serializers.SerializerMethodField()
+    bureau_name = serializers.CharField(source="bureau.name", read_only=True, default=None)
+    bureau_code = serializers.CharField(source="bureau.code", read_only=True, default=None)
+    direction_name = serializers.SerializerMethodField()
+    sub_direction_name = serializers.SerializerMethodField()
+    service_name = serializers.SerializerMethodField()
+    function_name = serializers.CharField(source="function.name", read_only=True, default=None)
+    grade_ref_name = serializers.CharField(source="grade_ref.name", read_only=True, default=None)
+    grade_ref_level = serializers.IntegerField(source="grade_ref.level", read_only=True, default=None)
 
     class Meta:
         model = Employee
@@ -142,6 +159,17 @@ class EmployeeDetailSerializer(BaseModelSerializer):
             "category",
             "contract_type",
             "contract_display",
+            "bureau",
+            "bureau_name",
+            "bureau_code",
+            "function",
+            "function_name",
+            "grade_ref",
+            "grade_ref_name",
+            "grade_ref_level",
+            "direction_name",
+            "sub_direction_name",
+            "service_name",
             "manager",
             "manager_name",
             "date_hired",
@@ -188,6 +216,21 @@ class EmployeeDetailSerializer(BaseModelSerializer):
         qs = obj.beneficiaries.filter(is_deleted=False).order_by("relationship", "date_of_birth")
         return BeneficiaryInlineSerializer(qs, many=True).data
 
+    def get_direction_name(self, obj):
+        if obj.bureau and obj.bureau.service and obj.bureau.service.sub_direction:
+            return obj.bureau.service.sub_direction.direction.name
+        return None
+
+    def get_sub_direction_name(self, obj):
+        if obj.bureau and obj.bureau.service:
+            return obj.bureau.service.sub_direction.name
+        return None
+
+    def get_service_name(self, obj):
+        if obj.bureau:
+            return obj.bureau.service.name
+        return None
+
 
 class EmployeeCreateSerializer(BaseModelSerializer):
     class Meta:
@@ -219,6 +262,9 @@ class EmployeeCreateSerializer(BaseModelSerializer):
             "grade",
             "grade_level",
             "category",
+            "bureau",
+            "function",
+            "grade_ref",
             "contract_type",
             "manager",
             "date_hired",
@@ -290,6 +336,9 @@ class EmployeeUpdateSerializer(BaseModelSerializer):
             "grade",
             "grade_level",
             "category",
+            "bureau",
+            "function",
+            "grade_ref",
             "contract_type",
             "manager",
             "date_hired",

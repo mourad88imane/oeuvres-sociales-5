@@ -29,6 +29,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token["full_name"] = user.get_full_name()
         token["role"] = user.role
         token["must_change_password"] = user.must_change_password
+        token["tenant_id"] = str(user.tenant_id) if user.tenant_id else None
 
         return token
 
@@ -42,6 +43,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             )
 
         # Enrichir la réponse avec les infos utilisateur
+        preferences = self.user.preferences or {}
         data["user"] = {
             "id": str(self.user.id),
             "email": self.user.email,
@@ -50,6 +52,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             "role_display": self.user.get_role_display(),
             "must_change_password": self.user.must_change_password,
             "avatar": self.user.avatar.url if self.user.avatar else None,
+            "tenant_id": str(self.user.tenant_id) if self.user.tenant_id else None,
+            "tenant_name": self.user.tenant.name if self.user.tenant else None,
+            "preferences": {
+                "language": preferences.get("language", "fr"),
+                "theme": preferences.get("theme", "light"),
+                "layout_direction": preferences.get("layout_direction", "ltr"),
+            },
         }
 
         return data

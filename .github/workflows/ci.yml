@@ -156,9 +156,28 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.ref_name }}
 
-  deploy-staging:
+  smoke-test-staging:
+    name: Smoke Test Staging
     if: github.ref == 'refs/heads/develop'
     needs: [build-and-push]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+      - name: Check liveness
+        run: curl -sf --retry 10 --retry-delay 10 --retry-connrefused https://staging.oeuvres-sociales.dz/api/v1/health/live/
+      - name: Check readiness
+        run: curl -sf https://staging.oeuvres-sociales.dz/api/v1/health/ready/
+      - name: Check deep health
+        run: curl -sf https://staging.oeuvres-sociales.dz/api/v1/health/
+      - name: Check Prometheus metrics
+        run: curl -sf https://staging.oeuvres-sociales.dz/metrics | head -5
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/develop'
+    needs: [build-and-push, smoke-test-staging]
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -173,12 +192,33 @@ jobs:
           script: |
             cd /opt/oeuvres-sociales
             docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans --wait
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput --clear
             docker system prune -f
+
+  smoke-test-production:
+    name: Smoke Test Production
+    if: github.ref == 'refs/heads/main'
+    needs: [build-and-push]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+      - name: Check liveness
+        run: curl -sf --retry 10 --retry-delay 10 --retry-connrefused https://oeuvres-sociales.dz/api/v1/health/live/
+      - name: Check readiness
+        run: curl -sf https://oeuvres-sociales.dz/api/v1/health/ready/
+      - name: Check deep health
+        run: curl -sf https://oeuvres-sociales.dz/api/v1/health/
+      - name: Check Prometheus metrics
+        run: curl -sf https://oeuvres-sociales.dz/metrics | head -5
 
   deploy-production:
     if: github.ref == 'refs/heads/main'
-    needs: [build-and-push]
+    needs: [build-and-push, smoke-test-production]
     runs-on: ubuntu-latest
     environment:
       name: production

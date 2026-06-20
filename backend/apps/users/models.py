@@ -56,9 +56,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         GESTIONNAIRE = "gestionnaire", "Gestionnaire RH"
         COMPTABLE = "comptable", "Comptable"
         CONSULTANT = "consultant", "Consultant"
+        SOCIAL_AGENT = "social_agent", "Agent Social"
+        DEPARTMENT_MANAGER = "department_manager", "Chef de Service"
+        COMMITTEE_MEMBER = "committee_member", "Membre de Commission"
+        DIRECTOR = "director", "Directeur"
 
     # ── Identifiant ──────────────────────────────────────
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # ── Rattachement multi-tenant ─────────────────────────
+    tenant = models.ForeignKey(
+        "tenant.Tenant",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Organisme",
+        help_text="Organisme de rattachement (multi-tenant)",
+    )
 
     # ── Authentification ─────────────────────────────────
     email = models.EmailField(unique=True, verbose_name="Adresse email")
@@ -118,6 +132,7 @@ class User(AbstractBaseUser, PermissionsMixin):
             models.Index(fields=["email"]),
             models.Index(fields=["role"]),
             models.Index(fields=["is_active"]),
+            models.Index(fields=["tenant"]),
         ]
 
     def __str__(self):
@@ -146,6 +161,22 @@ class User(AbstractBaseUser, PermissionsMixin):
     def is_consultant(self):
         return self.role == self.Role.CONSULTANT
 
+    @property
+    def is_social_agent(self):
+        return self.role == self.Role.SOCIAL_AGENT
+
+    @property
+    def is_department_manager(self):
+        return self.role == self.Role.DEPARTMENT_MANAGER
+
+    @property
+    def is_committee_member(self):
+        return self.role == self.Role.COMMITTEE_MEMBER
+
+    @property
+    def is_director(self):
+        return self.role == self.Role.DIRECTOR
+
     def has_role(self, *roles) -> bool:
         """Vérifie si l'utilisateur a l'un des rôles donnés."""
         return self.role in roles
@@ -157,3 +188,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     def can_process_payments(self) -> bool:
         """Peut traiter des paiements."""
         return self.role in [self.Role.ADMIN, self.Role.COMPTABLE]
+
+    def can_approve_coverage_request(self) -> bool:
+        return self.role in [self.Role.ADMIN, self.Role.DEPARTMENT_MANAGER, self.Role.DIRECTOR]
+
+    def can_escalate_coverage_request(self) -> bool:
+        return self.role in [self.Role.ADMIN, self.Role.DEPARTMENT_MANAGER]

@@ -8,10 +8,15 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
+import os
+import tempfile
+
 from .anomaly import AnomalyDetector
 from .assistant import AIAssistant
 from .behavior import BehaviorAnalyzer
+from .document_analysis import DocumentAnalysisService, document_analysis_service
 from .forecasting import ForecastingService
+from .fraud_detection import FraudDetector, fraud_detector
 from .models import (
     AIAnomaly,
     AIEvent,
@@ -21,6 +26,7 @@ from .models import (
     AIPrediction,
     AIRecommendation,
     AIScore,
+    MedicalDocumentAnalysis,
 )
 from .pipeline import AIPipeline
 from .recommendations import RecommendationEngine
@@ -35,6 +41,8 @@ from .serializers import (
     AIRecommendationSerializer,
     AIScoreSerializer,
     AssistantQuerySerializer,
+    DocumentAnalysisRequestSerializer,
+    MedicalDocumentAnalysisSerializer,
     ForecastRequestSerializer,
     RecommendationFeedbackSerializer,
     ResolveAnomalySerializer,
@@ -182,8 +190,11 @@ class AIServiceViewSet(viewsets.GenericViewSet):
         serializer = WhatIfSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         result = forecasting_service.what_if_scenario(
-            budget_change_pct=serializer.validated_data["budget_change_pct"],
-            new_hires=serializer.validated_data["new_hires"],
+            scenario={
+                "budget_change_pct": serializer.validated_data["budget_change_pct"],
+                "new_hires": serializer.validated_data["new_hires"],
+                "cost_per_hire": request.data.get("cost_per_hire", 50000),
+            }
         )
         return Response({"status": "success", "data": result})
 
@@ -192,6 +203,12 @@ class AIServiceViewSet(viewsets.GenericViewSet):
         days = int(request.data.get("days", 90))
         method = request.data.get("method", "ensemble")
         results = anomaly_detector.detect_all(days=days, method=method)
+        return Response({"status": "success", "data": results})
+
+    @action(detail=False, methods=["post"])
+    def detect_fraud(self, request):
+        days = int(request.data.get("days", 90))
+        results = fraud_detector.detect_all(days=days)
         return Response({"status": "success", "data": results})
 
     @action(detail=False, methods=["post"])
@@ -248,3 +265,65 @@ class AIServiceViewSet(viewsets.GenericViewSet):
         days = int(request.query_params.get("days", 30))
         segments = behavior_analyzer.segment_users(days=days)
         return Response({"status": "success", "data": segments})
+
+    @action(detail=False, methods=["post"])
+    def analyze_document(self, request):
+        file = request.FILES.get("file")
+        if not file:
+            return Response({"status": "error", "message": _("Fichier requis")}, status=400)
+
+        serializer = DocumentAnalysisRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.name)[1]) as tmp:
+            for chunk in file.chunks():
+                tmp.write(chunk)
+            tmp_path = tmp.name
+
+        try:
+            result = document_analysis_service.analyze(
+                file_path=tmp_path,
+                title=serializer.validated_data.get("title", ""),
+                category=serializer.validated_data.get("category", ""),
+                language=serializer.validated_data.get("language", "fr"),
+            )
+
+            doc = MedicalDocumentAnalysis.objects.create(
+                title=serializer.validated_data.get("title", "") or file.name,
+                category=result.get("category", "other"),
+                extracted_text=result.get("extracted_text", ""),
+                ocr_confidence=result.get("ocr_confidence"),
+                medical_keywords=result.get("medical_keywords", []),
+                diagnosis_mentions=result.get("diagnosis_mentions", []),
+                medication_mentions=result.get("medication_mentions", []),
+                summary=result.get("summary", ""),
+                language=result.get("language", "fr"),
+                file_name=file.name,
+                file_size_bytes=file.size,
+                file_type=result.get("file_type", ""),
+                page_count=result.get("page_count"),
+                analysis_duration_ms=result.get("analysis_duration_ms", 0),
+                status="failed" if result.get("error") else "completed",
+                analyzed_by=request.user if request.user.is_authenticated else None,
+                metadata={"error": result.get("error")} if result.get("error") else {},
+            )
+
+            doc_serializer = MedicalDocumentAnalysisSerializer(doc)
+            return Response({"status": "success", "data": doc_serializer.data})
+        except Exception as exc:
+            logger.exception("Document analysis failed")
+            return Response(
+                {"status": "error", "message": str(exc)},
+                status=500,
+            )
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+
+
+class MedicalDocumentAnalysisViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = MedicalDocumentAnalysis.objects.filter(is_deleted=False)
+    serializer_class = MedicalDocumentAnalysisSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["category", "language", "status"]
+    ordering = ["-created_at"]

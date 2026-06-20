@@ -21,6 +21,11 @@ export interface LoginResponse {
     role_display: string;
     must_change_password: boolean;
     avatar: string | null;
+    preferences?: {
+      language: "fr" | "ar";
+      theme: "light" | "dark";
+      layout_direction: "ltr" | "rtl";
+    };
   };
 }
 
@@ -43,4 +48,7 @@ export const authApi = {
     new_password: string;
     confirm_password: string;
   }) => apiClient.post("/users/change-password/", data),
+
+  updatePreferences: (data: { language?: string; theme?: string; layout_direction?: string }) =>
+    apiClient.patch("/auth/preferences/", data),
 };

@@ -12,7 +12,7 @@ from core.pagination import StandardResultsSetPagination
 from core.permissions import IsAdminOrGestionnaire, IsAdminOrReadOnly
 from django.apps import apps
 from django.db import models as db_models
-from django.utils import timezone
+from django.utils import timezone, translation
 from django.utils.translation import gettext as _
 from shared.ai.services import PredictionService
 
@@ -192,6 +192,10 @@ class ReportViewSet(viewsets.ReadOnlyModelViewSet):
         if fmt not in valid_formats:
             fmt = "csv"
         filters = ser.validated_data.get("filters", {})
+
+        # Activer la langue de l'utilisateur pour les rapports
+        language = request.META.get("HTTP_ACCEPT_LANGUAGE", "fr")
+        translation.activate(language)
 
         export = DataExport.objects.create(
             report=report,

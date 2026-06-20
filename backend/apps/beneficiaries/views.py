@@ -25,7 +25,10 @@ logger = logging.getLogger("apps.beneficiaries")
 service = BeneficiaryService()
 
 
-class BeneficiaryViewSet(ModelViewSet):
+from shared.tenant.mixins import TenantViewSetMixin
+
+
+class BeneficiaryViewSet(TenantViewSetMixin, ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             return [IsAuthenticated()]

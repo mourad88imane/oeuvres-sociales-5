@@ -213,6 +213,21 @@ class ForecastingService:
             .order_by("year", "month")
         )
 
+    def forecast(
+        self,
+        target: str = "budget",
+        months: int = 6,
+        method: str = "ensemble",
+        save: bool = True,
+    ) -> dict:
+        """
+        Routeur principal — dispatch vers la méthode appropriée selon la cible.
+        target : "budget", "benefits"
+        """
+        if target == "benefits":
+            return self.forecast_benefits(months_ahead=months, method=method)
+        return self.forecast_budget(months_ahead=months, method=method, save=save)
+
     def _linear_forecast(self, values: list[float], horizon: int) -> dict:
         xs = list(range(len(values)))
         slope, intercept, r2 = linear_regression(xs, values)

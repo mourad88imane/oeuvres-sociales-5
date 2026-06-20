@@ -16,6 +16,11 @@ export default defineConfig({
     },
   },
 
+  // ── Optimisation des dépendances ──────────────────────
+  optimizeDeps: {
+    include: ["@ant-design/cssinjs"],
+  },
+
   // ── Serveur de développement ──────────────────────────
   server: {
     host: "0.0.0.0",

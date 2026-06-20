@@ -34,4 +34,9 @@ urlpatterns = [
     path(
         "metrics/", views.MonitoringViewSet.as_view({"get": "metrics"}), name="monitoring-metrics"
     ),
+    path(
+        "system-health/",
+        views.MonitoringViewSet.as_view({"get": "system_health"}),
+        name="monitoring-system-health",
+    ),
 ]

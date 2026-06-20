@@ -9,6 +9,7 @@ from .models import (
     AIPrediction,
     AIRecommendation,
     AIScore,
+    MedicalDocumentAnalysis,
 )
 
 
@@ -164,3 +165,26 @@ class ForecastRequestSerializer(serializers.Serializer):
 class WhatIfSerializer(serializers.Serializer):
     budget_change_pct = serializers.FloatField(default=0.0, help_text="% de changement budgétaire")
     new_hires = serializers.IntegerField(default=0, min_value=0)
+
+
+class MedicalDocumentAnalysisSerializer(serializers.ModelSerializer):
+    category_display = serializers.CharField(source="get_category_display", read_only=True)
+    time_ago = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MedicalDocumentAnalysis
+        fields = "__all__"
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_time_ago(self, obj):
+        from django.utils.timesince import timesince
+        return timesince(obj.created_at)
+
+
+class DocumentAnalysisRequestSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    category = serializers.ChoiceField(
+        choices=["prescription", "report", "imaging", "lab_result", "invoice", "id_document", "other"],
+        default="other",
+    )
+    language = serializers.ChoiceField(choices=["fr", "ar", "en"], default="fr")

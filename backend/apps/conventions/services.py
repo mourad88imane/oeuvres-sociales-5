@@ -22,7 +22,7 @@ class PartnerService:
     def get_queryset(self):
         return Partner.objects.filter(is_deleted=False)
 
-    def search(self, queryset=None, search="", type="", is_active="", wilaya=""):
+    def search(self, queryset=None, search="", type="", is_active="", wilaya="", category=""):
         qs = queryset or self.get_queryset()
         if search:
             qs = qs.filter(
@@ -33,6 +33,8 @@ class PartnerService:
             )
         if type:
             qs = qs.filter(type=type)
+        if category:
+            qs = qs.filter(category=category)
         if is_active:
             qs = qs.filter(is_active=(is_active.lower() == "true"))
         if wilaya:
@@ -42,7 +44,7 @@ class PartnerService:
     @transaction.atomic
     def create(self, data, user=None, request=None):
         partner = Partner.objects.create(**data)
-        audit.log_create(partner, user=user, request=request)
+        audit.log_create(user=user, obj=partner, request=request)
         logger.info("Partenaire créé: %s", partner.code)
         return partner
 
@@ -100,7 +102,7 @@ class ConventionService:
     @transaction.atomic
     def create(self, data, user=None, request=None):
         convention = Convention.objects.create(**data)
-        audit.log_create(convention, user=user, request=request)
+        audit.log_create(user=user, obj=convention, request=request)
         self._check_and_create_alerts(convention)
         logger.info("Convention créée: %s", convention.reference)
         return convention

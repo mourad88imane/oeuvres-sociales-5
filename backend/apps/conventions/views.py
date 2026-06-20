@@ -5,6 +5,7 @@ from rest_framework.response import Response
 
 from core.pagination import StandardResultsSetPagination
 from core.permissions import IsAdminOrGestionnaire, IsAdminOrReadOnly
+from shared.tenant.mixins import TenantViewSetMixin
 from django.utils import timezone
 
 from .models import Convention, ConventionDocument
@@ -50,6 +51,7 @@ class PartnerViewSet(viewsets.ModelViewSet):
             qs,
             search=self.request.query_params.get("search", ""),
             type=self.request.query_params.get("type", ""),
+            category=self.request.query_params.get("category", ""),
             is_active=self.request.query_params.get("is_active", ""),
             wilaya=self.request.query_params.get("wilaya", ""),
         )
@@ -71,7 +73,7 @@ class PartnerViewSet(viewsets.ModelViewSet):
         )
 
 
-class ConventionViewSet(viewsets.ModelViewSet):
+class ConventionViewSet(TenantViewSetMixin, viewsets.ModelViewSet):
     queryset = convention_service.get_queryset()
     pagination_class = StandardResultsSetPagination
     permission_classes = [IsAuthenticated, IsAdminOrGestionnaire]

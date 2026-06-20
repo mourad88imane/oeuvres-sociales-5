@@ -30,6 +30,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "django_prometheus",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -41,6 +42,7 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",
     "django_celery_results",
     "django_extensions",
+    "csp",
 ]
 
 LOCAL_APPS = [
@@ -53,39 +55,48 @@ LOCAL_APPS = [
     "shared.workflow",
     "shared.reporting",
     "shared.ai",
+    "shared.documents",
+    "shared.tenant",
     "apps.departments",
     "apps.authentication",
     "apps.users",
     "apps.employees",
     "apps.beneficiaries",
     "apps.benefits",
+    "apps.loans",
     "apps.finance",
     "apps.conventions",
     "apps.reporting",
     "apps.dashboard",
     "apps.monitoring",
+    "apps.medical_coverage",
+    "apps.administration",
+    "apps.organization",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # ── Middleware ─────────────────────────────────────────────
 MIDDLEWARE = [
+    "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
-    "corsheaders.middleware.CorsMiddleware",  # CORS avant CommonMiddleware
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
-    # API uses JWT (no session auth), so skip CSRF for /api/ routes
-    # Must be before CsrfViewMiddleware
+    "core.middleware.CorrelationIDMiddleware",
     "core.middleware.CsrfExemptApiMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "csp.middleware.CSPMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "axes.middleware.AxesMiddleware",  # Brute force protection
-    "simple_history.middleware.HistoryRequestMiddleware",  # Historique modèles
-    "shared.audit.middleware.AuditMiddleware",  # Audit trail custom
-    "apps.monitoring.middleware.APIMonitoringMiddleware",  # API monitoring & métriques
+    "axes.middleware.AxesMiddleware",
+    "simple_history.middleware.HistoryRequestMiddleware",
+    "shared.tenant.middleware.TenantMiddleware",
+    "shared.audit.middleware.AuditMiddleware",
+    "apps.monitoring.middleware.APIMonitoringMiddleware",
+    "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -243,8 +254,25 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
-    "x-request-id",  # Pour le tracing
+    "x-request-id",
+    "x-correlation-id",
 ]
+
+# ── Content Security Policy (CSP) ─────────────────────────
+CONTENT_SECURITY_POLICY_REPORT_ONLY = {
+    "DIRECTIVES": {
+        "default-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "img-src": ["'self'", "data:", "blob:"],
+        "font-src": ["'self'", "data:"],
+        "connect-src": ["'self'", "ws://localhost:*", "http://localhost:*", "https://*.sentry.io"],
+        "frame-src": ["'none'"],
+        "object-src": ["'none'"],
+        "base-uri": ["'self'"],
+        "form-action": ["'self'"],
+    },
+}
 
 # ── DRF Spectacular (OpenAPI) ─────────────────────────────
 SPECTACULAR_SETTINGS = {
@@ -299,8 +327,10 @@ ENGINE_AUDIT_MODELS = [
     "apps.finance.BudgetLine",
     "apps.departments.Department",
     "apps.users.User",
+    "apps.medical_coverage.MedicalCoverageVoucher",
 ]
-ENGINE_ROLES = ["admin", "gestionnaire", "comptable", "consultant"]
+ENGINE_ROLES = ["admin", "gestionnaire", "comptable", "consultant",
+                 "social_agent", "department_manager", "committee_member", "director"]
 
 # ── Email ─────────────────────────────────────────────────
 EMAIL_BACKEND = config("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
@@ -330,10 +360,10 @@ LOGGING = {
     "formatters": {
         "json": {
             "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d",
+            "format": "%(asctime)s %(name)s %(levelname)s %(message)s %(pathname)s %(lineno)d %(request_id)s %(correlation_id)s",
         },
         "verbose": {
-            "format": "[{asctime}] {levelname} {name} {message}",
+            "format": "[{asctime}] {levelname} {name} [{request_id}] {message}",
             "style": "{",
         },
         "simple": {
@@ -342,6 +372,7 @@ LOGGING = {
         },
     },
     "filters": {
+        "request_context": {"()": "core.logging_filters.RequestContextFilter"},
         "require_debug_true": {"()": "django.utils.log.RequireDebugTrue"},
         "require_debug_false": {"()": "django.utils.log.RequireDebugFalse"},
     },
@@ -350,22 +381,25 @@ LOGGING = {
             "level": "DEBUG",
             "class": "logging.StreamHandler",
             "formatter": "verbose",
+            "filters": ["request_context"],
         },
         "json_file": {
             "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": BASE_DIR / "logs" / "app.json.log",
-            "maxBytes": 1024 * 1024 * 50,  # 50 MB
+            "maxBytes": 1024 * 1024 * 50,
             "backupCount": 10,
             "formatter": "json",
+            "filters": ["request_context"],
         },
         "error_file": {
             "level": "ERROR",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": BASE_DIR / "logs" / "errors.log",
-            "maxBytes": 1024 * 1024 * 10,  # 10 MB
+            "maxBytes": 1024 * 1024 * 10,
             "backupCount": 5,
             "formatter": "json",
+            "filters": ["request_context"],
         },
         "security_file": {
             "level": "WARNING",
@@ -374,6 +408,7 @@ LOGGING = {
             "maxBytes": 1024 * 1024 * 10,
             "backupCount": 10,
             "formatter": "json",
+            "filters": ["request_context"],
         },
         "audit_file": {
             "level": "INFO",
@@ -382,6 +417,7 @@ LOGGING = {
             "maxBytes": 1024 * 1024 * 50,
             "backupCount": 20,
             "formatter": "json",
+            "filters": ["request_context"],
         },
     },
     "loggers": {

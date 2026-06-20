@@ -80,3 +80,11 @@ export function useAuditStats(days = 30) {
     ).then(r => r.data.data),
   });
 }
+
+export function useSystemHealth() {
+  return useQuery({
+    queryKey: ["monitoring", "system-health"],
+    queryFn: () => apiClient.get("/monitoring/system-health/").then(r => r.data.data || r.data),
+    refetchInterval: 60000,
+  });
+}

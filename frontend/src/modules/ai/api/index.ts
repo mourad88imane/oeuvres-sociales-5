@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@shared/api/apiClient";
-import type { AIAnomaly, AIRecommendation, AIScore, AssistantResponse, DetectionResult } from "../types";
+import type { AIAnomaly, AIRecommendation, AIScore, AssistantResponse, DetectionResult, ForecastData, WhatIfData, MedicalDocumentAnalysisResult } from "../types";
 
 // ── Query Keys ─────────────────────────────────────────────
 export const AI_KEYS = {
@@ -79,6 +79,19 @@ export function useAskAssistant() {
 }
 
 // ── Hooks: Detection ───────────────────────────────────────
+export function useDetectFraud() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ days }: { days?: number } = {}) => {
+      const { data } = await apiClient.post("/ai/services/detect-fraud/", { days: days ?? 90 });
+      return data.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: AI_KEYS.anomalies.all() });
+    },
+  });
+}
+
 export function useDetectAnomalies() {
   const qc = useQueryClient();
   return useMutation({
@@ -107,6 +120,47 @@ export function useForecast() {
   return useMutation({
     mutationFn: async (params: { target?: string; months?: number; method?: string }) => {
       const { data } = await apiClient.post("/ai/services/forecast/", params);
+      return data.data as ForecastData;
+    },
+  });
+}
+
+export function useWhatIf() {
+  return useMutation({
+    mutationFn: async (params: { budget_change_pct?: number; new_hires?: number }) => {
+      const { data } = await apiClient.post("/ai/services/what-if/", params);
+      return data.data as WhatIfData;
+    },
+  });
+}
+
+// ── Hooks: Document Analysis ───────────────────────────────
+export const AI_DOC_KEYS = {
+  analyses: {
+    all: () => ["ai", "document-analyses"] as const,
+  },
+};
+
+export function useAnalyzeDocument() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (formData: FormData) => {
+      const { data } = await apiClient.post("/ai/services/analyze-document/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data.data as MedicalDocumentAnalysisResult;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: AI_DOC_KEYS.analyses.all() });
+    },
+  });
+}
+
+export function useDocumentAnalyses() {
+  return useQuery({
+    queryKey: AI_DOC_KEYS.analyses.all(),
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ status: string; data: MedicalDocumentAnalysisResult[] }>("/ai/document-analyses/");
       return data.data;
     },
   });

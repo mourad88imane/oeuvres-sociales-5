@@ -5,7 +5,7 @@ Toutes les routes d'authentification.
 
 from django.urls import path
 
-from .views import LoginView, LogoutView, MeView, TokenRefreshView, VerifyTokenView
+from .views import LoginView, LogoutView, MeView, TokenRefreshView, UpdatePreferencesView, VerifyTokenView
 
 app_name = "auth"
 
@@ -20,4 +20,6 @@ urlpatterns = [
     path("me/", MeView.as_view(), name="me"),
     # Verify → vérification de la validité du token
     path("verify/", VerifyTokenView.as_view(), name="verify"),
+    # Preferences → mise à jour des préférences utilisateur
+    path("preferences/", UpdatePreferencesView.as_view(), name="preferences"),
 ]

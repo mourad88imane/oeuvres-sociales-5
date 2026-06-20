@@ -120,6 +120,29 @@ export function useAddComment(benefitId: string) {
   });
 }
 
+export function useUpdateBenefit(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<BenefitCreatePayload>) =>
+      benefitApi.update(id, data).then(r => r.data.data),
+    onSuccess: (updated) => {
+      qc.setQueryData(BENEFIT_KEYS.detail(id), updated);
+      qc.invalidateQueries({ queryKey: BENEFIT_KEYS.lists() });
+      qc.invalidateQueries({ queryKey: BENEFIT_KEYS.statistics() });
+    },
+  });
+}
+
+export function useDeleteAttachment(benefitId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (attId: string) => benefitApi.deleteAttachment(benefitId, attId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: BENEFIT_KEYS.detail(benefitId) });
+    },
+  });
+}
+
 export function useDeleteBenefit() {
   const qc = useQueryClient();
   return useMutation({

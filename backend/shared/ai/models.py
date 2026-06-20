@@ -387,6 +387,66 @@ class AIEvent(models.Model):
         return f"Événement {self.id}"
 
 
+class MedicalDocumentAnalysis(models.Model):
+    """Analyse de documents médicaux (OCR + classification)."""
+
+    class DocCategory(models.TextChoices):
+        PRESCRIPTION = "prescription", "Ordonnance"
+        REPORT = "report", "Rapport médical"
+        IMAGING = "imaging", "Imagerie"
+        LAB_RESULT = "lab_result", "Résultat d'analyse"
+        INVOICE = "invoice", "Facture"
+        ID_DOCUMENT = "id_document", "Pièce d'identité"
+        OTHER = "other", "Autre"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255, blank=True)
+    category = models.CharField(
+        max_length=20, choices=DocCategory.choices, default=DocCategory.OTHER
+    )
+    extracted_text = models.TextField(blank=True)
+    ocr_confidence = models.FloatField(null=True, blank=True)
+    medical_keywords = models.JSONField(default=list, blank=True)
+    diagnosis_mentions = models.JSONField(default=list, blank=True)
+    medication_mentions = models.JSONField(default=list, blank=True)
+    summary = models.TextField(blank=True)
+    language = models.CharField(max_length=10, blank=True, default="fr")
+    file_name = models.CharField(max_length=500, blank=True)
+    file_size_bytes = models.PositiveIntegerField(null=True, blank=True)
+    file_type = models.CharField(max_length=50, blank=True)
+    page_count = models.PositiveIntegerField(null=True, blank=True)
+    analysis_duration_ms = models.PositiveIntegerField(default=0)
+    status = models.CharField(
+        max_length=15,
+        choices=[("pending", "En attente"), ("completed", "Terminé"), ("failed", "Échec")],
+        default="completed",
+    )
+    is_deleted = models.BooleanField(default=False)
+    analyzed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    related_entity_type = models.CharField(max_length=50, blank=True)
+    related_entity_id = models.CharField(max_length=255, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Analyse document IA"
+        verbose_name_plural = "Analyses documents IA"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["category"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self):
+        return self.title or f"Doc {self.id}"
+
+
 class AIFeedback(models.Model):
     """Retour utilisateur sur les prédictions/scores/recommandations."""
 

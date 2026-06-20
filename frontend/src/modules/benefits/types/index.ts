@@ -5,8 +5,8 @@
 // ── États workflow ─────────────────────────────────────────
 export type WorkflowState =
   | "draft" | "submitted" | "under_review"
-  | "on_hold" | "validated" | "paid"
-  | "rejected" | "cancelled";
+  | "on_hold" | "pending_director_approval"
+  | "validated" | "paid" | "rejected" | "cancelled";
 
 export type Priority   = "low" | "normal" | "high" | "urgent";
 export type BenefitCategory = "medical" | "loan" | "purchase" | "bonus" | "aid" | "other";
@@ -213,14 +213,15 @@ export interface BenefitFilters {
 
 // ── Config UI ─────────────────────────────────────────────
 export const STATE_UI: Record<WorkflowState, { label: string; badgeClass: string; dotClass: string }> = {
-  draft:        { label: "Brouillon",     badgeClass: "bg-gray-100 text-gray-700",      dotClass: "bg-gray-400"   },
-  submitted:    { label: "Soumise",       badgeClass: "bg-blue-100 text-blue-700",      dotClass: "bg-blue-500"   },
-  under_review: { label: "En instruction",badgeClass: "bg-purple-100 text-purple-700",  dotClass: "bg-purple-500" },
-  on_hold:      { label: "En attente",    badgeClass: "bg-amber-100 text-amber-700",    dotClass: "bg-amber-500"  },
-  validated:    { label: "Validée",       badgeClass: "bg-emerald-100 text-emerald-700",dotClass: "bg-emerald-500"},
-  paid:         { label: "Payée",         badgeClass: "bg-green-100 text-green-700",    dotClass: "bg-green-500"  },
-  rejected:     { label: "Rejetée",       badgeClass: "bg-red-100 text-red-700",        dotClass: "bg-red-500"    },
-  cancelled:    { label: "Annulée",       badgeClass: "bg-gray-100 text-gray-500",      dotClass: "bg-gray-300"   },
+  draft:        { label: "Brouillon",              badgeClass: "bg-gray-100 text-gray-700",      dotClass: "bg-gray-400"   },
+  submitted:    { label: "Soumise",                badgeClass: "bg-blue-100 text-blue-700",      dotClass: "bg-blue-500"   },
+  under_review: { label: "En instruction",         badgeClass: "bg-purple-100 text-purple-700",  dotClass: "bg-purple-500" },
+  on_hold:      { label: "En attente",             badgeClass: "bg-amber-100 text-amber-700",    dotClass: "bg-amber-500"  },
+  pending_director_approval: { label: "En attente du directeur", badgeClass: "bg-pink-100 text-pink-700", dotClass: "bg-pink-500" },
+  validated:    { label: "Validée",                badgeClass: "bg-emerald-100 text-emerald-700",dotClass: "bg-emerald-500"},
+  paid:         { label: "Payée",                  badgeClass: "bg-green-100 text-green-700",    dotClass: "bg-green-500"  },
+  rejected:     { label: "Rejetée",                badgeClass: "bg-red-100 text-red-700",        dotClass: "bg-red-500"    },
+  cancelled:    { label: "Annulée",                badgeClass: "bg-gray-100 text-gray-500",      dotClass: "bg-gray-300"   },
 };
 
 export const PRIORITY_UI: Record<Priority, { label: string; badgeClass: string }> = {
@@ -241,5 +242,5 @@ export const CATEGORY_UI: Record<BenefitCategory, { label: string; icon: string 
 
 // Ordre de la timeline workflow
 export const WORKFLOW_ORDER: WorkflowState[] = [
-  "draft", "submitted", "under_review", "validated", "paid"
+  "draft", "submitted", "under_review", "pending_director_approval", "validated", "paid"
 ];

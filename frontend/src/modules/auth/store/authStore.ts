@@ -18,6 +18,13 @@ export interface UserProfile {
   role_display: string;
   must_change_password: boolean;
   avatar: string | null;
+  tenant_id?: string | null;
+  tenant_name?: string | null;
+  preferences?: {
+    language: "fr" | "ar";
+    theme: "light" | "dark";
+    layout_direction: "ltr" | "rtl";
+  };
 }
 
 interface JwtPayload {
@@ -26,6 +33,7 @@ interface JwtPayload {
   full_name: string;
   role: string;
   must_change_password: boolean;
+  tenant_id?: string | null;
   exp: number;
 }
 
@@ -38,7 +46,7 @@ interface AuthState {
   isLoading: boolean;
 
   // Actions
-  setTokens: (accessToken: string, refreshToken: string) => void;
+  setTokens: (accessToken: string, refreshToken: string, userData?: Partial<UserProfile>) => void;
   setUser: (user: UserProfile) => void;
   logout: () => void;
   setLoading: (loading: boolean) => void;
@@ -59,18 +67,20 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
 
       // ── Actions ───────────────────────────────────────
-      setTokens: (accessToken, refreshToken) => {
-        // Décoder le JWT pour extraire les infos utilisateur
+      setTokens: (accessToken, refreshToken, userData?: Partial<UserProfile>) => {
         try {
           const payload = jwtDecode<JwtPayload>(accessToken);
           const user: UserProfile = {
-            id: payload.user_id,
-            email: payload.email,
-            full_name: payload.full_name,
-            role: payload.role as UserProfile["role"],
-            role_display: payload.role,
-            must_change_password: payload.must_change_password,
-            avatar: null,
+            id: userData?.id || payload.user_id,
+            email: userData?.email || payload.email,
+            full_name: userData?.full_name || payload.full_name,
+            role: (userData?.role || payload.role) as UserProfile["role"],
+            role_display: userData?.role_display || payload.role,
+            must_change_password: userData?.must_change_password ?? payload.must_change_password,
+            avatar: userData?.avatar || null,
+            tenant_id: userData?.tenant_id || payload.tenant_id || null,
+            tenant_name: userData?.tenant_name || null,
+            preferences: userData?.preferences || { language: "fr", theme: "light", layout_direction: "ltr" },
           };
           set({ accessToken, refreshToken, user, isAuthenticated: true });
         } catch {

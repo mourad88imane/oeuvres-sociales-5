@@ -6,6 +6,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from django.db import connections
+from django.db.utils import OperationalError
 from django.utils import timezone
 
 from .models import BusinessMetric, SecurityEvent
@@ -87,6 +89,65 @@ class MonitoringViewSet(viewsets.GenericViewSet):
         days = int(request.query_params.get("days", 30))
         summary = monitoring_service.get_audit_summary(days=days)
         return Response({"status": "success", "data": summary})
+
+    @action(detail=False, methods=["get"])
+    def system_health(self, request):
+        checks = {}
+        db_ok = False
+        try:
+            conn = connections["default"]
+            conn.ensure_connection()
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.execute("""
+                    SELECT schemaname, COUNT(*) as tbl_count
+                    FROM pg_catalog.pg_tables WHERE schemaname NOT IN ('pg_catalog','information_schema')
+                    GROUP BY schemaname
+                """)
+                table_info = list(cursor.fetchall())
+                cursor.execute("SELECT pg_database_size(current_database())")
+                db_size = cursor.fetchone()[0]
+            db_ok = True
+            checks["database"] = {
+                "healthy": True,
+                "table_count": sum(r[1] for r in table_info),
+                "size_bytes": db_size,
+                "size_mb": round(db_size / 1024 / 1024, 1),
+            }
+        except OperationalError as e:
+            checks["database"] = {"healthy": False, "error": str(e)}
+
+        try:
+            from django.core.cache import cache
+            cache.set("__health__", 1, timeout=5)
+            checks["cache"] = {"healthy": cache.get("__health__") == 1}
+        except Exception as e:
+            checks["cache"] = {"healthy": False, "error": str(e)}
+
+        try:
+            from celery import current_app
+            stats = current_app.control.inspect().stats()
+            checks["celery"] = {
+                "healthy": bool(stats),
+                "workers": list(stats.keys()) if stats else [],
+            }
+        except Exception as e:
+            checks["celery"] = {"healthy": False, "error": str(e)}
+
+        try:
+            checks["python"] = {
+                "version": __import__("sys").version,
+                "django_version": __import__("django").get_version(),
+            }
+        except Exception:
+            pass
+
+        all_healthy = all(c.get("healthy", False) for c in checks.values() if "healthy" in c)
+        return Response({
+            "status": "ok" if all_healthy else "degraded",
+            "timestamp": timezone.now().isoformat(),
+            "checks": checks,
+        })
 
     @action(detail=False, methods=["get"])
     def metrics(self, request):

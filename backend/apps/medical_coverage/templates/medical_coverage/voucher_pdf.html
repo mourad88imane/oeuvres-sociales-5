@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {
+      size: A4;
+      margin: 2cm;
+    }
+    body {
+      font-family: 'DejaVu Sans', sans-serif;
+      font-size: 12pt;
+      color: #1a1917;
+      line-height: 1.5;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #ffda2d;
+      padding-bottom: 20px;
+    }
+    .header h1 {
+      font-size: 14pt;
+      margin: 0 0 5px 0;
+      text-transform: uppercase;
+    }
+    .header h2 {
+      font-size: 12pt;
+      margin: 0;
+      font-weight: normal;
+    }
+    .header h3 {
+      font-size: 16pt;
+      margin: 15px 0 0 0;
+      color: #ffda2d;
+    }
+    .voucher-number {
+      text-align: center;
+      font-size: 13pt;
+      font-weight: bold;
+      margin: 20px 0;
+      padding: 10px;
+      border: 2px solid #1a1917;
+      display: inline-block;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    td {
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    td.label {
+      font-weight: bold;
+      width: 40%;
+      background: #f5f4f0;
+    }
+    .footer {
+      margin-top: 50px;
+      text-align: center;
+      font-size: 9pt;
+      color: #8a8882;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>RÉPUBLIQUE ALGÉRIENNE DÉMOCRATIQUE ET POPULAIRE</h1>
+    <h2>PREMIER MINISTRE</h2>
+    <h3>COMITÉ DES ŒUVRES SOCIALES</h3>
+  </div>
+
+  <div class="voucher-number">
+    BON DE PRISE EN CHARGE N° {{ request_number }}
+  </div>
+
+  <table>
+    <tr>
+      <td class="label">Employé (Nom)</td>
+      <td>{{ employee.last_name }}</td>
+    </tr>
+    <tr>
+      <td class="label">Employé (Prénom)</td>
+      <td>{{ employee.first_name }}</td>
+    </tr>
+    {% if beneficiary %}
+    <tr>
+      <td class="label">Ayant droit</td>
+      <td>{{ beneficiary.get_full_name }} ({{ beneficiary.get_relationship_display }})</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td class="label">Type d'examen</td>
+      <td>Selon prescription médicale</td>
+    </tr>
+    <tr>
+      <td class="label">Date de couverture</td>
+      <td>{{ coverage_date|date:"d/m/Y" }}</td>
+    </tr>
+    {% if validation_date %}
+    <tr>
+      <td class="label">Date de validation</td>
+      <td>{{ validation_date|date:"d/m/Y" }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td class="label">Partenaire</td>
+      <td>{{ partner.name }}</td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    Document généré automatiquement - COMITÉ DES ŒUVRES SOCIALES<br>
+    {{ request_number }} - {{ coverage_date|date:"d/m/Y" }}
+  </div>
+</body>
+</html>

@@ -97,6 +97,30 @@ class Employee(BaseModel):
     grade_level = models.PositiveSmallIntegerField(
         null=True, blank=True, verbose_name="Niveau grade"
     )
+
+    # Organisation hiérarchique (direction → sous-direction → service → bureau)
+    bureau = models.ForeignKey(
+        "organization.Bureau",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="employees",
+        verbose_name="Bureau",
+    )
+    function = models.ForeignKey(
+        "organization.Function",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="employees",
+        verbose_name="Fonction",
+    )
+    grade_ref = models.ForeignKey(
+        "organization.Grade",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="employees",
+        verbose_name="Grade (référentiel)",
+    )
+
     category = models.CharField(max_length=50, blank=True, verbose_name="Catégorie CSP")
     contract_type = models.CharField(
         max_length=20,

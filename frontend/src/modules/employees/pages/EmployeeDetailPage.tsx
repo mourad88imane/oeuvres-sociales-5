@@ -230,10 +230,10 @@ export function EmployeeDetailPage() {
           </Section>
 
           <Section title={t("employees.contacts")} icon={Phone}>
-            <InfoRow label={t("employees.phone")}       value={employee.phone || "—"} />
-            <InfoRow label={t("employees.phoneSecondary")} value={employee.phone_secondary || "—"} />
-            <InfoRow label={t("employees.email")}      value={employee.email_professional || "—"} />
-            <InfoRow label={t("employees.emailPersonal")}    value={employee.email_personal || "—"} />
+            <InfoRow label={t("employees.phone")}       value={<span dir="ltr">{employee.phone || "—"}</span>} />
+            <InfoRow label={t("employees.phoneSecondary")} value={<span dir="ltr">{employee.phone_secondary || "—"}</span>} />
+            <InfoRow label={t("employees.email")}      value={<span dir="ltr">{employee.email_professional || "—"}</span>} />
+            <InfoRow label={t("employees.emailPersonal")}    value={<span dir="ltr">{employee.email_personal || "—"}</span>} />
             <InfoRow label={t("employees.address")}         value={employee.address || "—"} />
             <InfoRow label={t("employees.cityWilaya")}  value={`${employee.city || "—"} / ${employee.wilaya || "—"}`} />
           </Section>
@@ -457,7 +457,7 @@ function Section({ title, icon: Icon, children }: { title: string; icon: React.E
   );
 }
 
-function InfoRow({ label, value, mono, badge }: { label: string; value: string; mono?: boolean; badge?: React.ReactNode }) {
+function InfoRow({ label, value, mono, badge }: { label: string; value: React.ReactNode; mono?: boolean; badge?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between py-1 border-b border-gray-50 last:border-0">
       <span className="text-xs text-gray-500 shrink-0 w-32">{label}</span>
@@ -479,6 +479,7 @@ function InfoChip({ label, value, mono }: { label: string; value: string; mono?:
 }
 
 function BeneficiaryCard({ bene, onEdit, onDelete }: { bene: Beneficiary; onEdit: () => void; onDelete: () => void }) {
+  const { t } = useTranslation();
   const RELATIONSHIP_COLORS: Record<string, string> = {
     spouse: "bg-purple-100 text-purple-700",
     child:  "bg-blue-100 text-blue-700",

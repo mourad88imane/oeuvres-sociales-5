@@ -5,14 +5,17 @@
  * - Injecte automatiquement le token Bearer dans chaque requête
  * - Rafraîchit automatiquement le token expiré (rotation)
  * - Redirige vers /login si le refresh échoue
- * - Ajoute X-Request-ID pour la corrélation des logs
+ * - Ajoute X-Request-ID / X-Correlation-ID pour la corrélation des logs
+ * - Monitor les performances des appels API (timing, erreurs)
  */
 import axios, {
   AxiosError,
   AxiosInstance,
+  AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
 import { v4 as uuidv4 } from "uuid";
+import i18n from "../i18n/i18n";
 import { useAuthStore } from "@modules/auth/store/authStore";
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_URL || "/api/v1";
@@ -54,24 +57,39 @@ const processQueue = (error: unknown, token: string | null = null) => {
 // ── Intercepteur de requête ────────────────────────────────
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Marquer le début de la requête pour le calcul de durée
+    (config as any)._startTime = performance.now();
+
     // Injecter le token JWT
     const token = useAuthStore.getState().accessToken;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Ajouter un ID unique par requête (corrélation logs)
-    config.headers["X-Request-ID"] = uuidv4();
+    // Ajouter la langue utilisateur pour les exports PDF/Excel/CSV
+    config.headers["Accept-Language"] = i18n.language;
+
+    // Ajouter des IDs uniques pour la corrélation des logs
+    const requestId = uuidv4();
+    config.headers["X-Request-ID"] = requestId;
+    config.headers["X-Correlation-ID"] = requestId;
 
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ── Intercepteur de réponse (refresh automatique) ─────────
+// ── Intercepteur de réponse (monitoring + refresh automatique) ──
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => {
+    logApiCall(response);
+    return response;
+  },
   async (error: AxiosError) => {
+    if (error.config) {
+      logApiCall(null, error);
+    }
+
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
@@ -129,5 +147,33 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// ── Monitoring des appels API ───────────────────────────────
+function logApiCall(response: AxiosResponse | null, error?: AxiosError) {
+  try {
+    const config = (response?.config || error?.config) as any;
+    if (!config) return;
+
+    const startTime = config._startTime;
+    const durationMs = startTime ? Math.round(performance.now() - startTime) : 0;
+    const method = (config.method || "?").toUpperCase();
+    const url = config.url || "?";
+    const status = response?.status || error?.response?.status || 0;
+
+    if ((import.meta as any).env.DEV) {
+      const level = status >= 400 ? "warn" : "log";
+      console[level](`[API] ${method} ${url} → ${status} (${durationMs}ms)`);
+    }
+
+    // Stocker les alertes lentes en localStorage pour analyse
+    if (durationMs > 5000) {
+      const slowCalls = JSON.parse(localStorage.getItem("slow_api_calls") || "[]");
+      slowCalls.push({ method, url, status, durationMs, timestamp: new Date().toISOString() });
+      localStorage.setItem("slow_api_calls", JSON.stringify(slowCalls.slice(-50)));
+    }
+  } catch {
+    // Le monitoring ne doit jamais casser l'app
+  }
+}
 
 export default apiClient;

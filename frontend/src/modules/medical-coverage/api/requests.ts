@@ -1,0 +1,45 @@
+import apiClient from "@shared/api/apiClient";
+import type {
+  MedicalCoverageRequest,
+  MedicalCoverageRequestCreatePayload,
+  RequestStatistics,
+  RequestStatus,
+} from "../types/request";
+
+const clean = (o: Record<string, unknown>) =>
+  Object.fromEntries(Object.entries(o).filter(([, v]) => v !== "" && v != null));
+
+export const coverageRequestApi = {
+  list: (params: Record<string, unknown> = {}) =>
+    apiClient.get<{ status: string; pagination: any; results: MedicalCoverageRequest[] }>(
+      "/medical-coverage/requests/", { params: clean(params) }
+    ),
+
+  get: (id: string) =>
+    apiClient.get<{ status: string; data: MedicalCoverageRequest }>(
+      `/medical-coverage/requests/${id}/`
+    ),
+
+  create: (data: MedicalCoverageRequestCreatePayload) =>
+    apiClient.post<{ status: string; data: MedicalCoverageRequest }>(
+      "/medical-coverage/requests/", data
+    ),
+
+  transition: (id: string, to_state: RequestStatus, reason?: string) =>
+    apiClient.post<{ status: string; data: MedicalCoverageRequest }>(
+      `/medical-coverage/requests/${id}/transition/`, { to_state, reason }
+    ),
+
+  availableTransitions: (id: string) =>
+    apiClient.get<{ status: string; data: any[] }>(
+      `/medical-coverage/requests/${id}/available_transitions/`
+    ),
+
+  statistics: (params?: { category?: string }) =>
+    apiClient.get<{ status: string; data: RequestStatistics }>(
+      "/medical-coverage/requests/statistics/", { params }
+    ),
+
+  downloadPdf: (id: string) =>
+    apiClient.get(`/medical-coverage/requests/${id}/pdf/`, { responseType: "blob" }),
+};

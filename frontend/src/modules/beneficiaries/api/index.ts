@@ -1,6 +1,7 @@
 import apiClient from "@shared/api/apiClient";
 import { useQuery } from "@tanstack/react-query";
 import type { GlobalBeneficiaryResponse } from "../types";
+import type { BeneficiaryCreatePayload } from "@modules/employees/types";
 
 interface BeneficiaryFilters {
   page?: number;
@@ -13,6 +14,8 @@ interface BeneficiaryFilters {
 export const beneficiaryGlobalApi = {
   list: (params: BeneficiaryFilters = {}) =>
     apiClient.get<GlobalBeneficiaryResponse>("/beneficiaries/", { params }),
+  createForEmployee: (employeeId: string, data: BeneficiaryCreatePayload) =>
+    apiClient.post(`/employees/${employeeId}/beneficiaries/`, data),
 };
 
 export const BENEFICIARY_KEYS = {

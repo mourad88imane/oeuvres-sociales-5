@@ -2,12 +2,13 @@ import { useState } from "react";
 import {
   Activity, AlertTriangle, Server, CheckCircle2, XCircle,
   TrendingUp, Users, Shield, ArrowUp, ArrowDown, BarChart3, Eye,
+  Database, HardDrive,
 } from "lucide-react";
 import { clsx } from "clsx";
-import { useDashboardStats, useApiLogs, useSecurityEvents, useEndpointStatus, useAuditStats } from "../api/index";
+import { useDashboardStats, useApiLogs, useSecurityEvents, useEndpointStatus, useAuditStats, useSystemHealth } from "../api/index";
 import { Spinner } from "@shared/components/ui/index";
 
-type Tab = "overview" | "api" | "security" | "endpoints" | "audit";
+type Tab = "overview" | "api" | "security" | "endpoints" | "audit" | "health";
 
 const SEVERITY_COLORS: Record<string, string> = {
   LOW: "text-gray-600 bg-gray-100",
@@ -55,8 +56,8 @@ export function MonitoringDashboardPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
-        {(["overview", "api", "security", "endpoints", "audit"] as Tab[]).map(t => (
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit flex-wrap">
+        {(["overview", "api", "security", "endpoints", "audit", "health"] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={clsx("px-4 py-1.5 text-sm font-medium rounded-md transition-colors capitalize",
               tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"
@@ -66,6 +67,7 @@ export function MonitoringDashboardPage() {
             {t === "security" && "Sécurité"}
             {t === "endpoints" && "Endpoints"}
             {t === "audit" && "Audit"}
+            {t === "health" && "Santé"}
           </button>
         ))}
       </div>
@@ -75,6 +77,7 @@ export function MonitoringDashboardPage() {
       {tab === "security" && <SecurityTab />}
       {tab === "endpoints" && <EndpointsTab />}
       {tab === "audit" && <AuditTab />}
+      {tab === "health" && <HealthTab />}
     </div>
   );
 }
@@ -153,46 +156,48 @@ function APILogsTab() {
         <label htmlFor="err-only" className="text-sm text-gray-600">Erreurs uniquement</label>
       </div>
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-            <tr>
-              <th className="text-left px-4 py-2">Méthode</th>
-              <th className="text-left px-4 py-2">Endpoint</th>
-              <th className="text-center px-4 py-2">Status</th>
-              <th className="text-right px-4 py-2">Durée</th>
-              <th className="text-right px-4 py-2">Utilisateur</th>
-              <th className="text-right px-4 py-2">Quand</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {isLoading ? (
-              <tr><td colSpan={6} className="py-8 text-center"><Spinner size="sm" /></td></tr>
-            ) : !logs?.length ? (
-              <tr><td colSpan={6} className="py-8 text-center text-gray-400">Aucune requête</td></tr>
-            ) : logs.map(log => (
-              <tr key={log.id} className={clsx(log.is_error && "bg-red-50/50")}>
-                <td className="px-4 py-2">
-                  <span className={clsx("text-xs font-mono font-bold px-1.5 py-0.5 rounded",
-                    log.method === "GET" ? "text-green-600 bg-green-100" :
-                    log.method === "POST" ? "text-blue-600 bg-blue-100" :
-                    log.method === "PUT" ? "text-orange-600 bg-orange-100" :
-                    "text-red-600 bg-red-100"
-                  )}>{log.method}</span>
-                </td>
-                <td className="px-4 py-2 text-gray-700 font-mono text-xs truncate max-w-[300px]">{log.endpoint}</td>
-                <td className="px-4 py-2 text-center">
-                  <span className={clsx(
-                    log.status_code < 300 ? "text-green-600" :
-                    log.status_code < 400 ? "text-yellow-600" : "text-red-600"
-                  )}>{log.status_code}</span>
-                </td>
-                <td className="px-4 py-2 text-right text-gray-600">{log.duration_ms}ms</td>
-                <td className="px-4 py-2 text-right text-gray-500 text-xs">{log.user_email || "-"}</td>
-                <td className="px-4 py-2 text-right text-gray-400 text-xs">{log.time_ago}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+              <tr>
+                <th className="text-left px-4 py-2">Méthode</th>
+                <th className="text-left px-4 py-2">Endpoint</th>
+                <th className="text-center px-4 py-2">Status</th>
+                <th className="text-right px-4 py-2">Durée</th>
+                <th className="text-right px-4 py-2">Utilisateur</th>
+                <th className="text-right px-4 py-2">Quand</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr><td colSpan={6} className="py-8 text-center"><Spinner size="sm" /></td></tr>
+              ) : !logs?.length ? (
+                <tr><td colSpan={6} className="py-8 text-center text-gray-400">Aucune requête</td></tr>
+              ) : logs.map(log => (
+                <tr key={log.id} className={clsx(log.is_error && "bg-red-50/50")}>
+                  <td className="px-4 py-2">
+                    <span className={clsx("text-xs font-mono font-bold px-1.5 py-0.5 rounded",
+                      log.method === "GET" ? "text-green-600 bg-green-100" :
+                      log.method === "POST" ? "text-blue-600 bg-blue-100" :
+                      log.method === "PUT" ? "text-orange-600 bg-orange-100" :
+                      "text-red-600 bg-red-100"
+                    )}>{log.method}</span>
+                  </td>
+                  <td className="px-4 py-2 text-gray-700 font-mono text-xs truncate max-w-[300px]">{log.endpoint}</td>
+                  <td className="px-4 py-2 text-center">
+                    <span className={clsx(
+                      log.status_code < 300 ? "text-green-600" :
+                      log.status_code < 400 ? "text-yellow-600" : "text-red-600"
+                    )}>{log.status_code}</span>
+                  </td>
+                  <td className="px-4 py-2 text-right text-gray-600">{log.duration_ms}ms</td>
+                  <td className="px-4 py-2 text-right text-gray-500 text-xs">{log.user_email || "-"}</td>
+                  <td className="px-4 py-2 text-right text-gray-400 text-xs">{log.time_ago}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -261,55 +266,136 @@ function EndpointsTab() {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-          <tr>
-            <th className="text-left px-4 py-2">Endpoint</th>
-            <th className="text-center px-4 py-2">Appels</th>
-            <th className="text-center px-4 py-2">Erreurs</th>
-            <th className="text-center px-4 py-2">Taux err.</th>
-            <th className="text-right px-4 py-2">Moy. durée</th>
-            <th className="text-center px-4 py-2">État</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {isLoading ? (
-            <tr><td colSpan={6} className="py-8 text-center"><Spinner size="sm" /></td></tr>
-          ) : !endpoints?.length ? (
-            <tr><td colSpan={6} className="py-8 text-center text-gray-400">Aucun endpoint</td></tr>
-          ) : endpoints.map(ep => (
-            <tr key={`${ep.method}-${ep.endpoint}`} className={clsx(ep.is_degraded && "bg-red-50/50")}>
-              <td className="px-4 py-2 flex items-center gap-2">
-                <span className={clsx("text-xs font-mono font-bold px-1.5 py-0.5 rounded",
-                  ep.method === "GET" ? "text-green-600 bg-green-100" :
-                  ep.method === "POST" ? "text-blue-600 bg-blue-100" :
-                  "text-orange-600 bg-orange-100"
-                )}>{ep.method}</span>
-                <span className="text-gray-700 font-mono text-xs">{ep.endpoint}</span>
-              </td>
-              <td className="px-4 py-2 text-center text-gray-700">{ep.total_calls}</td>
-              <td className="px-4 py-2 text-center text-gray-700">{ep.error_count}</td>
-              <td className="px-4 py-2 text-center">
-                <span className={clsx(ep.error_rate > 10 ? "text-red-600 font-medium" : "text-gray-600")}>
-                  {ep.error_rate}%
-                </span>
-              </td>
-              <td className="px-4 py-2 text-right text-gray-600">{Math.round(ep.avg_duration_ms)}ms</td>
-              <td className="px-4 py-2 text-center">
-                {ep.is_degraded ? (
-                  <span className="inline-flex items-center gap-1 text-xs text-red-600">
-                    <XCircle className="w-3 h-3" /> Dégradé
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                    <CheckCircle2 className="w-3 h-3" /> OK
-                  </span>
-                )}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+            <tr>
+              <th className="text-left px-4 py-2">Endpoint</th>
+              <th className="text-center px-4 py-2">Appels</th>
+              <th className="text-center px-4 py-2">Erreurs</th>
+              <th className="text-center px-4 py-2">Taux err.</th>
+              <th className="text-right px-4 py-2">Moy. durée</th>
+              <th className="text-center px-4 py-2">État</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {isLoading ? (
+              <tr><td colSpan={6} className="py-8 text-center"><Spinner size="sm" /></td></tr>
+            ) : !endpoints?.length ? (
+              <tr><td colSpan={6} className="py-8 text-center text-gray-400">Aucun endpoint</td></tr>
+            ) : endpoints.map(ep => (
+              <tr key={`${ep.method}-${ep.endpoint}`} className={clsx(ep.is_degraded && "bg-red-50/50")}>
+                <td className="px-4 py-2 flex items-center gap-2">
+                  <span className={clsx("text-xs font-mono font-bold px-1.5 py-0.5 rounded",
+                    ep.method === "GET" ? "text-green-600 bg-green-100" :
+                    ep.method === "POST" ? "text-blue-600 bg-blue-100" :
+                    "text-orange-600 bg-orange-100"
+                  )}>{ep.method}</span>
+                  <span className="text-gray-700 font-mono text-xs">{ep.endpoint}</span>
+                </td>
+                <td className="px-4 py-2 text-center text-gray-700">{ep.total_calls}</td>
+                <td className="px-4 py-2 text-center text-gray-700">{ep.error_count}</td>
+                <td className="px-4 py-2 text-center">
+                  <span className={clsx(ep.error_rate > 10 ? "text-red-600 font-medium" : "text-gray-600")}>
+                    {ep.error_rate}%
+                  </span>
+                </td>
+                <td className="px-4 py-2 text-right text-gray-600">{Math.round(ep.avg_duration_ms)}ms</td>
+                <td className="px-4 py-2 text-center">
+                  {ep.is_degraded ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-red-600">
+                      <XCircle className="w-3 h-3" /> Dégradé
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                      <CheckCircle2 className="w-3 h-3" /> OK
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function HealthTab() {
+  const { data: health, isLoading } = useSystemHealth();
+  if (isLoading) return <div className="py-12 text-center"><Spinner /></div>;
+  if (!health) return <div className="py-12 text-center text-gray-400 text-sm">Aucune donnée</div>;
+
+  const checks = health.checks || {};
+  const allHealthy = health.status === "ok";
+
+  return (
+    <div className="space-y-4">
+      <div className={`rounded-xl p-4 flex items-center gap-3 ${allHealthy ? "bg-green-50" : "bg-red-50"}`}>
+        {allHealthy ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
+        <span className={`font-bold ${allHealthy ? "text-green-700" : "text-red-700"}`}>
+          Système {allHealthy ? "en santé" : "dégradé"}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {checks.database && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Database className="w-4 h-4 text-blue-500" />
+              <h3 className="font-semibold text-gray-900">Base de données</h3>
+              {checks.database.healthy ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500 ml-auto" /> : <XCircle className="w-3.5 h-3.5 text-red-500 ml-auto" />}
+            </div>
+            {checks.database.healthy ? (
+              <div className="space-y-1 text-sm">
+                <p className="text-gray-600">Tables: <span className="font-semibold">{checks.database.table_count}</span></p>
+                <p className="text-gray-600">Taille: <span className="font-semibold">{checks.database.size_mb} MB</span></p>
+              </div>
+            ) : (
+              <p className="text-sm text-red-600">{checks.database.error}</p>
+            )}
+          </div>
+        )}
+
+        {checks.cache && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <HardDrive className="w-4 h-4 text-amber-500" />
+              <h3 className="font-semibold text-gray-900">Cache</h3>
+              {checks.cache.healthy ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500 ml-auto" /> : <XCircle className="w-3.5 h-3.5 text-red-500 ml-auto" />}
+            </div>
+            <p className="text-sm text-gray-600">{checks.cache.healthy ? "Redis opérationnel" : "Cache indisponible"}</p>
+          </div>
+        )}
+
+        {checks.celery && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Activity className="w-4 h-4 text-purple-500" />
+              <h3 className="font-semibold text-gray-900">Celery</h3>
+              {checks.celery.healthy ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500 ml-auto" /> : <XCircle className="w-3.5 h-3.5 text-red-500 ml-auto" />}
+            </div>
+            {checks.celery.healthy ? (
+              <p className="text-sm text-gray-600">{checks.celery.workers?.length || 0} worker(s) actif(s)</p>
+            ) : (
+              <p className="text-sm text-red-600">Aucun worker détecté</p>
+            )}
+          </div>
+        )}
+
+        {checks.python && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Server className="w-4 h-4 text-gray-500" />
+              <h3 className="font-semibold text-gray-900">Environnement</h3>
+            </div>
+            <div className="space-y-1 text-sm">
+              <p className="text-gray-600">Python: <span className="font-semibold">{checks.python.version || "—"}</span></p>
+              <p className="text-gray-600">Django: <span className="font-semibold">{checks.python.django_version || "—"}</span></p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -335,39 +421,41 @@ function AuditTab() {
         <h3 className="text-sm font-semibold text-gray-900 px-4 py-3 border-b border-gray-100">
           Dernières actions auditées
         </h3>
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
-            <tr>
-              <th className="text-left px-4 py-2">Action</th>
-              <th className="text-left px-4 py-2">Objet</th>
-              <th className="text-left px-4 py-2">Utilisateur</th>
-              <th className="text-right px-4 py-2">IP</th>
-              <th className="text-right px-4 py-2">Quand</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {!logs?.length ? (
-              <tr><td colSpan={5} className="py-8 text-center text-gray-400">Aucun log d'audit</td></tr>
-            ) : logs.map((log: any) => (
-              <tr key={log.id}>
-                <td className="px-4 py-2">
-                  <span className={clsx("text-xs font-medium px-1.5 py-0.5 rounded",
-                    log.action === "CREATE" ? "text-green-600 bg-green-100" :
-                    log.action === "UPDATE" ? "text-blue-600 bg-blue-100" :
-                    log.action === "DELETE" ? "text-red-600 bg-red-100" :
-                    "text-gray-600 bg-gray-100"
-                  )}>{log.action_display}</span>
-                </td>
-                <td className="px-4 py-2 text-gray-700 text-xs max-w-[200px] truncate">
-                  {log.object_repr || `${log.content_type_name}#${log.object_id}`}
-                </td>
-                <td className="px-4 py-2 text-gray-600 text-xs">{log.user_email || "-"}</td>
-                <td className="px-4 py-2 text-right text-gray-400 text-xs font-mono">{log.ip_address || "-"}</td>
-                <td className="px-4 py-2 text-right text-gray-400 text-xs">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "-"}</td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+              <tr>
+                <th className="text-left px-4 py-2">Action</th>
+                <th className="text-left px-4 py-2">Objet</th>
+                <th className="text-left px-4 py-2">Utilisateur</th>
+                <th className="text-right px-4 py-2">IP</th>
+                <th className="text-right px-4 py-2">Quand</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {!logs?.length ? (
+                <tr><td colSpan={5} className="py-8 text-center text-gray-400">Aucun log d'audit</td></tr>
+              ) : logs.map((log: any) => (
+                <tr key={log.id}>
+                  <td className="px-4 py-2">
+                    <span className={clsx("text-xs font-medium px-1.5 py-0.5 rounded",
+                      log.action === "CREATE" ? "text-green-600 bg-green-100" :
+                      log.action === "UPDATE" ? "text-blue-600 bg-blue-100" :
+                      log.action === "DELETE" ? "text-red-600 bg-red-100" :
+                      "text-gray-600 bg-gray-100"
+                    )}>{log.action_display}</span>
+                  </td>
+                  <td className="px-4 py-2 text-gray-700 text-xs max-w-[200px] truncate">
+                    {log.object_repr || `${log.content_type_name}#${log.object_id}`}
+                  </td>
+                  <td className="px-4 py-2 text-gray-600 text-xs">{log.user_email || "-"}</td>
+                  <td className="px-4 py-2 text-right text-gray-400 text-xs font-mono">{log.ip_address || "-"}</td>
+                  <td className="px-4 py-2 text-right text-gray-400 text-xs">{log.timestamp ? new Date(log.timestamp).toLocaleString() : "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from core.pagination import StandardResultsSetPagination
 from core.permissions import IsAdmin, IsAdminOrComptable, IsAdminOrGestionnaire
+from shared.tenant.mixins import TenantViewSetMixin
 from django.http import HttpResponse
 from django.utils import timezone
 
@@ -123,7 +124,7 @@ class FiscalYearViewSet(ModelViewSet):
 # ═══════════════════════════════════════════════════════════
 # BUDGET
 # ═══════════════════════════════════════════════════════════
-class BudgetViewSet(ModelViewSet):
+class BudgetViewSet(TenantViewSetMixin, ModelViewSet):
     pagination_class = StandardResultsSetPagination
     svc = BudgetService()
 
@@ -258,7 +259,9 @@ class BudgetViewSet(ModelViewSet):
 # ═══════════════════════════════════════════════════════════
 # PAYMENT
 # ═══════════════════════════════════════════════════════════
-class PaymentViewSet(ModelViewSet):
+
+
+class PaymentViewSet(TenantViewSetMixin, ModelViewSet):
     pagination_class = StandardResultsSetPagination
     svc = PaymentService()
 

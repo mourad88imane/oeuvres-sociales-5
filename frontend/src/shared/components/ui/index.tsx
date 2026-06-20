@@ -1,9 +1,11 @@
 /**
  * COMPOSANTS UI PARTAGÉS
- * Badge, Modal, ConfirmDialog, EmptyState, Spinner, Toast
+ * Badge, Modal, ConfirmDialog, EmptyState, Spinner, Toast, ErrorBoundary
  */
 import * as ToastPrimitive from "@radix-ui/react-toast";
 import { useState, useEffect, useRef } from "react";
+
+export { ErrorBoundary } from "./ErrorBoundary";
 import { X, AlertTriangle, CheckCircle2, Info, Loader2 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -18,30 +20,26 @@ interface BadgeProps {
 }
 
 export function Badge({ variant = "default", size = "sm", children, dot }: BadgeProps) {
-  const variantClasses: Record<string, string> = {
-    default: "bg-gray-100 text-gray-700",
-    success: "bg-green-100 text-green-700",
-    warning: "bg-amber-100 text-amber-700",
-    error:   "bg-red-100 text-red-700",
-    info:    "bg-blue-100 text-blue-700",
-    purple:  "bg-purple-100 text-purple-700",
+  const variantStyles: Record<string, { color: string; bg: string }> = {
+    default: { color: "#8a8882", bg: "rgba(138,136,130,0.1)" },
+    success: { color: "#16a34a", bg: "rgba(34,197,94,0.1)" },
+    warning: { color: "#d97706", bg: "rgba(245,158,11,0.1)" },
+    error:   { color: "#dc2626", bg: "rgba(239,68,68,0.1)" },
+    info:    { color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
+    purple:  { color: "#a855f7", bg: "rgba(168,85,247,0.1)" },
   };
-  const sizeClasses = size === "sm" ? "text-xs px-2 py-0.5" : "text-sm px-3 py-1";
+  const vs = variantStyles[variant] || variantStyles.default;
+  const sz = size === "sm" ? "text-xs px-2 py-0.5" : "text-sm px-3 py-1";
+
+  const dotColors: Record<string, string> = {
+    success: "#16a34a", warning: "#d97706", error: "#dc2626", info: "#3b82f6", default: "#8a8882",
+  };
 
   return (
-    <span className={clsx(
-      "inline-flex items-center gap-1 rounded-full font-medium",
-      variantClasses[variant], sizeClasses,
-    )}>
+    <span className={clsx("inline-flex items-center gap-1 rounded-full font-medium", sz)}
+      style={{ color: vs.color, background: vs.bg }}>
       {dot && (
-        <span className={clsx(
-          "w-1.5 h-1.5 rounded-full",
-          variant === "success" && "bg-green-500",
-          variant === "warning" && "bg-amber-500",
-          variant === "error"   && "bg-red-500",
-          variant === "info"    && "bg-blue-500",
-          variant === "default" && "bg-gray-400",
-        )} />
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: dotColors[variant] || dotColors.default }} />
       )}
       {children}
     </span>
@@ -110,15 +108,25 @@ export function Modal({ open, onClose, title, children, size = "md", footer }: M
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div className={clsx(
-        "bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh]",
+        "rounded-2xl shadow-2xl w-full flex flex-col max-h-[90vh]",
         sizeClasses[size],
-      )}>
+      )}
+        style={{
+          background: "#ffffff",
+          border: "1px solid rgba(0,0,0,0.06)",
+          boxShadow: "0 20px 60px -10px rgba(0,0,0,0.1)",
+        }}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4"
+          style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+          <h2 className="text-lg font-bold" style={{ color: "#1a1917" }}>{title}</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: "#8a8882" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.04)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >
             <X className="w-5 h-5" />
           </button>
@@ -127,7 +135,11 @@ export function Modal({ open, onClose, title, children, size = "md", footer }: M
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-2xl flex justify-end gap-3">
+          <div className="px-6 py-4 rounded-b-2xl flex justify-end gap-3"
+            style={{
+              borderTop: "1px solid rgba(0,0,0,0.04)",
+              background: "#f8f7f4",
+            }}>
             {footer}
           </div>
         )}
@@ -172,7 +184,13 @@ export function ConfirmDialog({
       footer={
         <>
           <button onClick={onClose} disabled={loading}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            className="px-4 py-2 text-sm border rounded-xl disabled:opacity-50 transition-colors font-bold"
+            style={{
+              borderColor: "rgba(0,0,0,0.08)",
+              color: "#4d4b46",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.03)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
             {cancelLabel}
           </button>
           <button onClick={onConfirm} disabled={loading}
@@ -185,7 +203,7 @@ export function ConfirmDialog({
     >
       <div className="flex items-start gap-4">
         {iconMap[variant]}
-        <p className="text-sm text-gray-600 leading-relaxed">{message}</p>
+        <p className="text-sm leading-relaxed" style={{ color: "#4d4b46" }}>{message}</p>
       </div>
     </Modal>
   );
@@ -205,12 +223,13 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center px-6">
       {Icon && (
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Icon className="w-8 h-8 text-gray-400" />
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+          style={{ background: "rgba(0,0,0,0.04)" }}>
+          <Icon className="w-8 h-8" style={{ color: "#a8a49a" }} />
         </div>
       )}
-      <h3 className="text-base font-semibold text-gray-800 mb-1">{title}</h3>
-      {description && <p className="text-sm text-gray-500 max-w-xs">{description}</p>}
+      <h3 className="text-base font-bold mb-1" style={{ color: "#1a1917" }}>{title}</h3>
+      {description && <p className="text-sm max-w-xs font-medium" style={{ color: "#8a8882" }}>{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -239,12 +258,12 @@ interface FieldProps {
 export function Field({ label, error, required, hint, children, className }: FieldProps) {
   return (
     <div className={clsx("flex flex-col gap-1", className)}>
-      <label className="text-sm font-medium text-gray-700">
+      <label className="text-sm font-bold" style={{ color: "#4d4b46" }}>
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       {children}
-      {hint && !error && <p className="text-xs text-gray-400">{hint}</p>}
+      {hint && !error && <p className="text-xs" style={{ color: "#8a8882" }}>{hint}</p>}
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
@@ -295,28 +314,29 @@ export function ToastViewport() {
     error:   <AlertTriangle className="w-5 h-5 text-red-500" />,
     info:    <Info className="w-5 h-5 text-blue-500" />,
   };
-  const borderMap = {
-    success: "border-green-200",
-    error:   "border-red-200",
-    info:    "border-blue-200",
+  const borderMap: Record<string, string> = {
+    success: "rgba(34, 197, 94, 0.2)",
+    error:   "rgba(239, 68, 68, 0.2)",
+    info:    "rgba(59, 130, 246, 0.2)",
   };
 
   return (
     <>
       <ToastPrimitive.Root open={open} onOpenChange={setOpen} duration={4000}
-        className={clsx(
-          "fixed bottom-4 right-4 z-[100] w-80 bg-white rounded-xl shadow-xl border p-4 flex items-start gap-3",
-          "radix-state-open:animate-slide-up radix-state-closed:animate-fade-out",
-          borderMap[variant],
-        )}>
+        className="fixed bottom-4 right-4 z-[100] w-80 rounded-2xl shadow-xl p-4 flex items-start gap-3 radix-state-open:animate-slide-up radix-state-closed:animate-fade-out"
+        style={{
+          background: "#ffffff",
+          border: `1px solid ${borderMap[variant]}`,
+          boxShadow: "0 10px 30px -8px rgba(0,0,0,0.08)",
+        }}>
         <div className="shrink-0 mt-0.5">{iconMap[variant]}</div>
         <div className="flex-1 min-w-0">
-          <ToastPrimitive.Title className="text-sm font-semibold text-gray-900">{title}</ToastPrimitive.Title>
+          <ToastPrimitive.Title className="text-sm font-bold" style={{ color: "#1a1917" }}>{title}</ToastPrimitive.Title>
           {description && (
-            <ToastPrimitive.Description className="text-xs text-gray-500 mt-0.5">{description}</ToastPrimitive.Description>
+            <ToastPrimitive.Description className="text-xs mt-0.5 font-medium" style={{ color: "#8a8882" }}>{description}</ToastPrimitive.Description>
           )}
         </div>
-        <ToastPrimitive.Close className="shrink-0 p-0.5 text-gray-400 hover:text-gray-600">
+        <ToastPrimitive.Close className="shrink-0 p-0.5" style={{ color: "#a8a49a" }}>
           <X className="w-4 h-4" />
         </ToastPrimitive.Close>
       </ToastPrimitive.Root>
@@ -328,9 +348,9 @@ export function ToastViewport() {
 // Classe CSS commune pour les inputs
 export const inputCls = (error?: string) =>
   clsx(
-    "w-full px-3 py-2 text-sm border rounded-lg transition-colors",
-    "focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent",
+    "w-full px-3 py-2 text-sm border rounded-xl transition-colors",
+    "focus:outline-none focus:ring-2 focus:ring-brand",
     error
-      ? "border-red-400 bg-red-50 focus:ring-red-400"
-      : "border-gray-300 bg-white hover:border-gray-400",
+      ? "border-red-400 focus:ring-red-400"
+      : "",
   );

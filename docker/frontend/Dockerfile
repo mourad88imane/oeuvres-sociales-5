@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Installer les dépendances
-RUN npm ci
+RUN npm install && (npm install @rollup/rollup-linux-$(uname -m)-musl --no-save 2>/dev/null || true)
 
 # Copier le code source
 COPY . .
@@ -27,7 +27,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm install && (npm install @rollup/rollup-linux-$(uname -m)-musl --no-save 2>/dev/null || true)
 
 COPY . .
 

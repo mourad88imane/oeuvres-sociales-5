@@ -10,6 +10,7 @@ import { useEmployees, useCreateEmployee, useDeleteEmployee, useExportEmployees,
 import { EmployeeStatusBadge, Modal, ConfirmDialog, EmptyState, Spinner } from "@shared/components/ui/index";
 import { EmployeeForm } from "../components/EmployeeForm";
 import { RoleGuard } from "@shared/components/layout/ProtectedRoute";
+import { fmtDate } from "@shared/utils/format";
 import type { EmployeeFilters } from "../types";
 
 const PAGE_SIZES = [10, 25, 50, 100];
@@ -159,7 +160,7 @@ export function EmployeesPage() {
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <p className="text-sm text-gray-700">{emp.seniority_label}</p>
-                      <p className="text-xs text-gray-400">{emp.date_hired}</p>
+                      <p className="text-xs text-gray-400">{fmtDate(emp.date_hired)}</p>
                     </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <EmployeeStatusBadge status={emp.status} />

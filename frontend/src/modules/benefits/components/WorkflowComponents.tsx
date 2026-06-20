@@ -21,6 +21,7 @@ const STATE_ICONS: Record<WorkflowState, React.ElementType> = {
   submitted:    Send,
   under_review: FileCheck,
   on_hold:      PauseCircle,
+  pending_director_approval: AlertTriangle,
   validated:    CheckCircle2,
   paid:         Banknote,
   rejected:     XCircle,
@@ -63,11 +64,13 @@ export function WorkflowTimeline({ benefit, compact = false }: WorkflowTimelineP
   const isRejected  = benefit.workflow_state === "rejected";
   const isCancelled = benefit.workflow_state === "cancelled";
   const isOnHold    = benefit.workflow_state === "on_hold";
+  const isPendingDirectorApproval = benefit.workflow_state === "pending_director_approval";
 
   const dateMap: Partial<Record<WorkflowState, string | null>> = {
     draft:        benefit.created_at,
     submitted:    benefit.submitted_at,
     under_review: benefit.last_transition_at,
+    pending_director_approval: benefit.last_transition_at,
     validated:    benefit.validated_at,
     paid:         benefit.paid_at,
   };
@@ -93,7 +96,7 @@ export function WorkflowTimeline({ benefit, compact = false }: WorkflowTimelineP
             </div>
           );
         })}
-        {(isRejected || isCancelled || isOnHold) && (
+        {(isRejected || isCancelled || isOnHold || isPendingDirectorApproval) && (
           <WorkflowBadge state={benefit.workflow_state as WorkflowState} size="sm" />
         )}
       </div>
@@ -164,16 +167,18 @@ export function WorkflowTimeline({ benefit, compact = false }: WorkflowTimelineP
       </div>
 
       {/* Indicateurs spéciaux */}
-      {(isRejected || isCancelled || isOnHold) && (
+      {(isRejected || isCancelled || isOnHold || isPendingDirectorApproval) && (
         <div className={clsx(
           "mt-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
           isRejected  ? "bg-red-50 text-red-700" : "",
           isCancelled ? "bg-gray-50 text-gray-600" : "",
           isOnHold    ? "bg-amber-50 text-amber-700" : "",
+          isPendingDirectorApproval ? "bg-pink-50 text-pink-700 border border-pink-200" : "",
         )}>
           {isRejected && <><XCircle className="w-4 h-4 shrink-0" />{t("benefits.rejected")} — {benefit.rejection_reason || t("common.noData")}</>}
           {isCancelled && <><Ban className="w-4 h-4 shrink-0" />{t("benefits.cancelled")}</>}
           {isOnHold && <><PauseCircle className="w-4 h-4 shrink-0" />{t("benefits.pending")} — {benefit.last_transition_reason || ""}</>}
+          {isPendingDirectorApproval && <><AlertTriangle className="w-4 h-4 shrink-0" />{t("benefits.pendingDirectorApproval")}</>}
         </div>
       )}
     </div>
@@ -191,6 +196,7 @@ interface WorkflowActionsProps {
 const TRANSITION_STYLE: Record<string, string> = {
   submitted:    "bg-blue-600 hover:bg-blue-700 text-white",
   under_review: "bg-purple-600 hover:bg-purple-700 text-white",
+  pending_director_approval: "bg-pink-600 hover:bg-pink-700 text-white",
   validated:    "bg-emerald-600 hover:bg-emerald-700 text-white",
   paid:         "bg-green-600 hover:bg-green-700 text-white",
   on_hold:      "bg-amber-500 hover:bg-amber-600 text-white",

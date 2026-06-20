@@ -64,7 +64,7 @@ pull_images() {
 # ── Déploiement des services ──────────────────────────────
 deploy_services() {
     log_step "Déploiement des services..."
-    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+    docker compose -f "$COMPOSE_FILE" up -d --remove-orphans --wait
     log_info "Services démarrés"
 }
 
@@ -72,19 +72,25 @@ deploy_services() {
 wait_for_health() {
     local retries=30
     local interval=5
+    local base_url="${SITE_URL:-http://localhost:8000}"
 
     log_step "Attente de la disponibilité des services..."
 
     for i in $(seq 1 $retries); do
-        if docker compose -f "$COMPOSE_FILE" ps --status healthy | grep -q "healthy"; then
-            log_info "✓ Services en bonne santé (tentative $i/$retries)"
-            return 0
+        # Vérification via le health endpoint HTTP
+        if curl -sf "$base_url/api/v1/health/live/" -o /dev/null 2>/dev/null; then
+            log_info "✓ Backend sain (tentative $i/$retries)"
+            # Vérification approfondie (DB + cache)
+            if curl -sf "$base_url/api/v1/health/ready/" -o /dev/null 2>/dev/null; then
+                log_info "✓ Backend prêt (DB + cache OK)"
+                return 0
+            fi
         fi
         sleep "$interval"
     done
 
-    log_warn "⚠️  Certains services ne sont pas en 'healthy' — vérifiez les logs"
-    docker compose -f "$COMPOSE_FILE" logs --tail=20 backend nginx
+    log_warn "⚠️  Services non disponibles — vérifiez les logs"
+    docker compose -f "$COMPOSE_FILE" logs --tail=30 backend nginx
     return 1
 }
 
@@ -112,21 +118,44 @@ smoke_tests() {
 
     log_step "Exécution des smoke tests..."
 
-    local endpoints=(
-        "$base_url/api/v1/auth/verify/"
-        "$base_url/api/v1/health/"
-        "$base_url/"
-    )
+    local tests=0
+    local passed=0
 
-    for endpoint in "${endpoints[@]}"; do
-        if curl -sf -o /dev/null -w "%{http_code}" "$endpoint" | grep -q "200\|302\|401"; then
-            log_info "  ✓ $endpoint"
+    test_endpoint() {
+        local url="$1"
+        local expected="$2"
+        local label="${3:-$url}"
+        local status
+        tests=$((tests + 1))
+        status=$(curl -sf -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+        if echo "$expected" | grep -q "$status"; then
+            log_info "  ✓ $label ($status)"
+            passed=$((passed + 1))
         else
-            log_error "  ✗ $endpoint — réponse inattendue"
+            log_error "  ✗ $label — attendu $expected, reçu $status"
         fi
-    done
+    }
 
-    log_info "✓ Smoke tests terminés"
+    # Health endpoints
+    test_endpoint "$base_url/api/v1/health/live/"   "200" "Liveness"
+    test_endpoint "$base_url/api/v1/health/ready/"  "200" "Readiness"
+    test_endpoint "$base_url/api/v1/health/"        "200" "Deep Health"
+
+    # Prometheus metrics
+    test_endpoint "$base_url/metrics"               "200" "Prometheus Metrics"
+
+    # Auth
+    test_endpoint "$base_url/api/v1/auth/verify/"   "401" "Auth Verify (expect 401 = JWT required)"
+
+    # Frontend
+    test_endpoint "$base_url/"                      "200|302" "Frontend"
+
+    echo ""
+    if [ "$passed" -eq "$tests" ]; then
+        log_info "✓ $passed/$tests smoke tests réussis"
+    else
+        log_warn "⚠️  $passed/$tests smoke tests réussis"
+    fi
 }
 
 # ── Post-déploiement ─────────────────────────────────────

@@ -70,3 +70,55 @@ export interface DetectionResult {
   benefit_anomalies?: AIAnomaly[];
   payment_anomalies?: AIAnomaly[];
 }
+
+export interface ForecastData {
+  target: string;
+  fiscal_year: number;
+  total_budget: number;
+  method: string;
+  horizon_months: number;
+  historical_months: number;
+  forecasts: Record<string, {
+    method: string;
+    horizon: number;
+    forecasts: { step: number; value: number; n_models?: number }[];
+    r_squared?: number;
+    slope?: number;
+  }>;
+}
+
+export interface WhatIfData {
+  scenario: Record<string, number>;
+  impact: {
+    budget_change: string;
+    new_annual_cost: number;
+  };
+  adjusted_forecasts: {
+    step: number;
+    base: number;
+    adjusted: number;
+  }[];
+}
+
+export interface MedicalDocumentAnalysisResult {
+  id: string;
+  title: string;
+  category: string;
+  category_display: string;
+  extracted_text: string;
+  ocr_confidence: number | null;
+  medical_keywords: string[];
+  diagnosis_mentions: string[];
+  medication_mentions: string[];
+  summary: string;
+  language: string;
+  file_name: string;
+  file_size_bytes: number;
+  file_type: string;
+  page_count: number | null;
+  analysis_duration_ms: number;
+  status: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  time_ago: string;
+}

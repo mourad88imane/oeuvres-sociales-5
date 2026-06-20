@@ -24,6 +24,7 @@ class PartnerListSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "contact_name",
+            "category",
             "created_at",
         ]
 
@@ -57,6 +58,9 @@ class PartnerSerializer(BaseModelSerializer):
             "contact_name",
             "contact_phone",
             "contact_email",
+            "category",
+            "gps_coordinates",
+            "description",
             "notes",
             "metadata",
             "created_at",
@@ -87,6 +91,9 @@ class PartnerCreateSerializer(serializers.ModelSerializer):
             "contact_name",
             "contact_phone",
             "contact_email",
+            "category",
+            "gps_coordinates",
+            "description",
             "notes",
             "metadata",
         ]

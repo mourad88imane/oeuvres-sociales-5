@@ -14,6 +14,7 @@ export function AIAssistantPage() {
     t("ai.suggestions.recommendations"),
     t("ai.suggestions.employees"),
     t("ai.suggestions.pending"),
+    t("ai.suggestions.documents"),
   ];
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   const { mutate, isPending } = useAskAssistant();

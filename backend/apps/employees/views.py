@@ -30,7 +30,10 @@ logger = logging.getLogger("apps.employees")
 service = EmployeeService()
 
 
-class EmployeeViewSet(ModelViewSet):
+from shared.tenant.mixins import TenantViewSetMixin
+
+
+class EmployeeViewSet(TenantViewSetMixin, ModelViewSet):
     pagination_class = StandardResultsSetPagination
     parser_classes = [JSONParser, MultiPartParser, FormParser]
 
@@ -185,7 +188,7 @@ class EmployeeViewSet(ModelViewSet):
                 "Wilaya",
             ]
         )
-        for e in qs.iterator():
+        for e in qs.iterator(chunk_size=2000):
             w.writerow(
                 [
                     e.matricule,

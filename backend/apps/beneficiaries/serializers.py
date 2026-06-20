@@ -42,6 +42,9 @@ class BeneficiarySerializer(BaseModelSerializer):
             "spouse_employer",
             "birth_certificate_uploaded",
             "marriage_certificate_uploaded",
+            "phone",
+            "address",
+            "social_security_number",
             "notes",
             "created_at",
             "updated_at",
@@ -76,6 +79,9 @@ class BeneficiaryCreateSerializer(BaseModelSerializer):
             "spouse_employer",
             "birth_certificate_uploaded",
             "marriage_certificate_uploaded",
+            "phone",
+            "address",
+            "social_security_number",
             "notes",
         ]
 
@@ -117,7 +123,10 @@ class BeneficiaryUpdateSerializer(BaseModelSerializer):
             "school_year",
             "spouse_is_employed",
             "spouse_employer",
-            "birth_certificate_uploaded",
-            "marriage_certificate_uploaded",
-            "notes",
-        ]
+    "birth_certificate_uploaded",
+    "marriage_certificate_uploaded",
+    "phone",
+    "address",
+    "social_security_number",
+    "notes",
+]

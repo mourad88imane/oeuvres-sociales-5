@@ -221,6 +221,15 @@ urlpatterns = [
         name="service-detect-anomalies",
     ),
     path(
+        "services/detect-fraud/",
+        views.AIServiceViewSet.as_view(
+            {
+                "post": "detect_fraud",
+            }
+        ),
+        name="service-detect-fraud",
+    ),
+    path(
         "services/score-benefit/",
         views.AIServiceViewSet.as_view(
             {
@@ -273,5 +282,32 @@ urlpatterns = [
             }
         ),
         name="service-segmentation",
+    ),
+    path(
+        "services/analyze-document/",
+        views.AIServiceViewSet.as_view(
+            {
+                "post": "analyze_document",
+            }
+        ),
+        name="service-analyze-document",
+    ),
+    path(
+        "document-analyses/",
+        views.MedicalDocumentAnalysisViewSet.as_view(
+            {
+                "get": "list",
+            }
+        ),
+        name="document-analysis-list",
+    ),
+    path(
+        "document-analyses/<uuid:pk>/",
+        views.MedicalDocumentAnalysisViewSet.as_view(
+            {
+                "get": "retrieve",
+            }
+        ),
+        name="document-analysis-detail",
     ),
 ]

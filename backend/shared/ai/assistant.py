@@ -36,31 +36,51 @@ class Intent:
     EMPLOYEE_COUNT = "employee_count"
     USER_HELP = "user_help"
     FORECAST = "forecast"
+    MEDICAL_COVERAGE = "medical_coverage"
+    DOCUMENT_ANALYSIS = "document_analysis"
     UNKNOWN = "unknown"
 
 
 class AIAssistant:
     """Assistant IA — répond aux questions en langage naturel."""
 
-    # Patterns d'intention (regex simples)
+    # Patterns d'intention (regex simples) — français, anglais + arabe
     INTENT_PATTERNS: list[tuple[str, str]] = [
-        (r"(bonjour|salut|coucou|hello|hi)", "greeting"),
+        (r"(bonjour|salut|coucou|hello|hi|السلام عليكم|مرحبا|اهلا|صباح الخير)", "greeting"),
         (
-            r"(récapitulatif|synthèse|dashboard|tableau de bord|vue d.ensemble|summary)",
+            r"(récapitulatif|synthèse|dashboard|tableau de bord|vue d.ensemble|summary|"
+            r"ملخص|نظرة عامة|موجز)",
             Intent.DASHBOARD_SUMMARY,
         ),
-        (r"(kpi|indicateur|performance|métrique)", Intent.KPI_QUERY),
-        (r"(budget|dépense|consommation budgétaire|finance)", Intent.BUDGET_STATUS),
-        (r"(prestation|demande|bénéfice|prestation sociale|dossier)", Intent.BENEFITS_STATUS),
+        (r"(kpi|indicateur|performance|métrique|مؤشرات|أداء)", Intent.KPI_QUERY),
+        (r"(budget|dépense|consommation budgétaire|finance|ميزانية|مالية|مصروفات)", Intent.BUDGET_STATUS),
+        (r"(prestation|demande|bénéfice|prestation sociale|dossier|"
+         r"منح|منحة|مساعدات|استفادة|طلب)", Intent.BENEFITS_STATUS),
         (
-            r"(convention|expir|renouvellement|partenaire|convention arriv)",
+            r"(convention|expir|renouvellement|partenaire|convention arriv|"
+            r"اتفاقيات|شركاء|انتهاء|تجديد)",
             Intent.CONVENTION_EXPIRY,
         ),
-        (r"(anomalie|détection|alerte|suspect|anormal)", Intent.ANOMALIES),
-        (r"(recommendation|recommandation|conseil|suggestion|proposition)", Intent.RECOMMENDATIONS),
-        (r"(employé|salarié|effectif|combien.*employé)", Intent.EMPLOYEE_COUNT),
-        (r"(prévision|prédiction|tendance|évolution|projection|estimation)", Intent.FORECAST),
-        (r"(aide|help|que fais|commandes|possible)", Intent.USER_HELP),
+        (r"(anomalie|détection|alerte|suspect|anormal|شذوذ|كشف|إنذار|حالات شاذة)", Intent.ANOMALIES),
+        (r"(recommendation|recommandation|conseil|suggestion|proposition|"
+         r"توصيات|اقتراحات|نصيحة)", Intent.RECOMMENDATIONS),
+        (r"(employé|salarié|effectif|combien.*employé|موظف|موظفين|عمال|عدد الموظفين)", Intent.EMPLOYEE_COUNT),
+        (r"(prévision|prédiction|tendance|évolution|projection|estimation|"
+         r"توقعات|تنبؤات|اتجاهات|تقديرات)", Intent.FORECAST),
+        (
+            r"(couvertures? m[eé]dicale?s?|prise en charge|bon m[eé]dical|voucher|analyse m[eé]dicale|"
+            r"imagerie|centre m[eé]dical|consultation|eligibilit[ée]|m[eé]dicale?s?|"
+            r"medical coverage|medical voucher|health coverage|"
+            r"تغطية طبية|تأمين صحي|رعاية صحية|كشف طبي|تحاليل طبية|تصوير طبي|مركز طبي)",
+            Intent.MEDICAL_COVERAGE,
+        ),
+        (
+            r"(analyse de document|document analysis|ocr|reconnaissance|"
+            r"extraire.*texte|scan.*document|analyse.*ordonnance|"
+            r"تحليل مستند|تعرف على النص|مسح ضوئي)",
+            Intent.DOCUMENT_ANALYSIS,
+        ),
+        (r"(aide|help|que fais|commandes|possible|مساعدة|أوامر|ما يمكنك)", Intent.USER_HELP),
     ]
 
     def __init__(self):
@@ -117,6 +137,8 @@ class AIAssistant:
             Intent.RECOMMENDATIONS: self._recommendations,
             Intent.EMPLOYEE_COUNT: self._employee_count,
             Intent.FORECAST: self._forecast,
+            Intent.MEDICAL_COVERAGE: self._medical_coverage,
+            Intent.DOCUMENT_ANALYSIS: self._document_analysis,
             Intent.USER_HELP: self._user_help,
             Intent.UNKNOWN: self._unknown,
         }
@@ -129,7 +151,7 @@ class AIAssistant:
             "text": _(
                 f"Bonjour {name} ! Je suis l'assistant IA des Œuvres Sociales. "
                 "Je peux vous aider avec le tableau de bord, les KPI, le budget, "
-                "les prestations, les conventions, et plus encore. Tapez « aide » "
+                "les prestations, les conventions, la couverture médicale, et plus encore. Tapez « aide » "
                 "pour voir ce que je sais faire."
             ),
             "type": "text",
@@ -340,6 +362,93 @@ class AIAssistant:
             "type": "text",
         }
 
+    def _medical_coverage(self, entities: dict, user=None) -> dict:
+        from django.apps import apps
+
+        try:
+            Voucher = apps.get_model("medical_coverage", "MedicalCoverageVoucher")
+            Type = apps.get_model("medical_coverage", "MedicalCoverageType")
+        except LookupError:
+            return {"text": _("Module couverture médicale non disponible."), "type": "text"}
+
+        types = list(Type.objects.alive().filter(is_active=True))
+        total = Voucher.objects.alive().count()
+        by_state = list(
+            Voucher.objects.alive()
+            .values("workflow_state")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+        by_type = list(
+            Voucher.objects.alive()
+            .values("coverage_type__name")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        types_info = "\n".join(
+            f"  • {t.name} — max {t.max_per_year}/an, attente {t.waiting_period_months} mois"
+            for t in types
+        )
+
+        state_details = "\n".join(
+            f"  • {s['workflow_state']}: {s['count']}" for s in by_state
+        )
+
+        return {
+            "text": _(
+                f"🏥 **Couverture Médicale**\n\n"
+                f"Total bons : {total}\n\n"
+                f"**Types disponibles :**\n{types_info}\n\n"
+                f"**Par statut :**\n{state_details}"
+            ),
+            "type": "rich",
+            "data": {
+                "total": total,
+                "by_state": by_state,
+                "by_type": by_type,
+            },
+        }
+
+    def _document_analysis(self, entities: dict, user=None) -> dict:
+        from .models import MedicalDocumentAnalysis
+
+        total = MedicalDocumentAnalysis.objects.filter(is_deleted=False).count()
+        recent = MedicalDocumentAnalysis.objects.filter(is_deleted=False).order_by("-created_at")[:5]
+        by_category = list(
+            MedicalDocumentAnalysis.objects.filter(is_deleted=False)
+            .values("category")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        category_labels = dict(MedicalDocumentAnalysis.DocCategory.choices)
+        category_details = "\n".join(
+            f"  • {category_labels.get(c['category'], c['category'])}: {c['count']}"
+            for c in by_category
+        )
+
+        recent_details = "\n".join(
+            f"  • {d.title or d.file_name} — {d.get_category_display()}"
+            for d in recent
+        )
+
+        return {
+            "text": _(
+                f"📄 **Analyse de documents**\n\n"
+                f"Total documents analysés : {total}\n\n"
+                f"**Par catégorie :**\n{category_details}\n\n"
+                f"**Dernières analyses :**\n{recent_details}\n\n"
+                "Utilisez l'onglet « Analytiques Prédictives » pour analyser un nouveau document."
+            ),
+            "type": "rich",
+            "data": {
+                "total": total,
+                "by_category": by_category,
+                "recent": [{"id": str(d.id), "title": d.title or d.file_name, "category": d.category} for d in recent],
+            },
+        }
+
     def _user_help(self, entities: dict, user=None) -> dict:
         return {
             "text": _(
@@ -351,7 +460,9 @@ class AIAssistant:
                 "• « Anomalies » — Alertes récentes\n"
                 "• « Recommandations » — Suggestions\n"
                 "• « Employés » — Effectifs\n"
-                "• « Prévisions » — Tendances\n\n"
+                "• « Prévisions » — Tendances\n"
+                "• « Couverture médicale » — Bons de prise en charge\n"
+                "• « Analyse de documents » — Résultats OCR et classification\n\n"
                 "Posez une question en langage naturel !"
             ),
             "type": "text",
@@ -361,8 +472,8 @@ class AIAssistant:
         return {
             "text": _(
                 "Je n'ai pas compris votre demande. "
-                "Essayez des mots-clés comme : budget, prestations, conventions, "
-                "employés, récapitulatif, anomalies, ou tapez « aide »."
+                "Essayez : budget, prestations, conventions, "
+                "employés, couverture médicale, récapitulatif, anomalies, ou tapez « aide »."
             ),
             "type": "text",
         }

@@ -49,6 +49,9 @@ class Beneficiary(BaseModel):
     spouse_employer = models.CharField(max_length=200, blank=True)
     birth_certificate_uploaded = models.BooleanField(default=False)
     marriage_certificate_uploaded = models.BooleanField(default=False)
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Téléphone")
+    address = models.TextField(blank=True, verbose_name="Adresse")
+    social_security_number = models.CharField(max_length=30, blank=True, verbose_name="N° SS")
     notes = models.TextField(blank=True)
 
     class Meta:

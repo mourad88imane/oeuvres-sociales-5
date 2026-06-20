@@ -1,13 +1,11 @@
-/**
- * SIDEBAR — Navigation principale
- * S'adapte aux rôles : affiche uniquement les sections autorisées.
- */
 import { useTranslation } from "react-i18next";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Users, UserCheck, Gift, Wallet,
   FileText, BarChart3, Settings, LogOut, ChevronLeft,
-  Building2, Shield, Lightbulb, Activity, Bot, Languages,
+  Building2, Shield, Lightbulb, Activity, Bot,
+  HandCoins, GitBranch, ClipboardList, Sliders, KeyRound, GitMerge, UserCog, Workflow,
+  TrendingUp, Briefcase, Layers,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useAuth } from "@modules/auth/hooks/useAuth";
@@ -18,7 +16,7 @@ interface NavItem {
   labelKey: string;
   path: string;
   icon: React.ElementType;
-  roles?: string[];      // Si vide → tous les rôles
+  roles?: string[];
   badge?: number;
 }
 
@@ -35,6 +33,8 @@ const navItemDefs: Omit<NavItem, "labelKey">[] = [
     roles: ["admin", "gestionnaire"],
   },
   { path: "/benefits", icon: Gift },
+  { path: "/medical-coverage/requests", icon: FileText, roles: ["admin", "gestionnaire", "comptable"] },
+  { path: "/loans", icon: HandCoins, roles: ["admin", "gestionnaire", "comptable"] },
   {
     path: "/finance",
     icon: Wallet,
@@ -61,8 +61,18 @@ const navItemDefs: Omit<NavItem, "labelKey">[] = [
     roles: ["admin"],
   },
   {
+    path: "/analytics/visualizations",
+    icon: TrendingUp,
+    roles: ["admin"],
+  },
+  {
     path: "/ai/assistant",
     icon: Bot,
+    roles: ["admin"],
+  },
+  {
+    path: "/ai/predictive",
+    icon: BarChart3,
     roles: ["admin"],
   },
   {
@@ -70,11 +80,28 @@ const navItemDefs: Omit<NavItem, "labelKey">[] = [
     icon: Activity,
     roles: ["admin"],
   },
+  {
+    path: "/documents",
+    icon: FileText,
+    roles: ["admin", "gestionnaire", "comptable"],
+  },
 ];
 
 const adminItemDefs: Omit<NavItem, "labelKey">[] = [
-  { path: "/users", icon: Shield, roles: ["admin"] },
-  { path: "/settings", icon: Settings, roles: ["admin"] },
+  { path: "/admin/roles", icon: Shield, roles: ["admin"] },
+  { path: "/admin/permissions", icon: KeyRound, roles: ["admin"] },
+  { path: "/admin/org-structure", icon: Building2, roles: ["admin"] },
+  { path: "/admin/functions", icon: Briefcase, roles: ["admin"] },
+  { path: "/admin/grades", icon: Layers, roles: ["admin"] },
+  { path: "/admin/system-settings", icon: Settings, roles: ["admin"] },
+  { path: "/admin/committee-params", icon: Sliders, roles: ["admin"] },
+  { path: "/admin/workflow-designer", icon: Workflow, roles: ["admin"] },
+  { path: "/admin/workflow-rules", icon: GitBranch, roles: ["admin"] },
+  { path: "/admin/approval-matrix", icon: GitMerge, roles: ["admin"] },
+  { path: "/admin/user-roles", icon: UserCog, roles: ["admin"] },
+  { path: "/admin/audit-logs", icon: ClipboardList, roles: ["admin"] },
+  { path: "/users", icon: Users, roles: ["admin"] },
+  { path: "/monitoring", icon: Activity, roles: ["admin"] },
 ];
 
 const pathToNavKey: Record<string, string> = {
@@ -82,15 +109,31 @@ const pathToNavKey: Record<string, string> = {
   "/employees": "employees",
   "/beneficiaries": "beneficiaries",
   "/benefits": "benefits",
+  "/medical-coverage/requests": "coverageRequests",
+  "/loans": "loans",
   "/finance": "finance",
   "/conventions": "conventions",
   "/reporting": "reports",
   "/analytics": "analytics",
   "/analytics/decisions": "decisions",
+  "/analytics/visualizations": "visualizations",
   "/ai/assistant": "assistant",
+  "/ai/predictive": "predictiveAnalytics",
   "/monitoring": "monitoring",
+  "/documents": "documents",
   "/users": "users",
-  "/settings": "settings",
+  "/admin/system-settings": "systemSettings",
+  "/admin/committee-params": "committeeParams",
+  "/admin/workflow-designer": "workflowDesigner",
+  "/admin/workflow-rules": "workflowRules",
+  "/admin/approval-matrix": "approvalMatrix",
+  "/admin/user-roles": "userRoles",
+  "/admin/audit-logs": "auditLogs",
+  "/admin/roles": "roles",
+  "/admin/permissions": "permissions",
+  "/admin/org-structure": "orgStructure",
+  "/admin/functions": "orgFunctions",
+  "/admin/grades": "orgGrades",
 };
 
 interface SidebarProps {
@@ -99,7 +142,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { logout } = useAuth();
   const { user } = useAuthStore();
 
@@ -121,55 +164,72 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
     (item) => !item.roles || (user && item.roles.includes(user.role))
   );
 
+  const isRtl = i18n.language === "ar";
+
   return (
     <aside
       className={clsx(
-        "flex flex-col h-full bg-brand text-white transition-all duration-300",
-        collapsed ? "w-16" : "w-64"
+        "flex flex-col h-full transition-all duration-300",
+        isRtl ? "rounded-l-[40px]" : "rounded-r-[40px]",
+        collapsed ? "w-20" : "w-64"
       )}
+      style={{
+        background: "rgba(255,255,255,0.75)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        [isRtl ? "borderLeft" : "borderRight"]: "1px solid rgba(0,0,0,0.04)",
+      }}
     >
-      {/* ── Logo ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between p-4 border-b border-blue-800">
+      <div
+        className="flex items-center justify-between p-5"
+        style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}
+      >
         {!collapsed && (
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-brand" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center"
+              style={{ background: "#ffda2d" }}
+            >
+              <span className="text-sm font-black text-[#1a1917]">OS</span>
             </div>
             <div>
-              <p className="font-bold text-sm leading-tight">Oeuvres</p>
-              <p className="text-blue-300 text-xs">Sociales</p>
+              <p className="font-black text-sm leading-tight uppercase" style={{ fontStretch: "condensed" }}>
+                Oeuvres
+              </p>
+              <p className="text-xs font-semibold" style={{ color: "#ffda2d" }}>Sociales</p>
             </div>
           </div>
         )}
         <button
           onClick={() => onCollapse?.(!collapsed)}
-          className="p-1 rounded-lg hover:bg-blue-800 transition-colors"
+          className="p-1.5 rounded-xl transition-colors"
+          style={{ color: "#8a8882" }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(0,0,0,0.04)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
         >
-          <ChevronLeft
-            className={clsx("w-4 h-4 transition-transform", collapsed && "rotate-180")}
-          />
+          {isRtl ? (
+            <ChevronLeft className={clsx("w-4 h-4 transition-transform", !collapsed && "rotate-180")} />
+          ) : (
+            <ChevronLeft className={clsx("w-4 h-4 transition-transform", collapsed && "rotate-180")} />
+          )}
         </button>
       </div>
 
-      {/* ── Navigation principale ──────────────────────── */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1">
         {filteredNavItems.map((item) => (
           <NavItem key={item.path} item={item} collapsed={collapsed} />
         ))}
 
-        {/* ── Section Admin ────────────────────────────── */}
         {filteredAdminItems.length > 0 && (
           <>
             {!collapsed && (
-              <div className="px-3 pt-4 pb-1">
-                <p className="text-blue-400 text-xs font-semibold uppercase tracking-wider">
+              <div className="px-3 pt-5 pb-1">
+                <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: "#a8a49a" }}>
                   {t("nav.administration")}
                 </p>
               </div>
             )}
-            <div className="border-t border-blue-800 pt-2">
+            <div className="pt-1" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
               {filteredAdminItems.map((item) => (
                 <NavItem key={item.path} item={item} collapsed={collapsed} />
               ))}
@@ -178,32 +238,32 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
         )}
       </nav>
 
-      {/* ── Langue ─────────────────────────────────────── */}
       {!collapsed && (
-        <div className="border-t border-blue-800 p-3">
-          <div className="flex items-center gap-2 mb-2 px-1">
-            <Languages className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-blue-400 text-xs font-semibold uppercase tracking-wider">Langue</span>
-          </div>
+        <div style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }} className="p-3">
           <LanguageSwitcher />
         </div>
       )}
 
-      {/* ── Profil utilisateur ─────────────────────────── */}
-      <div className="border-t border-blue-800 p-3">
+      <div style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }} className="p-4">
         {!collapsed ? (
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm font-bold shrink-0">
+            <div
+              className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0"
+              style={{ background: "#ffda2d", color: "#1a1917" }}
+            >
               {user?.full_name?.charAt(0).toUpperCase() || "?"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.full_name}</p>
-              <p className="text-blue-300 text-xs truncate">{user?.role_display}</p>
+              <p className="text-sm font-bold truncate" style={{ color: "#1a1917" }}>{user?.full_name}</p>
+              <p className="text-xs truncate font-medium" style={{ color: "#8a8882" }}>{user?.role_display}</p>
             </div>
           </div>
         ) : (
           <div className="flex justify-center mb-2">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm font-bold">
+            <div
+              className="w-9 h-9 rounded-2xl flex items-center justify-center text-sm font-bold"
+              style={{ background: "#ffda2d", color: "#1a1917" }}
+            >
               {user?.full_name?.charAt(0).toUpperCase() || "?"}
             </div>
           </div>
@@ -211,10 +271,12 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
         <button
           onClick={() => logout()}
           className={clsx(
-            "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg",
-            "text-blue-300 hover:text-white hover:bg-red-600/20 transition-colors text-sm",
+            "flex items-center gap-2 w-full px-2 py-1.5 rounded-xl transition-all text-sm font-medium",
             collapsed && "justify-center"
           )}
+          style={{ color: "#8a8882" }}
+          onMouseEnter={e => { e.currentTarget.style.color = "#dc2626"; e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
+          onMouseLeave={e => { e.currentTarget.style.color = "#8a8882"; e.currentTarget.style.background = "transparent"; }}
         >
           <LogOut className="w-4 h-4 shrink-0" />
           {!collapsed && <span>{t("auth.logout")}</span>}
@@ -224,28 +286,42 @@ export function Sidebar({ collapsed = false, onCollapse }: SidebarProps) {
   );
 }
 
-// ── Composant NavItem ──────────────────────────────────────
 function NavItem({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const label = t(`nav.${item.labelKey}`, item.labelKey);
   return (
     <NavLink
       to={item.path}
       className={({ isActive }) =>
         clsx(
-          "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm",
-          collapsed && "justify-center px-2",
-          isActive
-            ? "bg-white/20 text-white font-medium"
-            : "text-blue-200 hover:bg-white/10 hover:text-white"
+          "flex items-center gap-3 rounded-2xl transition-all text-sm font-bold",
+          collapsed ? "justify-center p-3" : "px-4 py-3",
+          isActive ? "" : ""
         )
       }
       title={collapsed ? label : undefined}
+      style={({ isActive }: { isActive: boolean }) => ({
+        color: isActive ? "#1a1917" : "#8a8882",
+        background: isActive ? "#ffda2d" : "transparent",
+      })}
+      onMouseEnter={e => {
+        if (!e.currentTarget.classList.contains("active")) {
+          e.currentTarget.style.background = "rgba(0,0,0,0.03)";
+        }
+      }}
+      onMouseLeave={e => {
+        if (!e.currentTarget.classList.contains("active")) {
+          e.currentTarget.style.background = "transparent";
+        }
+      }}
     >
       <item.icon className="w-5 h-5 shrink-0" />
       {!collapsed && <span className="truncate">{label}</span>}
       {!collapsed && item.badge != null && item.badge > 0 && (
-        <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center">
+        <span
+          className={`text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-bold ${i18n.language === "ar" ? "mr-auto" : "ml-auto"}`}
+          style={{ background: "rgba(239,68,68,0.1)", color: "#dc2626" }}
+        >
           {item.badge > 99 ? "99+" : item.badge}
         </span>
       )}

@@ -15,33 +15,31 @@ from django.utils import timezone
 
 
 class SoftDeleteQuerySet(models.QuerySet):
-    """QuerySet avec support soft delete."""
+    """QuerySet avec support soft delete et scope tenant."""
 
     def delete(self):
-        """Soft delete en masse."""
         return self.update(is_deleted=True, deleted_at=timezone.now())
 
     def hard_delete(self):
-        """Suppression physique (admin uniquement)."""
         return super().delete()
 
     def alive(self):
-        """Retourne uniquement les objets non supprimés."""
         return self.filter(is_deleted=False)
 
     def dead(self):
-        """Retourne uniquement les objets supprimés (pour audit)."""
         return self.filter(is_deleted=True)
+
+    def for_tenant(self, tenant):
+        return self.filter(tenant=tenant)
 
 
 class SoftDeleteManager(models.Manager):
-    """Manager filtrant automatiquement les objets supprimés."""
+    """Manager filtrant les objets supprimés + scope tenant."""
 
     def get_queryset(self):
         return SoftDeleteQuerySet(self.model, using=self._db).filter(is_deleted=False)
 
     def with_deleted(self):
-        """Inclure les objets supprimés (pour audit)."""
         return SoftDeleteQuerySet(self.model, using=self._db)
 
     def alive(self):
@@ -52,6 +50,9 @@ class SoftDeleteManager(models.Manager):
 
     def hard_delete(self):
         return self.get_queryset().hard_delete()
+
+    def for_tenant(self, tenant):
+        return self.get_queryset().for_tenant(tenant)
 
 
 class BaseModel(models.Model):
@@ -103,11 +104,21 @@ class BaseModel(models.Model):
         help_text="Utilisateur ayant supprimé",
     )
 
+    # -- Multi-tenant --
+    tenant = models.ForeignKey(
+        "tenant.Tenant",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Organisme de rattachement (multi-tenant)",
+    )
+
     # Historique complet pour audit et préparation AI
     history = HistoricalRecords(inherit=True)
 
     # Managers
-    all_objects = models.Manager()  # Inclut tout (admin, audit)
+    all_objects = models.Manager()  # Inclut tout (admin, audit, migrations)
     objects = SoftDeleteManager()  # Exclut les supprimés par défaut
 
     class Meta:
@@ -118,7 +129,6 @@ class BaseModel(models.Model):
         return f"{self.__class__.__name__} ({self.id})"
 
     def save(self, *args, **kwargs):
-        """Override save pour s'assurer que les FKs sont cohérentes."""
         super().save(*args, **kwargs)
 
     def soft_delete(self, user=None):

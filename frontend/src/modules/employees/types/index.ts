@@ -96,6 +96,14 @@ export interface EmployeeListItem {
   phone: string;
   email_professional: string;
   beneficiaries_count: number;
+  bureau: string | null;
+  bureau_name: string | null;
+  bureau_code: string | null;
+  function: string | null;
+  function_name: string | null;
+  grade_ref: string | null;
+  grade_ref_name: string | null;
+  grade_ref_level: number | null;
 }
 
 // ── Employé — détail complet ──────────────────────────────
@@ -134,6 +142,14 @@ export interface Employee extends EmployeeListItem {
   created_at: string;
   updated_at: string;
   created_by_name: string | null;
+  bureau: string | null;
+  bureau_name: string | null;
+  bureau_code: string | null;
+  function: string | null;
+  function_name: string | null;
+  grade_ref: string | null;
+  grade_ref_name: string | null;
+  grade_ref_level: number | null;
 }
 
 // ── Formulaires ───────────────────────────────────────────
@@ -174,6 +190,9 @@ export interface EmployeeCreatePayload {
   education_field?: string;
   competencies?: string[];
   notes?: string;
+  bureau?: string;
+  function?: string;
+  grade_ref?: string;
 }
 
 export type EmployeeUpdatePayload = Partial<EmployeeCreatePayload>;

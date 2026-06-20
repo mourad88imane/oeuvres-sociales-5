@@ -24,6 +24,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoggingIn, loginError } = useAuth();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const user = useAuthStore((s) => s.user);
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -153,6 +154,14 @@ export function LoginPage() {
             </button>
           </form>
         </div>
+
+        {isAuthenticated && user?.tenant_name && (
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+            <p className="text-xs text-blue-600">
+              {user.tenant_name}
+            </p>
+          </div>
+        )}
 
         <p className="text-center text-blue-200 text-xs mt-6">
           {t("app.copyright", { year: new Date().getFullYear() })}

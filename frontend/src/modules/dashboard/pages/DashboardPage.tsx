@@ -1,28 +1,33 @@
-/**
- * DASHBOARD PAGE — Tableau de bord principal de la plateforme
- * Données en temps réel depuis l'endpoint d'analytics.
- */
+import { useTranslation } from "react-i18next";
 import {
-  Users, Gift, Wallet, Clock,
+  Users, Gift, ArrowUpRight, TrendingUp, CheckCircle2,
+  Clock, Zap,
+  CreditCard, UserCheck, UserPlus,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LineChart, Line, Legend,
 } from "recharts";
-import { useTranslation } from "react-i18next";
 import { useAuthStore } from "@modules/auth/store/authStore";
 import { useGlobalDashboard } from "@modules/analytics/api/index";
 import { Spinner } from "@shared/components/ui/index";
 import { fmtNumber, fmtDZD } from "@modules/analytics/utils/formatters";
 import { RecommendationsWidget } from "@modules/ai/components/RecommendationsWidget";
 import { AnomalyFeedWidget } from "@modules/ai/components/AnomalyFeedWidget";
+import { MedicalCoverageWidget } from "@modules/medical-coverage/components/MedicalCoverageWidget";
 
 export function DashboardPage() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { data, isLoading } = useGlobalDashboard({ months: 6 });
 
-  if (isLoading) return <div className="flex justify-center py-24"><Spinner size="lg" /></div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   const s = data?.summary;
   const trends = (data?.trends || []).map(v => ({
@@ -31,190 +36,235 @@ export function DashboardPage() {
   }));
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* ── En-tête ─────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {t("dashboard.greeting", { name: user?.full_name?.split(" ")[0] })}
-        </h1>
-        <p className="text-gray-500 mt-1 text-sm">
-          {t("dashboard.subtitle")}
-        </p>
+    <div className="space-y-6 py-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight" style={{ color: "#1a1917" }}>
+            {t("dashboard.greeting", { name: user?.full_name?.split(" ")[0] })}
+          </h1>
+          <p className="text-sm font-medium mt-1" style={{ color: "#8a8882" }}>{t("dashboard.subtitle")}</p>
+        </div>
+        <button
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl font-bold text-sm transition-all"
+          style={{ background: "#ffda2d", color: "#1a1917" }}
+          onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(255,218,45,0.3)"; }}
+          onMouseLeave={e => { e.currentTarget.style.boxShadow = "none"; }}
+        >
+          <Zap className="w-4 h-4" />
+          {t("dashboard.generateReport")}
+        </button>
       </div>
 
-      {/* ── KPI Cards ───────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <KpiCard
-          title={t("dashboard.activeEmployees")}
+          title={t("dashboard.activeEmployeesShort")}
           value={fmtNumber(s?.employees?.active ?? 0)}
           icon={Users}
-          iconBg="bg-blue-100"
-          iconColor="text-blue-600"
-          trend={`${fmtNumber(s?.employees?.total ?? 0)} ${t("dashboard.total")}`}
-          trendPositive
+          badge="+12%"
+          color="#3b82f6"
         />
         <KpiCard
           title={t("dashboard.totalBenefits")}
           value={fmtNumber(s?.benefits?.total ?? 0)}
           icon={Gift}
-          iconBg="bg-purple-100"
-          iconColor="text-purple-600"
-          trend={`${fmtNumber(s?.benefits?.pending ?? 0)} ${t("dashboard.pending")}`}
-          trendPositive={false}
+          badge="+8%"
+          color="#22c55e"
         />
         <KpiCard
-          title={t("dashboard.pendingValidation")}
-          value={fmtNumber(s?.benefits?.pending ?? 0)}
-          icon={Clock}
-          iconBg="bg-amber-100"
-          iconColor="text-amber-600"
-          trend={t("dashboard.toProcess")}
-          trendPositive={false}
+          title={t("dashboard.activeConventionsShort")}
+          value={fmtNumber(s?.conventions?.active ?? 0)}
+          icon={TrendingUp}
+          badge="Actif"
+          color="#f59e0b"
         />
         <KpiCard
-          title={t("dashboard.totalPaid")}
+          title={t("dashboard.totalPaidShort")}
           value={fmtDZD(s?.finance?.total_paid ?? 0, true)}
-          icon={Wallet}
-          iconBg="bg-green-100"
-          iconColor="text-green-600"
-          trend={`${fmtDZD(s?.finance?.month_paid ?? 0, true)} ${t("dashboard.thisMonth")}`}
-          trendPositive
+          icon={CreditCard}
+          badge="Budget"
+          color="#a855f7"
         />
       </div>
 
-      {/* ── Graphiques ──────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Évolution mensuelle */}
-        <div className="card p-5 xl:col-span-2">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">
-            {t("dashboard.monthlyTrend")}
-          </h2>
-          {trends.length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">{t("dashboard.noData")}</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={trends} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="monthLabel" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
-                  formatter={(v: number) => fmtNumber(v)}
-                />
-                <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <Line
-                  type="monotone" dataKey="benefits_count"
-                  stroke="#3B82F6" strokeWidth={2}
-                  dot={{ r: 3 }} name={t("dashboard.submitted")}
-                />
-                <Line
-                  type="monotone" dataKey="payments_count"
-                  stroke="#22C55E" strokeWidth={2}
-                  dot={{ r: 3 }} name={t("dashboard.paid")}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
-        {/* Répartition par statut */}
-        <div className="card p-5">
-          <h2 className="text-base font-semibold text-gray-800 mb-4">
-            {t("dashboard.distributionByStatus")}
-          </h2>
-          {(s?.benefits?.by_type || []).length === 0 ? (
-            <div className="flex items-center justify-center h-48 text-gray-400 text-sm">{t("dashboard.noData")}</div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={(s?.benefits?.by_type || []).slice(0, 5)} layout="vertical" margin={{ left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} />
-                  <YAxis type="category" dataKey="benefit_type__name" tick={{ fontSize: 11 }} width={80} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white rounded-[32px] p-6" style={{ border: "1px solid rgba(0,0,0,0.04)" }}>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-base font-black" style={{ color: "#1a1917" }}>{t("dashboard.evolutionTitle")}</h2>
+              <p className="text-xs font-medium mt-0.5" style={{ color: "#8a8882" }}>{t("dashboard.evolutionSubtitle")}</p>
+            </div>
+            <div className="flex gap-2">
+              <button className="text-xs font-bold px-4 py-1.5 rounded-xl transition-colors" style={{ background: "#f3f2ee", color: "#1a1917" }}>
+                7J
+              </button>
+              <button className="text-xs font-bold px-4 py-1.5 rounded-xl" style={{ background: "#ffda2d", color: "#1a1917" }}>
+                Live
+              </button>
+            </div>
+          </div>
+          <div style={{ height: 280 }}>
+            {trends.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-sm font-medium" style={{ color: "#8a8882" }}>{t("dashboard.noData")}</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={trends} margin={{ top: 10, right: 15, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
+                  <XAxis dataKey="monthLabel" tick={{ fontSize: 11, fill: "#8a8882" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#8a8882" }} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
-                    formatter={(value) => [value, "Prestations"]}
+                    contentStyle={{
+                      borderRadius: "16px", border: "1px solid rgba(0,0,0,0.04)",
+                      fontSize: "12px", background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)",
+                      color: "#1a1917", boxShadow: "0 10px 30px -10px rgba(0,0,0,0.05)",
+                    }}
+                    formatter={(v: number) => [fmtNumber(v), ""]}
+                    labelFormatter={(l) => `${l}`}
                   />
-                  <Bar dataKey="count" fill="#3B82F6" radius={[0, 4, 4, 0]} name="Count" />
-                </BarChart>
+                  <Legend wrapperStyle={{ fontSize: "11px", color: "#8a8882" }} />
+                  <Line type="monotone" dataKey="benefits_count" stroke="#ffda2d" strokeWidth={3} dot={{ r: 4, fill: "#ffda2d", strokeWidth: 0 }} name="Soumises" />
+                  <Line type="monotone" dataKey="payments_count" stroke="#22c55e" strokeWidth={3} dot={{ r: 4, fill: "#22c55e", strokeWidth: 0 }} name="Payées" />
+                </LineChart>
               </ResponsiveContainer>
-              <div className="mt-4 space-y-2">
-                {(s?.benefits?.by_type || []).slice(0, 5).map(({ benefit_type__name, count }, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      <span className="text-xs text-gray-600 truncate max-w-[120px]">{benefit_type__name}</span>
-                    </div>
-                    <span className="text-xs font-semibold text-gray-800">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-[32px] p-6 flex flex-col" style={{ border: "1px solid rgba(0,0,0,0.04)" }}>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{ background: "#ffda2d" }}>
+              <Zap className="w-5 h-5" style={{ color: "#1a1917" }} />
+            </div>
+            <h2 className="text-base font-black" style={{ color: "#1a1917" }}>Assistant Social AI</h2>
+          </div>
+          <div className="flex-1 space-y-3 mb-4 overflow-y-auto pr-1" style={{ maxHeight: 200 }}>
+            <div className="rounded-2xl p-4 text-sm" style={{ background: "#f3f2ee" }}>
+              <p className="font-black mb-1 text-xs uppercase tracking-wider" style={{ color: "#ffda2d" }}>SocialBot</p>
+              <p className="font-medium" style={{ color: "#1a1917" }}>J'ai remarqué une augmentation des demandes ces 30 derniers jours. Voulez-vous générer un rapport ?</p>
+            </div>
+            <div className="rounded-2xl p-4 text-sm ml-4" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.04)" }}>
+              <p className="font-black mb-1 text-xs uppercase tracking-wider" style={{ color: "#8a8882" }}>Vous</p>
+              <p className="font-medium" style={{ color: "#1a1917" }}>Oui, prépare une analyse budgétaire.</p>
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type="text" placeholder="Poser une question à l'IA..."
+              className="w-full rounded-2xl py-3 px-4 text-sm outline-none transition-all pr-12 font-medium"
+              style={{
+                background: "#f3f2ee",
+                border: "1px solid rgba(0,0,0,0.04)",
+                color: "#1a1917",
+              }}
+              onFocus={e => { e.currentTarget.style.borderColor = "#ffda2d"; }}
+              onBlur={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.04)"; }}
+            />
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-2" style={{ color: "#ffda2d" }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4z"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Activités récentes ───────────────────────── */}
-      <div className="card p-5">
-        <h2 className="text-base font-semibold text-gray-800 mb-4">
-          {t("dashboard.quickOverview")}
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="text-center py-4 bg-blue-50 rounded-xl">
-            <p className="text-2xl font-bold text-blue-700">{fmtNumber(s?.employees?.active ?? 0)}</p>
-            <p className="text-xs text-blue-500 mt-0.5">{t("dashboard.activeEmployeesShort")}</p>
-          </div>
-          <div className="text-center py-4 bg-green-50 rounded-xl">
-            <p className="text-2xl font-bold text-green-700">{fmtNumber(s?.beneficiaries?.active ?? 0)}</p>
-            <p className="text-xs text-green-500 mt-0.5">{t("dashboard.activeBeneficiariesShort")}</p>
-          </div>
-          <div className="text-center py-4 bg-amber-50 rounded-xl">
-            <p className="text-2xl font-bold text-amber-700">{fmtNumber(s?.conventions?.active ?? 0)}</p>
-            <p className="text-xs text-amber-500 mt-0.5">{t("dashboard.activeConventionsShort")}</p>
-          </div>
-          <div className="text-center py-4 bg-purple-50 rounded-xl">
-            <p className="text-2xl font-bold text-purple-700">{fmtDZD(s?.finance?.total_paid ?? 0, true)}</p>
-            <p className="text-xs text-purple-500 mt-0.5">{t("dashboard.totalPaidShort")}</p>
-          </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2">
+          <MedicalCoverageWidget />
         </div>
+        <ActivityFeed />
       </div>
 
-      {/* ── IA Widgets ───────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <RecommendationsWidget />
-        <AnomalyFeedWidget />
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+        <div className="bg-white rounded-[32px] p-6" style={{ border: "1px solid rgba(0,0,0,0.04)" }}>
+          <h2 className="text-base font-black mb-4" style={{ color: "#1a1917" }}>
+            <Zap className="w-4 h-4 inline mr-2" style={{ color: "#ffda2d" }} />
+            Recommandations
+          </h2>
+          <RecommendationsWidget />
+        </div>
+        <div className="bg-white rounded-[32px] p-6" style={{ border: "1px solid rgba(0,0,0,0.04)" }}>
+          <h2 className="text-base font-black mb-4" style={{ color: "#1a1917" }}>
+            <CheckCircle2 className="w-4 h-4 inline mr-2" style={{ color: "#ffda2d" }} />
+            Anomalies
+          </h2>
+          <AnomalyFeedWidget />
+        </div>
       </div>
     </div>
   );
 }
 
-// ── Composant KPI Card ────────────────────────────────────
 interface KpiCardProps {
   title: string;
   value: string;
   icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
-  trend?: string;
-  trendPositive?: boolean;
+  badge?: string;
+  color: string;
 }
 
-function KpiCard({ title, value, icon: Icon, iconBg, iconColor, trend, trendPositive }: KpiCardProps) {
+function KpiCard({ title, value, icon: Icon, badge, color }: KpiCardProps) {
   return (
-    <div className="card p-5">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-2.5 rounded-xl ${iconBg}`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
+    <div
+      className="bg-white rounded-[32px] p-5 transition-all duration-300"
+      style={{
+        border: "1px solid rgba(0,0,0,0.04)",
+        cursor: "default",
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = "translateY(-2px)";
+        e.currentTarget.style.boxShadow = "0 12px 30px -8px rgba(0,0,0,0.06)";
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = "";
+        e.currentTarget.style.boxShadow = "";
+      }}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div
+          className="w-10 h-10 rounded-2xl flex items-center justify-center"
+          style={{ background: `${color}12` }}
+        >
+          <Icon className="w-5 h-5" style={{ color }} />
         </div>
-        {trend && (
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full
-            ${trendPositive ? "text-green-700 bg-green-50" : "text-amber-700 bg-amber-50"}`}>
-            {trend}
+        {badge && (
+          <span
+            className="inline-flex items-center gap-0.5 text-[10px] font-black px-2 py-1 rounded-xl"
+            style={{ background: "rgba(34,197,94,0.1)", color: "#16a34a" }}
+          >
+            <ArrowUpRight className="w-3 h-3" />
+            {badge}
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-      <p className="text-sm text-gray-500">{title}</p>
+      <p className="text-xs font-bold uppercase tracking-wider mb-1" style={{ color: "#8a8882" }}>{title}</p>
+      <p className="text-xl font-black" style={{ color: "#1a1917" }}>{value}</p>
+    </div>
+  );
+}
+
+function ActivityFeed() {
+  const activities = [
+    { icon: CheckCircle2, color: "#22c55e", bg: "rgba(34,197,94,0.1)", title: "Versement primes vacances", desc: "Les virements ont été effectués pour 240 adhérents", time: "Il y a 2 mins" },
+    { icon: UserPlus, color: "#3b82f6", bg: "rgba(59,130,246,0.1)", title: "Nouvel adhérent enregistré", desc: "Sarah Chen a rejoint le programme social", time: "Il y a 45 mins" },
+    { icon: Clock, color: "#f59e0b", bg: "rgba(245,158,11,0.1)", title: "Nouvelle session colonies", desc: "Ouverture des inscriptions pour l'été 2026", time: "Il y a 2 heures" },
+    { icon: UserCheck, color: "#a855f7", bg: "rgba(168,85,247,0.1)", title: "Demande de bourse validée", desc: "Dossier de Karim B. approuvé par le comité", time: "Il y a 4 heures" },
+  ];
+
+  return (
+    <div className="bg-white rounded-[32px] p-6" style={{ border: "1px solid rgba(0,0,0,0.04)" }}>
+      <h2 className="text-base font-black mb-6" style={{ color: "#1a1917" }}>Activités Récentes</h2>
+      <div className="space-y-5">
+        {activities.map((a, i) => (
+          <div key={i} className="flex gap-3">
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{ background: a.bg }}>
+              <a.icon className="w-4 h-4" style={{ color: a.color }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold" style={{ color: "#1a1917" }}>{a.title}</p>
+              <p className="text-xs font-medium mt-0.5" style={{ color: "#8a8882" }}>{a.desc}</p>
+              <span className="text-[10px] font-bold uppercase tracking-wider mt-1 block" style={{ color: "#a8a49a" }}>{a.time}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

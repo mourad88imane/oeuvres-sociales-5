@@ -153,6 +153,8 @@ def guard_payment_reference_set(ctx: WorkflowContext) -> tuple[bool, str]:
 
 def guard_approved_amount_set(ctx: WorkflowContext) -> tuple[bool, str]:
     """Pour valider, le montant approuvé doit être défini."""
+    if not ctx.metadata:
+        return True, ""
     approved = ctx.metadata.get("approved_amount") or getattr(ctx.instance, "approved_amount", None)
     if not approved or approved <= 0:
         return False, "Le montant approuvé est obligatoire pour valider la demande."
@@ -249,6 +251,8 @@ class BenefitWorkflowDefinition(WorkflowDefinition):
     Workflow complet des prestations sociales.
     Instancié une seule fois comme attribut de classe sur le modèle Benefit.
     """
+
+    db_enabled = True
 
     STATES = {
         "draft": {

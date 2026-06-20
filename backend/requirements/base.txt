@@ -37,6 +37,9 @@ django-extensions==3.2.3
 django-axes==7.0.1       # Blocage brute force
 django-csp==3.8          # Content Security Policy
 
+# Monitoring & Métriques
+django-prometheus==2.5.0  # Prometheus metrics export
+
 # Logging structuré
 python-json-logger==3.2.0
 
@@ -53,3 +56,6 @@ python-dateutil==2.9.0.post0
 openpyxl==3.1.2
 reportlab==4.5.1
 croniter==5.0.1
+
+# PDF Generation
+weasyprint==69.0
