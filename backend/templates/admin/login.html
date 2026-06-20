@@ -1,0 +1,42 @@
+{% extends "admin/login.html" %}
+{% load i18n static %}
+
+{% block content %}
+{% if request.GET.locked == "1" %}
+<div style="
+  background: #fff3f3;
+  border-left: 4px solid #dc3545;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  font-size: 14px;
+  line-height: 1.5;
+">
+  <div style="display:flex;align-items:flex-start;gap:12px">
+    <div style="
+      flex-shrink:0;
+      width:36px;height:36px;
+      border-radius:50%;
+      background:#dc3545;
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:18px;
+      font-weight:700;
+    ">!</div>
+    <div>
+      <strong style="color:#b02a37;display:block;margin-bottom:4px">
+        ⛔ Compte temporairement bloqué
+      </strong>
+      <p style="color:#6c757d;margin:0">
+        Votre compte a été bloqué après plusieurs tentatives de connexion échouées.
+        Veuillez réessayer dans <strong>30 minutes</strong> ou contactez l'administrateur.
+      </p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}
